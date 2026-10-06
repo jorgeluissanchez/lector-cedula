@@ -1,0 +1,3 @@
+# Informes de Schemathesis y ZAP y salidas de Locust: se regeneran, nunca se versionan.
+reportes/
+carga/reporte*

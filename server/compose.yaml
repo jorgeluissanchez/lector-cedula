@@ -1,13 +1,61 @@
 services:
   pruebas:
     build: { context: ., target: dev }
-    command: sh -c "uv run ruff check . && uv run ruff format --check . && uv run pytest -q"
+    # --frozen: usa el uv.lock montado tal cual (nunca lo reescribe).
+    command: >-
+      sh -c "uv run --frozen ruff check . && uv run --frozen ruff format --check .
+      && uv run --frozen pytest -q"
     volumes:
       - ./app:/srv/app:ro
       - ./tests:/srv/tests:ro
+      - ./openapi:/srv/openapi:ro
+      - ./pyproject.toml:/srv/pyproject.toml:ro
+      - ./uv.lock:/srv/uv.lock:ro
+      # AV-19: los IDs de warnings se comprueban contra el registro de hipótesis del formato.
+      - ../docs/decisiones/hipotesis-formato.md:/srv/docs/decisiones/hipotesis-formato.md:ro
 
   api:
     build: { context: ., target: produccion }
     ports: ["8000:8000"]
     read_only: true
     tmpfs: ["/tmp"]
+
+  # Misma imagen que `api`, con claves sintéticas, para Schemathesis, ZAP y Locust (decisión 16).
+  # Ninguna clave ni secreto de este servicio es real (skill fixture-sintetico).
+  api-pruebas:
+    build: { context: ., target: produccion }
+    command:
+      - /srv/.venv/bin/uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --workers
+      - "1"
+      - --no-access-log
+    ports: ["8000:8000"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    environment:
+      # sha256 de KT, KT2 y KL de la spec (sk_test_0..., sk_test_1..., sk_live_2...).
+      CLAVES_API_JSON: >-
+        [{"sha256": "9e7856735d2236cd8512842bd06a1515fa62426519a64c6705bffeb9d010337c",
+        "secreto_webhook": "whsec_sintetico_0123456789abcdef"},
+        {"sha256": "ae8bec1baed6cd650cfce35842f4122a7117e789544f6e1966170a4526d28f8a",
+        "secreto_webhook": "whsec_sintetico_fedcba9876543210"},
+        {"sha256": "5903d094b21970fafc45862ba3da53ead886f9997b7e9304f9c72f166d944990",
+        "secreto_webhook": "whsec_sintetico_live_0000000000"}]
+      SECRETO_SUBIDA: secreto_subida_sintetico_solo_pruebas_0000000000
+      URL_PUBLICA: http://host.docker.internal:8000
+      LIMITE_PETICIONES_POR_MINUTO: "100000"
+    healthcheck:
+      test:
+        - CMD
+        - /srv/.venv/bin/python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/salud', timeout=2)"
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 3s

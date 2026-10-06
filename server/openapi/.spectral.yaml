@@ -1,0 +1,69 @@
+# Ruleset de Spectral 6.17 para el contrato de la API de validaciones (AV-01, AV-31).
+# Uso (desde la raíz del repositorio, en Git Bash):
+#   docker run --rm -v "$(pwd -W)/server/openapi:/oa" -w /oa stoplight/spectral:6.17.0 \
+#     lint api-validaciones.yaml --ruleset .spectral.yaml --fail-severity warn
+extends: [["spectral:oas", "recommended"]]
+
+rules:
+  # Principio III: ninguna respuesta ni webhook declara imágenes, biometría ni payloads crudos.
+  # La expresión es la misma que la comprobación en tiempo de ejecución de AV-31.
+  sin-imagen-ni-biometria-en-respuestas:
+    description: >-
+      Las respuestas y los webhooks no declaran propiedades de imagen, foto, selfie, retrato, rostro,
+      plantilla biométrica, huella, AFIS, payload crudo ni base64 (AV-31, principio III).
+    message: "Propiedad prohibida en una respuesta o webhook (imagen, biometría o payload crudo): {{path}}"
+    severity: error
+    given:
+      - "$.paths[*][*].responses[*].content[*].schema..properties"
+      - "$.webhooks[*][*].requestBody.content[*].schema..properties"
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "/imag|img|foto|photo|selfie|retrato|portrait|rostro|face_(image|template|embedding)|biometr|afis|dactilar|huella|fingerprint|raw|payload|base64/i"
+
+  sin-binario-en-respuestas:
+    description: >-
+      Ningún esquema de respuesta o webhook usa `format: binary`, `contentEncoding` ni
+      `contentMediaType` (AV-31): el servidor nunca devuelve bytes de imagen.
+    message: "Esquema binario en una respuesta o webhook: {{path}}"
+    severity: error
+    given:
+      - "$.paths[*][*].responses[*].content[*]..[?(@ && (@.format === 'binary' || @.contentEncoding !== undefined || @.contentMediaType !== undefined))]"
+      - "$.webhooks[*][*].requestBody.content[*]..[?(@ && (@.format === 'binary' || @.contentEncoding !== undefined || @.contentMediaType !== undefined))]"
+    then:
+      function: falsy
+
+  errores-problem-json:
+    description: Toda respuesta 4xx o 5xx es `application/problem+json` y nada más (AV-29, RFC 9457).
+    message: "Respuesta de error sin application/problem+json como único tipo: {{path}}"
+    severity: error
+    given: "$.paths[*][*].responses[?(@property.match(/^[45]/))]"
+    then:
+      field: content
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: ["application/problem+json"]
+          additionalProperties: false
+          properties:
+            "application/problem+json": {}
+
+  creacion-con-idempotency-key:
+    description: La creación de validaciones acepta la cabecera `Idempotency-Key` (AV-12).
+    message: "POST /v1/validations no declara la cabecera Idempotency-Key"
+    severity: error
+    given: "$.paths['/v1/validations'].post"
+    then:
+      field: parameters
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          contains:
+            type: object
+            required: [in, name]
+            properties:
+              in: { const: header }
+              name: { const: Idempotency-Key }

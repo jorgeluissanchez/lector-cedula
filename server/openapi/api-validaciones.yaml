@@ -1,0 +1,1273 @@
+openapi: 3.1.1
+info:
+  title: API de validaciones del lector de cédula CO
+  version: 1.0.0
+  summary: Crear, alimentar, consultar y suprimir validaciones de la cédula colombiana.
+  description: |
+    API del servidor de respaldo del lector de cédula colombiana (amarilla con PDF417 y digital
+    con MRZ). Este documento es la fuente de verdad del contrato: la aplicación lo sirve tal cual en
+    `GET /openapi.json`.
+
+    Flujo: `POST /v1/validations` crea una validación en `pending` y devuelve `upload.url`; el
+    cliente envía anverso, reverso y, solo con comparación facial, selfie en una única petición
+    `multipart/form-data` a esa URL; la respuesta trae la validación en estado terminal
+    (`success`, `failure` o `review`). Si se configuró `webhook_url`, el servidor notifica el
+    evento `validation.completed` firmado con HMAC-SHA256.
+
+    Privacidad (Ley 1581 de 2012): toda creación exige la autorización expresa del titular
+    (`autorizacion.datos`) y, para comparación facial, la de datos sensibles
+    (`autorizacion.sensibles`). Las imágenes se procesan solo en memoria y nunca se guardan; ninguna
+    respuesta ni webhook contiene imágenes ni biometría. El resultado se elimina con `DELETE` o al
+    vencer la retención (`expires_at`).
+
+    Sandbox: las claves `sk_test_` operan en modo sandbox con resultados sintéticos deterministas
+    (`sandbox_scenario`); las claves `sk_live_` operan en modo live.
+
+    Limitaciones conocidas: el servidor guarda las validaciones en memoria; un reinicio del proceso
+    pierde las validaciones, las claves de idempotencia y los reintentos de webhook pendientes.
+  contact:
+    name: Equipo del lector de cédula CO
+    url: https://lector-cedula.example/soporte
+  license:
+    name: MIT
+    identifier: MIT
+
+servers:
+  - url: https://api.lector-cedula.example
+    description: Servidor de ejemplo (dominio reservado; se reemplaza en el despliegue).
+
+tags:
+  - name: contrato
+    description: Documento OpenAPI publicado.
+  - name: salud
+    description: Comprobación de vida del servicio.
+  - name: validaciones
+    description: Ciclo de vida de una validación de documento.
+  - name: webhooks
+    description: Eventos que el servidor envía al cliente.
+
+security:
+  - claveApi: []
+
+paths:
+  /salud:
+    get:
+      operationId: obtenerSalud
+      tags: [salud]
+      summary: Comprobación de vida
+      description: 'Responde `{"estado": "ok"}` mientras el proceso atiende peticiones. No requiere clave.'
+      security: []
+      responses:
+        "200":
+          description: El servicio está vivo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Salud"
+
+  /openapi.json:
+    get:
+      operationId: obtenerContrato
+      tags: [contrato]
+      summary: Contrato OpenAPI
+      description: Devuelve este documento en JSON. No requiere clave.
+      security: []
+      responses:
+        "200":
+          description: El contrato OpenAPI 3.1 de la API.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v1/validations:
+    post:
+      operationId: crearValidacion
+      tags: [validaciones]
+      summary: Crear una validación
+      description: |
+        Crea una validación en estado `pending` y devuelve la URL firmada de subida. Exige la
+        autorización expresa del titular. El cuerpo admite como máximo 16 384 bytes y rechaza campos
+        no declarados. Con `Idempotency-Key`, repetir la misma petición devuelve la misma respuesta
+        durante 86 400 s.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearValidacion"
+            examples:
+              minima:
+                summary: Creación mínima en sandbox
+                value:
+                  document_type: co_national-id-2000
+                  autorizacion:
+                    datos: true
+                    sensibles: false
+                    version_texto: "2026-10-01"
+                    otorgada_en: "2026-10-06T15:19:00Z"
+      responses:
+        "201":
+          description: Validación creada en `pending`.
+          headers:
+            Location:
+              $ref: "#/components/headers/Location"
+            Idempotent-Replayed:
+              $ref: "#/components/headers/IdempotentReplayed"
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/XContentTypeOptions"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Validation"
+              examples:
+                pendiente:
+                  summary: Validación recién creada
+                  value:
+                    id: val_0123456789abcdef0123456789abcdef
+                    object: validation
+                    sandbox: true
+                    document_type: co_national-id-2000
+                    face_match: false
+                    status: pending
+                    declined_reason: null
+                    checks: []
+                    document: null
+                    autorizacion:
+                      datos: true
+                      sensibles: false
+                      version_texto: "2026-10-01"
+                      otorgada_en: "2026-10-06T15:19:00Z"
+                      registrada_en: "2026-10-06T15:20:00Z"
+                    upload:
+                      url: "https://api.lector-cedula.example/v1/validations/val_0123456789abcdef0123456789abcdef/images?token=AAAAAGkm0yxzaW50ZXRpY28tc29sby1lamVtcGxvLW5vLXZhbGlkbw"
+                      expires_at: "2026-10-06T15:35:00Z"
+                    webhook_url: null
+                    created_at: "2026-10-06T15:20:00Z"
+                    updated_at: "2026-10-06T15:20:00Z"
+                    completed_at: null
+                    expires_at: null
+          links:
+            ConsultarValidacion:
+              operationId: obtenerValidacion
+              description: Consulta la validación creada.
+              parameters:
+                id: "$response.body#/id"
+            SubirImagenes:
+              operationId: subirImagenes
+              description: Sube las imágenes de la validación creada.
+              parameters:
+                id: "$response.body#/id"
+            SuprimirValidacion:
+              operationId: suprimirValidacion
+              description: Suprime la validación creada.
+              parameters:
+                id: "$response.body#/id"
+        "400":
+          $ref: "#/components/responses/SolicitudInvalida"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "409":
+          $ref: "#/components/responses/Conflicto"
+        "413":
+          $ref: "#/components/responses/DemasiadoGrande"
+        "422":
+          $ref: "#/components/responses/NoProcesable"
+        "429":
+          $ref: "#/components/responses/DemasiadasPeticiones"
+        "500":
+          $ref: "#/components/responses/ErrorInterno"
+
+  /v1/validations/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdValidacion"
+    get:
+      operationId: obtenerValidacion
+      tags: [validaciones]
+      summary: Consultar una validación
+      description: |
+        Devuelve el estado actual de la validación. Un identificador inexistente, mal formado,
+        suprimido, vencido o de otro cliente responde 404 con el mismo cuerpo salvo `request_id`.
+      responses:
+        "200":
+          description: Estado actual de la validación.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/XContentTypeOptions"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Validation"
+              examples:
+                exitosa:
+                  summary: Cédula amarilla validada en sandbox
+                  value:
+                    id: val_0123456789abcdef0123456789abcdef
+                    object: validation
+                    sandbox: true
+                    document_type: co_national-id-2000
+                    face_match: false
+                    status: success
+                    declined_reason: null
+                    checks:
+                      - category: image_quality
+                        status: passed
+                        reasons: []
+                      - category: data_validation
+                        status: passed
+                        reasons: []
+                      - category: data_consistency
+                        status: passed
+                        reasons: []
+                      - category: document_liveness
+                        status: passed
+                        reasons: []
+                    document:
+                      type: co_national-id-2000
+                      document_number: "9999123456"
+                      first_surname: PEÑA
+                      second_surname: DE LA OSSA
+                      first_name: FICTICIA
+                      second_name: null
+                      sex: F
+                      date_of_birth: "1990-02-28"
+                      place_of_birth:
+                        divipol_department: "01"
+                        divipol_municipality: "001"
+                      blood_type: AB-
+                      date_of_issue: null
+                      place_of_issue: null
+                      date_of_expiry: null
+                      sources: [pdf417]
+                      warnings: [H03, H05, H06]
+                    autorizacion:
+                      datos: true
+                      sensibles: false
+                      version_texto: "2026-10-01"
+                      otorgada_en: "2026-10-06T15:19:00Z"
+                      registrada_en: "2026-10-06T15:20:00Z"
+                    upload: null
+                    webhook_url: null
+                    created_at: "2026-10-06T15:20:00Z"
+                    updated_at: "2026-10-06T15:20:00Z"
+                    completed_at: "2026-10-06T15:20:00Z"
+                    expires_at: "2026-10-07T15:20:00Z"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "429":
+          $ref: "#/components/responses/DemasiadasPeticiones"
+        "500":
+          $ref: "#/components/responses/ErrorInterno"
+    delete:
+      operationId: suprimirValidacion
+      tags: [validaciones]
+      summary: Suprimir una validación
+      description: |
+        Elimina la validación y su resultado por revocación de la autorización del titular y
+        cancela los webhooks pendientes. Después, toda operación sobre el mismo `id` responde 404.
+      responses:
+        "204":
+          description: Validación suprimida. Sin cuerpo.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/XContentTypeOptions"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "429":
+          $ref: "#/components/responses/DemasiadasPeticiones"
+        "500":
+          $ref: "#/components/responses/ErrorInterno"
+
+  /v1/validations/{id}/images:
+    parameters:
+      - $ref: "#/components/parameters/IdValidacion"
+    post:
+      operationId: subirImagenes
+      tags: [validaciones]
+      summary: Subir las imágenes y procesar la validación
+      description: |
+        Recibe en una sola petición `multipart/form-data` las partes `front` y `back` y, solo si la
+        validación pidió comparación facial, `selfie`. Cada parte es JPEG o PNG de 1 a 8 388 608
+        bytes; el cuerpo completo mide como máximo 20 971 520 bytes. La validación se procesa de
+        forma síncrona y en memoria: ninguna imagen sobrevive a la petición. Se autentica con el
+        token de `upload.url` (vigencia de 900 s, un solo uso) o con la clave que creó la
+        validación.
+      security:
+        - tokenSubida: []
+        - claveApi: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ImagenesValidacion"
+            encoding:
+              front:
+                contentType: image/jpeg, image/png
+              back:
+                contentType: image/jpeg, image/png
+              selfie:
+                contentType: image/jpeg, image/png
+      responses:
+        "200":
+          description: Validación procesada, en estado terminal.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            X-Content-Type-Options:
+              $ref: "#/components/headers/XContentTypeOptions"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Validation"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "403":
+          $ref: "#/components/responses/Prohibido"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "409":
+          $ref: "#/components/responses/Conflicto"
+        "413":
+          $ref: "#/components/responses/DemasiadoGrande"
+        "415":
+          $ref: "#/components/responses/TipoNoAdmitido"
+        "422":
+          $ref: "#/components/responses/NoProcesable"
+        "429":
+          $ref: "#/components/responses/DemasiadasPeticiones"
+        "500":
+          $ref: "#/components/responses/ErrorInterno"
+        "503":
+          $ref: "#/components/responses/MotorNoDisponible"
+
+webhooks:
+  validation.completed:
+    post:
+      operationId: notificarValidacionTerminada
+      tags: [webhooks]
+      summary: Validación terminada
+      description: |
+        El servidor envía este evento a `webhook_url` cuando la validación llega a un estado
+        terminal. El cuerpo no contiene datos del documento: el cliente consulta el detalle con
+        `GET /v1/validations/{id}`. Cada intento lleva `X-Lector-Signature: t=<unix>,v1=<hex>`, el
+        HMAC-SHA256 en hexadecimal minúscula de `<unix>.<cuerpo>` con el secreto de webhooks de la
+        clave. Solo una respuesta 2xx en 10 s cuenta como entrega; las redirecciones no se siguen.
+        Si falla, se reintenta a los 60, 300, 1800, 7200 y 21 600 s del primer intento con el mismo
+        cuerpo y `X-Lector-Event-Id`.
+      security: []
+      parameters:
+        - name: X-Lector-Event-Id
+          in: header
+          required: true
+          description: Identificador del evento; igual en todos los reintentos.
+          schema:
+            type: string
+            pattern: "^evt_[0-9a-f]{32}$"
+        - name: X-Lector-Attempt
+          in: header
+          required: true
+          description: Número de intento, de 1 a 6.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 6
+        - name: X-Lector-Signature
+          in: header
+          required: true
+          description: Marca de tiempo unix del intento y firma HMAC-SHA256 del cuerpo.
+          schema:
+            type: string
+            pattern: "^t=[0-9]+,v1=[0-9a-f]{64}$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationCompletedEvent"
+            examples:
+              exitosa:
+                summary: Validación terminada en `success`
+                value:
+                  id: evt_00000000000000000000000000000001
+                  type: validation.completed
+                  created_at: "2026-10-06T15:20:00Z"
+                  sandbox: true
+                  data:
+                    validation_id: val_0123456789abcdef0123456789abcdef
+                    status: success
+                    declined_reason: null
+      responses:
+        "2XX":
+          description: El receptor confirmó la entrega.
+
+components:
+  securitySchemes:
+    claveApi:
+      type: http
+      scheme: bearer
+      description: |
+        Clave de API en `Authorization: Bearer <clave>`. El prefijo `sk_test_` selecciona el modo
+        sandbox y `sk_live_` el modo live. Cada validación solo es visible para la clave que la creó.
+    tokenSubida:
+      type: apiKey
+      in: query
+      name: token
+      description: |
+        Token firmado de `upload.url`. Autoriza solo la subida a esa validación, vence en 900 s y
+        sirve una sola vez.
+
+  parameters:
+    IdValidacion:
+      name: id
+      in: path
+      required: true
+      description: Identificador de la validación.
+      schema:
+        type: string
+        pattern: "^val_[0-9a-f]{32}$"
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Clave de idempotencia de 1 a 255 caracteres ASCII imprimibles, con alcance por clave de API
+        y vigencia de 86 400 s. Repetir clave y cuerpo devuelve la misma respuesta con
+        `Idempotent-Replayed: true`; repetir la clave con otro cuerpo responde 422.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+        pattern: "^[\\x20-\\x7E]+$"
+
+  headers:
+    XRequestId:
+      description: Identificador de la petición (UUID versión 4); coincide con `request_id` en los errores.
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CacheControl:
+      description: Las respuestas nunca se guardan en cachés.
+      required: true
+      schema:
+        type: string
+        const: no-store
+    XContentTypeOptions:
+      description: Impide que el navegador adivine el tipo de contenido.
+      required: true
+      schema:
+        type: string
+        const: nosniff
+    ReferrerPolicy:
+      description: Impide que la URL con el token de subida viaje en `Referer`.
+      required: true
+      schema:
+        type: string
+        const: no-referrer
+    Location:
+      description: Ruta de la validación creada, `/v1/validations/{id}`.
+      required: true
+      schema:
+        type: string
+        pattern: "^/v1/validations/val_[0-9a-f]{32}$"
+    IdempotentReplayed:
+      description: Presente con `true` cuando la respuesta es la repetición de una creación anterior.
+      required: false
+      schema:
+        type: string
+        const: "true"
+    RetryAfter:
+      description: Segundos que el cliente debe esperar antes de reintentar.
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    WwwAuthenticate:
+      description: Esquema de autenticación requerido.
+      required: true
+      schema:
+        type: string
+        const: Bearer
+
+  responses:
+    SolicitudInvalida:
+      description: Cabecera inválida (por ejemplo, `invalid-idempotency-key`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NoAutorizado:
+      description: Falta la clave de API o no está configurada (`unauthorized`).
+      headers:
+        WWW-Authenticate:
+          $ref: "#/components/headers/WwwAuthenticate"
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Prohibido:
+      description: Token de subida inválido o vencido (`upload-token-invalid`, `upload-token-expired`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NoEncontrado:
+      description: |
+        La validación no existe, está mal identificada, fue suprimida, venció o es de otro cliente
+        (`not-found`). El cuerpo es el mismo en todos los casos salvo `request_id`.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            noEncontrada:
+              summary: Validación inexistente
+              value:
+                type: https://lector-cedula.example/problemas/not-found
+                title: Recurso no encontrado
+                status: 404
+                detail: El recurso solicitado no existe o no está disponible para esta clave.
+                code: not-found
+                request_id: 3f2c9a7e-5b1d-4c8e-9f0a-2b6d4e8c1a3f
+    Conflicto:
+      description: |
+        La validación no está en `pending` (`validation-not-pending`) o hay una creación en curso
+        con la misma clave de idempotencia (`idempotency-key-in-progress`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    DemasiadoGrande:
+      description: El cuerpo o una imagen supera el límite (`request-too-large`, `image-too-large`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    TipoNoAdmitido:
+      description: La imagen no es JPEG ni PNG o su firma no coincide con el tipo declarado (`unsupported-image-type`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NoProcesable:
+      description: |
+        El cuerpo no cumple el contrato (`invalid-request`) o reutiliza una clave de idempotencia con
+        otro cuerpo (`idempotency-key-reused`). `errors` señala cada campo con un JSON Pointer.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            camposFaltantes:
+              summary: Cuerpo vacío
+              value:
+                type: https://lector-cedula.example/problemas/invalid-request
+                title: Solicitud inválida
+                status: 422
+                detail: El cuerpo no cumple el contrato. Revise `errors`.
+                code: invalid-request
+                request_id: 3f2c9a7e-5b1d-4c8e-9f0a-2b6d4e8c1a3f
+                errors:
+                  - pointer: /document_type
+                    code: required
+                  - pointer: /autorizacion
+                    code: required
+    DemasiadasPeticiones:
+      description: Se superó el límite de peticiones por minuto de la clave (`rate-limited`).
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ErrorInterno:
+      description: Error interno (`internal-error`). Nunca incluye trazas ni valores del cliente.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    MotorNoDisponible:
+      description: El modo live no tiene motor de procesamiento configurado (`engine-unavailable`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/XRequestId"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+        X-Content-Type-Options:
+          $ref: "#/components/headers/XContentTypeOptions"
+        Referrer-Policy:
+          $ref: "#/components/headers/ReferrerPolicy"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    Salud:
+      type: object
+      description: Estado del proceso.
+      required: [estado]
+      additionalProperties: false
+      properties:
+        estado:
+          type: string
+          const: ok
+
+    DocumentType:
+      type: string
+      description: Tipo de documento. `co_national-id-2000` es la cédula amarilla con PDF417; `co_national-id-2020`, la digital con MRZ.
+      enum:
+        - co_national-id-2000
+        - co_national-id-2020
+
+    SandboxScenario:
+      type: string
+      description: |
+        Solo con claves `sk_test_`: fija el resultado de la subida e ignora el contenido de las
+        imágenes válidas. Sin el campo, el escenario es `success`. `failure_document_expired` exige
+        `co_national-id-2020`; `review_face_mismatch` exige `face_match` en `true`.
+      enum:
+        - success
+        - failure_image_quality
+        - failure_document_unreadable
+        - review_data_consistency
+        - review_document_liveness
+        - failure_document_expired
+        - review_face_mismatch
+
+    ValidationStatus:
+      type: string
+      description: |
+        `pending` hasta la subida; después, un estado terminal que no cambia: `success`, `failure`
+        o `review` (revisión humana).
+      enum: [pending, success, failure, review]
+
+    DeclinedReason:
+      description: Motivo de `failure` o `review`; `null` en `pending` y `success`.
+      anyOf:
+        - type: string
+          enum:
+            - image_quality_insufficient
+            - document_not_detected
+            - document_unreadable
+            - unsupported_document_type
+            - data_validation_failed
+            - document_expired
+            - data_inconsistent
+            - document_liveness_suspected
+            - face_mismatch
+            - legacy_document
+            - upload_expired
+            - processing_error
+        - type: "null"
+
+    CheckStatus:
+      type: string
+      description: Resultado de una categoría de comprobaciones.
+      enum: [passed, failed, warning, not_performed]
+
+    ImageQualityReason:
+      type: string
+      description: Razones de la categoría `image_quality`.
+      enum: [blur_detected, glare_detected, document_cropped, low_resolution, overexposed, underexposed]
+
+    DataValidationReason:
+      type: string
+      description: Razones de la categoría `data_validation`.
+      enum:
+        - barcode_unreadable
+        - mrz_check_digit_invalid
+        - document_number_invalid
+        - date_invalid
+        - document_expired
+        - divipol_unknown
+        - legacy_document_type
+
+    DataConsistencyReason:
+      type: string
+      description: Razones de la categoría `data_consistency`.
+      enum: [document_number_mismatch, name_mismatch, date_of_birth_mismatch, sex_mismatch]
+
+    DocumentLivenessReason:
+      type: string
+      description: Razones de la categoría `document_liveness`.
+      enum: [screen_recapture_suspected, photocopy_suspected, print_suspected]
+
+    FaceMatchReason:
+      type: string
+      description: Razones de la categoría `face_match`.
+      enum: [face_not_detected, face_mismatch, liveness_failed]
+
+    ImageQualityCheck:
+      type: object
+      description: Calidad de las imágenes recibidas.
+      required: [category, status, reasons]
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          const: image_quality
+        status:
+          $ref: "#/components/schemas/CheckStatus"
+        reasons:
+          type: array
+          description: Vacío cuando `status` es `passed` o `not_performed`.
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ImageQualityReason"
+
+    DataValidationCheck:
+      type: object
+      description: Lectura y validez de los datos del documento.
+      required: [category, status, reasons]
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          const: data_validation
+        status:
+          $ref: "#/components/schemas/CheckStatus"
+        reasons:
+          type: array
+          description: Vacío cuando `status` es `passed` o `not_performed`.
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/DataValidationReason"
+
+    DataConsistencyCheck:
+      type: object
+      description: Coherencia entre las fuentes de datos del documento.
+      required: [category, status, reasons]
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          const: data_consistency
+        status:
+          $ref: "#/components/schemas/CheckStatus"
+        reasons:
+          type: array
+          description: Vacío cuando `status` es `passed` o `not_performed`.
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/DataConsistencyReason"
+
+    DocumentLivenessCheck:
+      type: object
+      description: Indicios de que el documento no es físico (pantalla, fotocopia, impresión).
+      required: [category, status, reasons]
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          const: document_liveness
+        status:
+          $ref: "#/components/schemas/CheckStatus"
+        reasons:
+          type: array
+          description: Vacío cuando `status` es `passed` o `not_performed`.
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/DocumentLivenessReason"
+
+    FaceMatchCheck:
+      type: object
+      description: Comparación facial; solo presente si la validación pidió `face_match`.
+      required: [category, status, reasons]
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          const: face_match
+        status:
+          $ref: "#/components/schemas/CheckStatus"
+        reasons:
+          type: array
+          description: Vacío cuando `status` es `passed` o `not_performed`.
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/FaceMatchReason"
+
+    Check:
+      description: |
+        Resultado de una categoría. Fuera de `pending`, `checks` trae una por categoría en el orden
+        `image_quality`, `data_validation`, `data_consistency`, `document_liveness` y, solo con
+        comparación facial, `face_match`.
+      oneOf:
+        - $ref: "#/components/schemas/ImageQualityCheck"
+        - $ref: "#/components/schemas/DataValidationCheck"
+        - $ref: "#/components/schemas/DataConsistencyCheck"
+        - $ref: "#/components/schemas/DocumentLivenessCheck"
+        - $ref: "#/components/schemas/FaceMatchCheck"
+
+    Autorizacion:
+      type: object
+      description: |
+        Autorización expresa del titular (Ley 1581 de 2012; `docs/legal/autorizacion-tratamiento.md`).
+        `datos` debe ser exactamente `true`. Con `face_match` en `true`, `sensibles` también.
+        `otorgada_en` no puede estar más de 300 s en el futuro.
+      required: [datos, version_texto, otorgada_en]
+      additionalProperties: false
+      properties:
+        datos:
+          type: boolean
+          const: true
+          description: Autorización del tratamiento de los datos del documento.
+        sensibles:
+          type: boolean
+          description: Autorización del tratamiento de datos sensibles (biometría facial). Por defecto `false`.
+        version_texto:
+          type: string
+          description: Versión del texto de autorización que aceptó el titular.
+          pattern: "^[A-Za-z0-9._-]{1,64}$"
+        otorgada_en:
+          type: string
+          format: date-time
+          description: Fecha y hora RFC 3339 en que el titular otorgó la autorización.
+
+    AutorizacionRegistrada:
+      type: object
+      description: Registro de la autorización otorgada, con la hora del servidor en `registrada_en`.
+      required: [datos, sensibles, version_texto, otorgada_en, registrada_en]
+      additionalProperties: false
+      properties:
+        datos:
+          type: boolean
+          const: true
+        sensibles:
+          type: boolean
+        version_texto:
+          type: string
+          pattern: "^[A-Za-z0-9._-]{1,64}$"
+        otorgada_en:
+          type: string
+          format: date-time
+        registrada_en:
+          type: string
+          format: date-time
+
+    CrearValidacion:
+      type: object
+      description: Cuerpo de la creación (como máximo 16 384 bytes; no admite campos no declarados).
+      required: [document_type, autorizacion]
+      additionalProperties: false
+      properties:
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
+        autorizacion:
+          $ref: "#/components/schemas/Autorizacion"
+        face_match:
+          type: boolean
+          default: false
+          description: Pide comparación facial con selfie. Exige `autorizacion.sensibles` en `true`.
+        webhook_url:
+          type: string
+          format: uri
+          maxLength: 2048
+          pattern: "^https://"
+          description: |
+            URL `https` que recibe el evento `validation.completed`. Sin credenciales y con un host
+            que no sea una IP literal; si al entregar resuelve a una red interna, el envío se bloquea.
+        sandbox_scenario:
+          $ref: "#/components/schemas/SandboxScenario"
+
+    Upload:
+      type: object
+      description: URL firmada de un solo uso para subir las imágenes.
+      required: [url, expires_at]
+      additionalProperties: false
+      properties:
+        url:
+          type: string
+          format: uri
+          description: "`POST` multipart a esta URL; el token viaja en `?token=`."
+        expires_at:
+          type: string
+          format: date-time
+          description: Vencimiento del token, 900 s después de la creación.
+
+    DivipolPlace:
+      type: object
+      description: Lugar codificado con DIVIPOL (departamento y municipio).
+      required: [divipol_department, divipol_municipality]
+      additionalProperties: false
+      properties:
+        divipol_department:
+          type: string
+          pattern: "^[0-9]{2}$"
+        divipol_municipality:
+          type: string
+          pattern: "^[0-9]{3}$"
+
+    Document:
+      type: object
+      description: |
+        Datos normalizados del documento. Las fechas son `YYYY-MM-DD` y los nombres conservan la Ñ
+        y los espacios internos.
+      required:
+        - type
+        - document_number
+        - first_surname
+        - second_surname
+        - first_name
+        - second_name
+        - sex
+        - date_of_birth
+        - place_of_birth
+        - blood_type
+        - date_of_issue
+        - place_of_issue
+        - date_of_expiry
+        - sources
+        - warnings
+      additionalProperties: false
+      properties:
+        type:
+          $ref: "#/components/schemas/DocumentType"
+        document_number:
+          type: string
+          pattern: "^[0-9]{6,11}$"
+        first_surname:
+          type: string
+          minLength: 1
+          maxLength: 64
+        second_surname:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 64
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        second_name:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 64
+        sex:
+          type: string
+          enum: [M, F]
+        date_of_birth:
+          type: [string, "null"]
+          format: date
+        place_of_birth:
+          oneOf:
+            - $ref: "#/components/schemas/DivipolPlace"
+            - type: "null"
+        blood_type:
+          type: [string, "null"]
+          enum: [O+, O-, A+, A-, B+, B-, AB+, AB-, null]
+        date_of_issue:
+          type: [string, "null"]
+          format: date
+        place_of_issue:
+          oneOf:
+            - $ref: "#/components/schemas/DivipolPlace"
+            - type: "null"
+        date_of_expiry:
+          type: [string, "null"]
+          format: date
+        sources:
+          type: array
+          description: Fuentes de las que salieron los datos, en orden de preferencia.
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum: [pdf417, mrz, ocr]
+        warnings:
+          type: array
+          description: |
+            IDs de las hipótesis del formato no confirmadas que se aplicaron al extraer los datos
+            (principio VI). Cada ID existe en `docs/decisiones/hipotesis-formato.md`.
+          uniqueItems: true
+          items:
+            type: string
+            pattern: "^[HMN][0-9]{2}$"
+
+    Validation:
+      type: object
+      description: |
+        Validación de un documento. En `pending`, `checks` es `[]`, `document` es `null` y
+        `expires_at` es `null`. En un estado terminal, `upload` es `null` y `expires_at` informa
+        cuándo se elimina el resultado.
+      required:
+        - id
+        - object
+        - sandbox
+        - document_type
+        - face_match
+        - status
+        - declined_reason
+        - checks
+        - document
+        - autorizacion
+        - upload
+        - webhook_url
+        - created_at
+        - updated_at
+        - completed_at
+        - expires_at
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: "^val_[0-9a-f]{32}$"
+        object:
+          type: string
+          const: validation
+        sandbox:
+          type: boolean
+        document_type:
+          $ref: "#/components/schemas/DocumentType"
+        face_match:
+          type: boolean
+        status:
+          $ref: "#/components/schemas/ValidationStatus"
+        declined_reason:
+          $ref: "#/components/schemas/DeclinedReason"
+        checks:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/Check"
+        document:
+          oneOf:
+            - $ref: "#/components/schemas/Document"
+            - type: "null"
+        autorizacion:
+          $ref: "#/components/schemas/AutorizacionRegistrada"
+        upload:
+          oneOf:
+            - $ref: "#/components/schemas/Upload"
+            - type: "null"
+        webhook_url:
+          type: [string, "null"]
+          format: uri
+          maxLength: 2048
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: [string, "null"]
+          format: date-time
+        expires_at:
+          type: [string, "null"]
+          format: date-time
+
+    ImagenesValidacion:
+      type: object
+      description: Partes de la subida; cada una JPEG o PNG de 1 a 8 388 608 bytes.
+      required: [front, back]
+      additionalProperties: false
+      properties:
+        front:
+          type: string
+          format: binary
+          description: Anverso del documento.
+        back:
+          type: string
+          format: binary
+          description: Reverso del documento.
+        selfie:
+          type: string
+          format: binary
+          description: Solo si la validación pidió `face_match`; prohibida en otro caso.
+
+    ProblemError:
+      type: object
+      description: Error de un campo, señalado con un JSON Pointer (RFC 6901) sobre el cuerpo.
+      required: [pointer, code]
+      additionalProperties: false
+      properties:
+        pointer:
+          type: string
+          pattern: "^(/[^/]*)*$"
+        code:
+          type: string
+          pattern: "^[a-z]+(_[a-z]+)*$"
+
+    Problem:
+      type: object
+      description: |
+        Error RFC 9457. `code` es el último segmento de `type`. Nunca reproduce valores enviados por
+        el cliente ni trazas internas.
+      required: [type, title, status, detail, code, request_id]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        code:
+          type: string
+          pattern: "^[a-z]+(-[a-z0-9]+)*$"
+        request_id:
+          type: string
+          format: uuid
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemError"
+
+    ValidationCompletedEventData:
+      type: object
+      description: Veredicto de la validación; sin datos del documento.
+      required: [validation_id, status, declined_reason]
+      additionalProperties: false
+      properties:
+        validation_id:
+          type: string
+          pattern: "^val_[0-9a-f]{32}$"
+        status:
+          type: string
+          enum: [success, failure, review]
+        declined_reason:
+          $ref: "#/components/schemas/DeclinedReason"
+
+    ValidationCompletedEvent:
+      type: object
+      description: Evento `validation.completed`, serializado en JSON compacto.
+      required: [id, type, created_at, sandbox, data]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: "^evt_[0-9a-f]{32}$"
+        type:
+          type: string
+          const: validation.completed
+        created_at:
+          type: string
+          format: date-time
+        sandbox:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ValidationCompletedEventData"
