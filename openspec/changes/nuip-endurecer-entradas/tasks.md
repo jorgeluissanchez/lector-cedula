@@ -49,7 +49,7 @@ Pruebas del validador en `packages/parsers/test/nuip-formato.test.ts`; del corre
 
 ## 5. Separadores admitidos
 
-- [ ] 5.1 Escribir las pruebas de los escenarios nuevos o modificados de NF-03, NF-05 y NF-06: variantes de guion, CR/LF/tab, espacio estrecho U+202F, espacios Unicode no admitidos, otros espacios, guiones fuera de la lista, surrogate aislado, `"-"`, `"– −"`, `"　"` y `"﻿"`. Ampliar el generador `capturaPlausible` con U+2010, U+2011, U+2013, U+2212, U+202F y `\r`. Verlas fallar. Luego sustituir `\s` por los conjuntos explícitos H y W de la decisión 2 de design.md, tanto en la comprobación de caracteres como en la eliminación de separadores. Cubre NF-03, NF-05, NF-06. Tipos de prueba:
+- [x] 5.1 Escribir las pruebas de los escenarios nuevos o modificados de NF-03, NF-05 y NF-06: variantes de guion, CR/LF/tab, espacio estrecho U+202F, espacios Unicode no admitidos, otros espacios, guiones fuera de la lista, surrogate aislado, `"-"`, `"– −"`, `"　"` y `"﻿"`. Ampliar el generador `capturaPlausible` con U+2010, U+2011, U+2013, U+2212, U+202F y `\r`. Verlas fallar. Luego sustituir `\s` por los conjuntos explícitos H y W de la decisión 2 de design.md, tanto en la comprobación de caracteres como en la eliminación de separadores. Cubre NF-03, NF-05, NF-06. Tipos de prueba:
   - **unitaria**: los escenarios citados.
   - **propiedad P1**: toda cadena de hasta 64 caracteres formada solo por dígitos ASCII y separadores de NF-03 nunca da `caracteres-invalidos`.
   - **fuzz de entrada P2**: insertar en cualquier posición de una cadena de P1 un carácter de `fc.string({ unit: "binary", minLength: 1, maxLength: 1 })` que no sea dígito ASCII ni separador de NF-03, sin superar 64 caracteres, da exactamente `{ valido: false, motivo: "caracteres-invalidos" }`.

@@ -32,7 +32,7 @@ function cumpleFormaNf01(r: ResultadoFormatoNuip): boolean {
   return JSON.stringify(claves) === JSON.stringify(["motivo", "valido"]) && MOTIVOS.includes(r.motivo);
 }
 
-const NBSP = " ";
+const NBSP = "\u00A0";
 
 const NO_TEXTO = { valido: false, motivo: "entrada-no-texto" };
 const TIPO_INVALIDO = { valido: false, motivo: "tipo-documento-invalido" };
@@ -40,10 +40,32 @@ const DEMASIADO_LARGA = { valido: false, motivo: "entrada-demasiado-larga" };
 const NUIP_VALIDO = { valido: true, numero: "9999123456", tipoProbable: "nuip", digitos: 10, warnings: [] };
 const TI_ANTIGUA = { valido: true, numero: "99991234567", tipoProbable: "ti-antigua", digitos: 11, warnings: ["N01"] };
 
+/** Guiones admitidos por NF-03 (H en design.md, decisión 2). */
+const GUIONES_ADMITIDOS = ["-", "\u2010", "\u2011", "\u2013", "\u2212"];
+/** Espacio en blanco admitido por NF-03 (W en design.md, decisión 2). */
+const BLANCOS_ADMITIDOS = [" ", "\t", "\n", "\r", "\u00A0", "\u202F"];
+/** Todos los separadores admitidos por NF-03 (S = punto, H y W). */
+const SEPARADORES_ADMITIDOS = [".", ...GUIONES_ADMITIDOS, ...BLANCOS_ADMITIDOS];
+const DIGITOS_ASCII = "0123456789".split("");
+
 /** Cadenas formadas solo por dígitos y separadores admitidos: producen resultados válidos con frecuencia. */
 const capturaPlausible = fc
-  .array(fc.constantFrom(..."00123456789999.- \t\n".split(""), NBSP), { maxLength: 16 })
+  .array(
+    fc.constantFrom(..."00123456789999.- \t\n".split(""), NBSP, "\u2010", "\u2011", "\u2013", "\u2212", "\u202F", "\r"),
+    { maxLength: 16 },
+  )
   .map((partes) => partes.join(""));
+
+/** Cadenas de dígitos ASCII y separadores de NF-03 de hasta `maxLength` caracteres (propiedad P1). */
+const digitosYSeparadores = (maxLength: number) =>
+  fc
+    .array(fc.constantFrom(...DIGITOS_ASCII, ...SEPARADORES_ADMITIDOS), { maxLength })
+    .map((partes) => partes.join(""));
+
+/** Un carácter (un code point, o un surrogate aislado) que no es dígito ASCII ni separador de NF-03. */
+const caracterNoAdmitido = fc
+  .string({ unit: "binary", minLength: 1, maxLength: 1 })
+  .filter((c) => !DIGITOS_ASCII.includes(c) && !SEPARADORES_ADMITIDOS.includes(c));
 
 describe("validarFormatoNuip", () => {
   describe("NF-01 Forma del resultado", () => {
@@ -161,11 +183,47 @@ describe("validarFormatoNuip", () => {
     });
 
     it("Espacio en blanco alrededor de la captura", () => {
-      expect(validarFormatoNuip("  9999123456\n")).toMatchObject({ valido: true, numero: "9999123456" });
+      for (const entrada of ["  9999123456\n", "9999123456\r\n", "\t9999\t123456"]) {
+        expect(validarFormatoNuip(entrada)).toMatchObject({ valido: true, numero: "9999123456" });
+      }
     });
 
     it("Agrupación irregular no se valida", () => {
       expect(validarFormatoNuip("99.99-12 3456")).toMatchObject({ valido: true, numero: "9999123456" });
+    });
+
+    it("Espacio estrecho sin corte de PDF", () => {
+      expect(validarFormatoNuip("9\u202F999\u202F123\u202F456")).toStrictEqual(NUIP_VALIDO);
+    });
+
+    it("Variantes de guion de OCR y PDF", () => {
+      for (const entrada of [
+        "9999\u2010123\u2010456",
+        "9999\u2011123\u2011456",
+        "9999\u2013123\u2013456",
+        "9999\u2212123\u2212456",
+      ]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NUIP_VALIDO);
+      }
+    });
+
+    it("Cada separador admitido se elimina en cualquier posición (cédula y tarjeta de identidad)", () => {
+      for (const sep of SEPARADORES_ADMITIDOS) {
+        const entrada = `${sep}9999${sep}123456${sep}${sep}`;
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NUIP_VALIDO);
+        expect(validarFormatoNuip(entrada, { tipoDocumento: "ti" })).toStrictEqual(NUIP_VALIDO);
+      }
+    });
+
+    it("Propiedad P1: dígitos ASCII y separadores de NF-03 nunca dan caracteres-invalidos", () => {
+      fc.assert(
+        fc.property(digitosYSeparadores(64), fc.constantFrom(undefined, { tipoDocumento: "ti" }), (s, opciones) => {
+          const r = validarFormatoNuip(s, opciones);
+          expect(cumpleFormaNf01(r)).toBe(true);
+          expect(r).not.toStrictEqual({ valido: false, motivo: "caracteres-invalidos" });
+        }),
+        { numRuns: 1000 },
+      );
     });
   });
 
@@ -213,11 +271,57 @@ describe("validarFormatoNuip", () => {
     });
 
     it("Dígitos no ASCII", () => {
-      expect(validarFormatoNuip("９９９９１２３４５６")).toStrictEqual(invalido);
+      expect(validarFormatoNuip("\uFF19\uFF19\uFF19\uFF19\uFF11\uFF12\uFF13\uFF14\uFF15\uFF16")).toStrictEqual(invalido);
     });
 
     it("Prioridad sobre la longitud", () => {
       expect(validarFormatoNuip("9A")).toStrictEqual(invalido);
+    });
+
+    it("Espacios Unicode no admitidos", () => {
+      for (const entrada of [
+        "\uFEFF9999123456",
+        "9999123456\u2028",
+        "9999\u2029123456",
+        "9999\u3000123456",
+        "9\u2007999\u2007123\u2007456",
+      ]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(invalido);
+      }
+    });
+
+    it("Otros espacios fuera de la lista", () => {
+      for (const entrada of ["9999\u000B123456", "9999\u000C123456", "9999\u0085123456", "9999\u2009123456"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(invalido);
+      }
+    });
+
+    it("Guiones fuera de la lista", () => {
+      for (const entrada of ["9999\u2012123456", "9999\u2014123456", "9999\uFE63123456", "9999\uFF0D123456"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(invalido);
+      }
+    });
+
+    it("Surrogate aislado", () => {
+      expect(validarFormatoNuip("9999123456\uD800")).toStrictEqual(invalido);
+    });
+
+    it("Propiedad P2 (fuzz): insertar un carácter no admitido da caracteres-invalidos", () => {
+      fc.assert(
+        fc.property(
+          digitosYSeparadores(62),
+          caracterNoAdmitido,
+          fc.nat(),
+          fc.constantFrom(undefined, { tipoDocumento: "ti" }),
+          (base, c, n, opciones) => {
+            const pos = n % (base.length + 1);
+            const entrada = base.slice(0, pos) + c + base.slice(pos);
+            expect(entrada.length).toBeLessThanOrEqual(64);
+            expect(validarFormatoNuip(entrada, opciones)).toStrictEqual(invalido);
+          },
+        ),
+        { numRuns: 1000 },
+      );
     });
   });
 
@@ -229,6 +333,18 @@ describe("validarFormatoNuip", () => {
     it("Solo separadores", () => {
       for (const entrada of ["   ", " .-. \t"]) {
         expect(validarFormatoNuip(entrada)).toStrictEqual({ valido: false, motivo: "vacio" });
+      }
+    });
+
+    it("Guion solo", () => {
+      for (const entrada of ["-", "\u2013 \u2212"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual({ valido: false, motivo: "vacio" });
+      }
+    });
+
+    it("Espacio no admitido no cuenta como vacío", () => {
+      for (const entrada of ["\u3000", "\uFEFF"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual({ valido: false, motivo: "caracteres-invalidos" });
       }
     });
   });
@@ -449,7 +565,7 @@ describe("validarFormatoNuip", () => {
     });
 
     it("Propiedad: cc y ti con cualquier mayúscula y espacio en blanco alrededor equivalen al tipo canónico", () => {
-      const blanco = fc.string({ unit: fc.constantFrom(" ", "\t", "\n", "\r", NBSP, "　", "﻿") });
+      const blanco = fc.string({ unit: fc.constantFrom(" ", "\t", "\n", "\r", NBSP, "\u3000", "\uFEFF") });
       const variante = (canonico: string) =>
         fc
           .tuple(fc.array(fc.boolean(), { minLength: 2, maxLength: 2 }), blanco, blanco)

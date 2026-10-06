@@ -56,4 +56,5 @@ Lo alimentan los revisores. Cada entrada: qué pasó y cómo evitarlo.
 - Repos antiguos cortaban el RH `AB+` a `B+`, detectaban el sexo con `contains("M")`, borraban el `-` del RH, rompían con la Ñ e invertían los apellidos. Cada caso necesita una prueba (skill `formato-cedula`).
 - Al escribir archivos con heredoc de bash se perdieron barras invertidas en expresiones regulares. Usa la herramienta de escritura de archivos para código con `\`.
 - El hook `pre-bash` tomó `2>&1` y el texto de heredocs como nombres de paquete. Ya se ignoran redirecciones y cuerpos de heredoc; si vuelve a bloquear sin motivo, añade el caso a `tools/test/hooks.test.mjs` antes de corregir.
+- Edit y Write convirtieron escapes `\uXXXX` en caracteres literales invisibles; ESLint (`no-irregular-whitespace`) lo detectó. Tras escribir código con escapes Unicode, comprueba los bytes; si se perdieron, regenéralos con un script que emita la barra con `String.fromCharCode(92)`.
 - Los agentes definidos en `.claude/agents/` solo se registran al reiniciar la sesión; hasta entonces, usa un agente de propósito general que lea el archivo del rol.

@@ -38,11 +38,20 @@ export type ResultadoFormatoNuip =
       motivo: MotivoFormatoInvalido;
     };
 
-/** Dígitos ASCII y separadores admitidos: punto, guion y la clase `\s` (NF-03, NF-05). */
-const SOLO_ADMITIDOS = /^[0-9.\-\s]*$/;
+/*
+ * Separadores admitidos S (NF-03; design.md de nuip-endurecer-entradas, decisión 2), siempre como
+ * clases explícitas y nunca con `\s`, que admitiría BOM, U+2028, U+3000 y otros (NF-05):
+ * - punto U+002E;
+ * - H (guiones): U+002D, U+2010, U+2011, U+2013, U+2212;
+ * - W (espacio admitido): U+0020, U+0009, U+000A, U+000D, U+00A0, U+202F.
+ * Sin la bandera `u`: un surrogate aislado o un carácter astral no pertenece a la clase (NF-05).
+ */
+/** Dígitos ASCII y separadores S, y nada más (NF-03, NF-05). */
+const SOLO_ADMITIDOS = /^[0-9.\-\u2010\u2011\u2013\u2212 \t\n\r\u00A0\u202F]*$/;
 /** Guion final seguido de exactamente un dígito: posible dígito de verificación estilo NIT (NF-08). */
 const PATRON_NIT = /-[0-9]\s*$/;
-const SEPARADORES = /[.\-\s]/g;
+/** Separadores S que se eliminan en cualquier posición (NF-03, NF-06). */
+const SEPARADORES = /[.\-\u2010\u2011\u2013\u2212 \t\n\r\u00A0\u202F]/g;
 const CEROS_IZQUIERDA = /^0+/;
 
 /** Longitud máxima de la entrada original, en unidades de código UTF-16 (NF-12; design.md, decisión 5). */
