@@ -34,3 +34,15 @@ Estados: **pendiente**, **confirmada**, **refutada**. La evidencia de confirmaci
 | ID | Hipótesis | Fuente | Estado | Evidencia |
 |---|---|---|---|---|
 | N01 | El número de la tarjeta de identidad puede tener 11 dígitos además de los 10 del NUIP; el validador los clasifica como `ti-antigua` (relacionada con H10 y M02) | fgardila (lee 11 en la MRZ), conocimiento general | pendiente | Sin payloads ni especímenes públicos; lo aplica el cambio OpenSpec `validador-formato-nuip` (NF-09) |
+
+## DIVIPOL (códigos de lugar de la Registraduría)
+
+Las aplica el cambio OpenSpec `divipol-registraduria` (`buscarDivipol`, DV-04 a DV-07). Fuente de la tabla y licencias: `docs/decisiones/2026-10-06-fuente-divipol.md`.
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| D01 | La tabla de Eitol (transcrita del PDF de pre-DIVIPOL de agosto de 2011) no contiene municipios ni consulados creados después; un código con departamento conocido y municipio ausente puede ser posterior a la fuente | Comparación con `DIVIPOL.TXT` 2026 (copia sin licencia, solo contraste) | pendiente | `17082` NUEVO BELEN DE BAJIRA y 10 consulados están en el TXT 2026 y no en Eitol |
+| D02 | `15001` (CUNDINAMARCA / BOGOTA, D.C.) es un código histórico de Bogotá, equivalente a `16001`, que puede aparecer en cédulas antiguas | Eitol (ambas filas) | pendiente | `15001` no está en `DIVIPOL.TXT` 2026 |
+| D03 | La numeración de consulados (departamento 88) cambió entre versiones de DIVIPOL; el país de un código 88 puede no corresponder al de una cédula reciente | Comparación Eitol frente a `DIVIPOL.TXT` 2026 | pendiente | IRLANDA `88480` frente a `88470`; HUNGRIA `88450` frente a `88445` |
+| D04 | El código `00000` (departamento 00, municipio 000) en el bloque demográfico significa lugar no registrado | Bloque público `<valor real omitido por privacidad>` (fgardila) | pendiente | Un solo ejemplo público |
+| D05 | El opcional de la línea 1 de la MRZ (M03), si es un lugar, usa códigos DIVIPOL y no DIVIPOLA | Ninguna fuente lo afirma | pendiente | El ejemplo sintético de Eitol `05001` es CARTAGENA en DIVIPOL y MEDELLÍN en DIVIPOLA; la emite el parser MRZ, no la búsqueda |
