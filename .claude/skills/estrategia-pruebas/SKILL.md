@@ -93,6 +93,11 @@ Sobre imágenes sintéticas: rotación ±3°, perspectiva leve, blur sigma <= 1,
 - Esperas por tiempo fijo.
 - Un test que nunca se vio fallar.
 - Bajar un umbral o el baseline para que pase.
+- **Propiedades vacías**: un generador que casi nunca produce el caso que la propiedad comprueba (por ejemplo, una idempotencia de NUIP cuyo generador nunca da 10 dígitos). Toda propiedad con `return` temprano o `filter` MUST medir la proporción de casos útiles con `fc.statistics` o un contador y exigir más del 50 %. Preferir generadores válidos por construcción.
+- **Oráculos que copian la implementación**: si la prueba recalcula el resultado con la misma expresión que el código (`trim().toLowerCase()`), no atrapa nada. Usa tablas literales de la spec o un oráculo independiente.
+- **Código de harness sin mutar**: Stryker solo muta lo que está en `mutate`. Los corredores de evals y las herramientas también necesitan pruebas y mutación.
+
+Lección del 2026-10-06: con 100 % de cobertura y 100 % de mutantes, el análisis de calidad de pruebas encontró tres problemas críticos (propiedades vacías, corredor de evals sin prueba, hook evadible). Cobertura y mutación no bastan; por eso `pr-test-analyzer` es paso obligatorio.
 
 ## 5. Skills complementarias
 

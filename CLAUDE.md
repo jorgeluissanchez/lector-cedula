@@ -29,7 +29,7 @@ Lector autoalojado de la cédula colombiana (PDF417 amarilla, MRZ digital, OCR),
 
 0. Toda spec y toda tarea declaran sus pruebas con la skill `estrategia-pruebas` (tipo, herramienta, comando, umbral). E2E con los agentes `playwright-test-planner`, `-generator` y `-healer`.
 1. Nada se implementa sin spec: `/speckit-specify` para capacidades nuevas, `/opsx:propose` para cambios.
-2. El orquestador delega cada tarea a un subagente `implementador` y la cierra un `verificador` distinto.
+2. El orquestador delega cada tarea a un subagente `implementador`. Al terminar el cambio, en paralelo: un `verificador` distinto (spec contra código) y el agente `pr-test-analyzer` del plugin pr-review-toolkit (calidad de las pruebas). Se archiva solo si el verificador confirma; los hallazgos críticos del analizador abren un cambio nuevo.
 3. Cambios que tocan captura, servidor o datos: `revisor-privacidad`. Dependencias o modelos: `revisor-licencias`.
 4. Fin de fase: `eval-runner` y `revisor-producto`.
 

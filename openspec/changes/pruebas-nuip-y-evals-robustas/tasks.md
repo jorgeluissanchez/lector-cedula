@@ -1,0 +1,54 @@
+# Tasks
+
+Reglas para todas las tareas: TDD (principio II): la prueba nueva o reescrita se ve fallar antes de dar la tarea por buena (en tareas de solo pruebas, se ve fallar contra un mutante manual o contra el generador viejo, según se indique). Datos sintéticos únicamente (skill `fixture-sintetico`). Código con barras invertidas o escapes `\u` escrito con la herramienta de escritura de archivos, no con heredoc, y bytes comprobados después (errores pasados de `CLAUDE.md`). No se toca `packages/parsers/src/`: si una prueba nueva falla contra el código actual, se detiene la tarea y se reporta. La tabla por requisito está en `design.md`, sección `## Pruebas`; los comandos `V`, `T`, `I`, `M`, `E` y `L` se definen allí. Tipos de prueba:
+
+- **Unitaria**: un `it` por escenario, nombrado `"<ID> <escenario> (atrapa: <fallo>)"`, con los literales de la spec y `toStrictEqual`.
+- **Propiedad**: fast-check, `numRuns >= 1000`, esperado literal u oráculo independiente (design.md, decisión 4).
+- **Vacuidad**: contadores comprobados con `expect` tras `fc.assert`, con los umbrales del escenario (design.md, decisión 2).
+- **Fuzz de entrada**: `fc.anything()` y `fc.string({ unit: "binary" })` con 0 excepciones y resultado exacto.
+- **Integración**: `spawnSync` del corredor sobre directorios temporales (design.md, decisión 15).
+- **Mutación**: `npm run test:mutacion` con >= 85 % por archivo mutado.
+- **Eval de campo**: `npm run eval:quick` sin regresión frente a `evals/reports/baseline.json`.
+
+## 1. Generadores válidos por construcción e idempotencia (C1)
+
+- [ ] 1.1 Añadir en `packages/parsers/test/nuip-formato.test.ts` los generadores `G_cc`, `G_ti` y `G_sinGuion` (design.md, decisión 1) y una función auxiliar de contadores (decisión 2). Primero escribir la salvaguarda de vacuidad del escenario "Idempotencia de la normalización" de NF-02 y ejecutarla con `capturaPlausible` para verla fallar (decisión 16). Después reescribir las propiedades de las líneas 161-170 (cédula, con `G_cc`) y 561-571 (tarjeta de identidad, con `G_ti`; la parte "nunca lanza y cumple NF-01" de 561-571 se conserva con `fc.string()` y binario), y sustituir `capturaPlausible` en 141-146 y en "Determinismo (propiedad)" por `fc.oneof(G_cc, G_ti)` mapeado a la entrada. Borrar `capturaPlausible` si queda sin uso. Cubre NF-02. Tipos de prueba: **propiedad**, **vacuidad**. Verificación: `npx vitest run packages/parsers` en verde; la salida de la ejecución con el generador viejo (falla de vacuidad: menos del 50 % de válidos) se adjunta como evidencia; cada generador comprueba `entrada.length <= 64` en el 100 % de los casos.
+- [ ] 1.2 Escribir las propiedades de NF-14 "Captura válida por construcción en cédula" y "en tarjeta de identidad" (resultado exacto con D y tabla literal) con sus contadores de cobertura, la propiedad "Oráculo independiente sobre capturas sin guion" para cc y ti, y la unitaria "Ejemplos fijos del oráculo". Verlas fallar contra un mutante manual temporal de `nuip-formato.ts` (por ejemplo, `CEROS_IZQUIERDA = /^0/`), revertido antes del commit. Cubre NF-14 (y NF-03, NF-04, NF-07, NF-09 por oráculo). Tipos de prueba: **propiedad**, **vacuidad**, **unitaria**. Verificación: `npx vitest run packages/parsers` en verde con los umbrales de la tabla de `## Pruebas` (fila NF-14); `git diff --stat packages/parsers/src` vacío.
+
+## 2. Tipo de documento sin oráculos copiados (I2, I6)
+
+- [ ] 2.1 Sustituir las propiedades de las líneas 651-661 y 684-695 por los escenarios de NF-10 "Propiedad sobre texto sin las letras de cc ni ti" y "Propiedad sobre tipoDocumento que no es texto", y añadir las unitarias "Variantes aceptadas del tipo de documento" (16 literales) y "Casos frontera rechazados" (12 literales, incluidos `"ti."`, `"tì"`, `"tı"`, `"tii"`). Restringir a W el generador de blancos de la propiedad de 663-682 (design.md, decisión 5). Cubre NF-10. Tipos de prueba: **unitaria**, **propiedad**. Verificación: `npx vitest run packages/parsers` en verde; `grep -nE "trim\(\)\.toLowerCase\(\)" packages/parsers/test/nuip-formato.test.ts` sin resultados; comprobación de bytes de `ì` y `ı` con `node -e` sobre el archivo.
+- [ ] 2.2 Reescribir la prueba de las líneas 115-125 según design.md, decisión 6: disyunción literal con `fc.anything()` (NF-02 "Nunca lanza con opciones arbitrarias") y las propiedades de NF-10 "Propiedad sobre opciones primitivas" y "Propiedad sobre objetos sin tipoDocumento". Cubre NF-02, NF-10. Tipos de prueba: **fuzz de entrada**, **propiedad**. Verificación: `npx vitest run packages/parsers` en verde; `grep -n "typeof opciones ===" packages/parsers/test/nuip-formato.test.ts` sin resultados.
+- [ ] 2.3 Añadir la unitaria de NF-10 "tipoDocumento se lee una sola vez" con un accesor contador (design.md, decisión 7). Verla fallar contra un mutante manual temporal que lea `tipoDocumento` dos veces, revertido antes del commit. Cubre NF-10. Tipos de prueba: **unitaria**. Verificación: `npx vitest run packages/parsers` en verde con contador igual a 1.
+
+## 3. Patrón NIT tras agrupación (I3)
+
+- [ ] 3.1 Añadir la unitaria de NF-08 "Patrón NIT tras agrupación con guiones" (`"9999-12345-6"` y `"99.99-123.45 - 6"`, cc y ti) y ampliar la propiedad P3 (líneas 471-492) a "Propiedad del patrón NIT con número agrupado" con contador de guion dentro de N (design.md, decisión 8). Cubre NF-08, NF-09. Tipos de prueba: **unitaria**, **propiedad**, **vacuidad**. Verificación: `npx vitest run packages/parsers` en verde; 100 % de entradas <= 64 y >= 25 % de casos con guion en N.
+
+## 4. Prioridad de motivos, duplicado y limpieza (I4, S3)
+
+- [ ] 4.1 Añadir las propiedades de NF-13 "el tipo inválido prevalece sobre cualquier cadena" (binario y binario con `minLength: 65`, con `{ tipoDocumento: "xx" }`) y "la entrada no texto prevalece sobre cualquier opción" (`fc.anything()` no string con `opciones` de `fc.anything()`). Eliminar la propiedad duplicada de las líneas 719-726 y renombrar la de 103-112 para que cite NF-02 y NF-11 (design.md, decisión 9). Cubre NF-11, NF-13. Tipos de prueba: **propiedad**, **fuzz de entrada**. Verificación: `npx vitest run packages/parsers` en verde; el número de propiedades que citan NF-11 "sin opciones" es exactamente 1 (`grep -c`).
+- [ ] 4.2 Borrar la línea 708 (solo espacios) y, si ESLint marca `new String`, restaurar el `eslint-disable-next-line` con su razón (design.md, decisión 9). Tipos de prueba: **lint**. Verificación: `npx eslint packages/parsers/test/nuip-formato.test.ts` con 0 problemas y `grep -nE "^[[:space:]]+$" packages/parsers/test/nuip-formato.test.ts` sin resultados.
+- [ ] 4.3 Mutación del validador tras los grupos 1 a 4. Cubre NF-02 a NF-14. Tipos de prueba: **mutación**. Verificación: `npm run test:mutacion` >= 85 % en `nuip-formato.ts` y no menor que el último reporte archivado; anotar en el PR los mutantes que antes sobrevivían y ahora mueren.
+
+## 5. Corredor de evals (C2, I5)
+
+- [ ] 5.1 En `tools/test/metricas.test.mjs`, escribir las unitarias de EV-03 ("Caída de n", "n igual o mayor", "Caída de n junto con caída de exact match") y verlas fallar; después hacer que `regresiones()` compare `n` (design.md, decisión 12). Cubre EV-03. Tipos de prueba: **unitaria**. Verificación: `npx vitest run tools/test/metricas.test.mjs` en verde; `npm run eval:quick` sin regresiones.
+- [ ] 5.2 Escribir las unitarias de EV-01 "Clave con valor undefined cuenta como sobrante" y "Solo el booleano true activa la comparación", y la de EV-05 "Agregación con esperado nulo" (verla fallar: hoy es un `TypeError` sin el tipo); después añadir la validación de `esperado` en `agregar()` (decisión 13). Cubre EV-01, EV-05. Tipos de prueba: **unitaria**. Verificación: `npx vitest run tools/test/metricas.test.mjs` en verde.
+- [ ] 5.3 Escribir las unitarias de `construirCasos` (propagación de `clavesExactas === true` con `true`, `"true"`, `1` y ausente; EV-05 "Esperado nulo, array o texto" con un evaluador contador que debe quedar en 0; excepción del evaluador recogida en `errores` con la ruta). Verlas fallar, implementar `construirCasos` en `evals/runners/metricas.mjs` y hacer que `eval-campo.mjs` lo use (design.md, decisión 10). Cubre EV-01, EV-05. Tipos de prueba: **unitaria**, **eval de campo**. Verificación: `npx vitest run tools/test/metricas.test.mjs` en verde; `npm run eval:quick` con 40 casos, 0 excepciones y sin regresiones.
+- [ ] 5.4 Crear `tools/test/eval-campo.test.mjs` con los escenarios de integración de EV-01 "El corredor propaga la marca del fixture", EV-03 "El corredor falla si se pierden fixtures", EV-04 (los dos) y EV-05 "Fixture sin esperado"; verlos fallar (hoy las banderas no existen); después añadir `--fixtures` y `--reportes` a `eval-campo.mjs` (decisiones 11 y 15). Documentar las banderas y la regresión por `n` en `.claude/skills/eval-campo/SKILL.md` y en el comentario de uso de `eval-campo.mjs`. Cubre EV-01, EV-03, EV-04, EV-05. Tipos de prueba: **integración**, **eval de campo**. Verificación: `npx vitest run tools/test/eval-campo.test.mjs` en verde en <= 120 s; `npm run eval:quick` sin regresiones; `evals/reports/baseline.json` sin cambios (`git diff --exit-code evals/reports/baseline.json`).
+
+## 6. Mutación del harness
+
+- [ ] 6.1 Añadir `"evals/runners/metricas.mjs"` a `mutate` en `stryker.config.mjs` y crear `vitest.stryker.config.ts`, que extiende `vitest.config.ts` y excluye `tools/test/eval-campo.test.mjs` (design.md, decisión 14). Si `metricas.mjs` queda por debajo del 85 %, añadir unitarias en `tools/test/metricas.test.mjs` derivadas de escenarios de EV-01 a EV-05 que maten los supervivientes; los equivalentes se marcan con `// Stryker disable next-line <mutador>: <razón>`. Cubre EV-01, EV-02, EV-03, EV-05. Tipos de prueba: **mutación** (y **unitaria** si hace falta). Verificación: `npm run test:mutacion` sale con código 0 e informa >= 85 % para `metricas.mjs` y para `nuip-formato.ts` en la tabla `clear-text`; `npm test` sigue ejecutando `tools/test/eval-campo.test.mjs`.
+
+## 7. Integración
+
+- [ ] 7.1 Comprobación final de todo el cambio y del backlog. Marcar el hueco #7 de `docs/decisiones/backlog-formato-nuip.md` como resuelto por este cambio. Tipos de prueba: todos los anteriores. Verificación: `npm run check:completo` en verde (tipos, lint, pruebas, licencias, privacidad, evals rápidas y mutación); `git diff --stat packages/parsers/src evals/reports/baseline.json` vacío.
+
+## Workflow follow-up
+
+- Revisión del rol `pr-test-analyzer` sobre el diff antes del verificador, para confirmar que los hallazgos C1, C2, I1 a I6 y S3 quedan cerrados.
+- Verificación con `/opsx:verify` por un subagente `verificador` distinto del implementador.
+- Archivar con `/opsx:archive` (actualiza `openspec/specs/formato-nuip/spec.md` y `openspec/specs/evals-por-campo/spec.md`).
+- Decisión humana sobre las preguntas abiertas de `design.md`, en especial el hueco #3 (principio V).
