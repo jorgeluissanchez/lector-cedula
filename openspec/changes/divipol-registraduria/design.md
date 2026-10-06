@@ -254,3 +254,8 @@ Capacidad nueva, sin consumidores todavía. Orden: fuentes e instantáneas -> ge
 1. ¿Se incorporan los 11 códigos que solo están en `DIVIPOL.TXT` (`17082` NUEVO BELEN DE BAJIRA y 10 consulados)? Requiere obtener el archivo de una publicación oficial de la Registraduría con términos de uso, o su autorización. Si se aprueba, será un cambio OpenSpec que modifique DV-09, DV-10 y DV-16 (conteos). No cambia este cambio.
 2. ¿La equivalencia DIVIPOLA se publica en npm dentro de `@lector-cedula/parsers` (subruta, licencia `MIT AND CC-BY-SA-4.0`) o como paquete aparte? Se decide antes de la Fase 7; mover el módulo no cambia los requisitos.
 3. ¿Se acepta la lectura conservadora del CC BY-SA (equivalencia como Material Adaptado)? Si un abogado concluye que los pares de códigos son hechos no protegidos, se puede simplificar el aislamiento en un cambio posterior.
+
+## Pendiente antes de archivar (orquestador, 2026-10-06)
+
+- DV-16, escenario "Tabla literal de departamentos": contradice DV-15 y la decisión 5 para `15001 -> 11001` (Cundinamarca es DANE 25, Bogotá 11). La implementación lo trata como una única excepción documentada y probada. Corregir el escenario para declarar esa excepción.
+- La tabla manual de 33 equivalencias (`tools/divipol/equivalencias-manuales.json`) requiere revisión humana.
