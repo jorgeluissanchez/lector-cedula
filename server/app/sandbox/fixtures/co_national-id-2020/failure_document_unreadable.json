@@ -1,0 +1,36 @@
+{
+  "sintetico": true,
+  "descripcion": "Sandbox co_national-id-2020 / failure_document_unreadable: Código del documento ilegible. Persona ficticia (skill fixture-sintetico).",
+  "status": "failure",
+  "declined_reason": "document_unreadable",
+  "checks": [
+    {
+      "category": "image_quality",
+      "status": "passed",
+      "reasons": []
+    },
+    {
+      "category": "data_validation",
+      "status": "failed",
+      "reasons": [
+        "barcode_unreadable"
+      ]
+    },
+    {
+      "category": "data_consistency",
+      "status": "not_performed",
+      "reasons": []
+    },
+    {
+      "category": "document_liveness",
+      "status": "not_performed",
+      "reasons": []
+    },
+    {
+      "category": "face_match",
+      "status": "not_performed",
+      "reasons": []
+    }
+  ],
+  "document": null
+}

@@ -34,6 +34,36 @@ PROBLEMAS: dict[str, tuple[str, str]] = {
     "internal-error": ("Error interno", "Ocurrió un error interno. Use `request_id` para reportarlo."),
     "service-unavailable": ("Servicio no disponible", "El servicio no está disponible en este momento."),
     "http-error": ("Error de la petición", "La petición no se pudo atender."),
+    "invalid-idempotency-key": (
+        "Clave de idempotencia inválida",
+        "`Idempotency-Key` debe tener de 1 a 255 caracteres ASCII imprimibles.",
+    ),
+    "idempotency-key-reused": (
+        "Clave de idempotencia reutilizada",
+        "La clave de idempotencia ya se usó con otro cuerpo.",
+    ),
+    "idempotency-key-in-progress": (
+        "Creación en curso",
+        "Hay una creación en curso con la misma clave de idempotencia. Reintente más tarde.",
+    ),
+    "upload-token-invalid": (
+        "Token de subida inválido",
+        "El token de subida no es válido para este recurso.",
+    ),
+    "upload-token-expired": ("Token de subida vencido", "El token de subida venció."),
+    "validation-not-pending": (
+        "La validación no admite subidas",
+        "La validación ya no está en `pending`; cada validación admite una sola subida.",
+    ),
+    "image-too-large": ("Imagen demasiado grande", "Una imagen supera el tamaño máximo. Revise `errors`."),
+    "unsupported-image-type": (
+        "Tipo de imagen no admitido",
+        "Cada imagen debe ser JPEG o PNG y coincidir con el tipo declarado. Revise `errors`.",
+    ),
+    "engine-unavailable": (
+        "Motor no disponible",
+        "El modo live no tiene motor de procesamiento configurado.",
+    ),
 }
 
 # Estados HTTP que levanta Starlette o FastAPI por su cuenta -> slug.

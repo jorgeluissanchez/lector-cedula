@@ -60,3 +60,111 @@ def crear_cliente(**cambios: Any) -> TestClient:
     from app.main import crear_app
 
     return TestClient(crear_app(config_de_prueba(**cambios)), raise_server_exceptions=False)
+
+
+# --- Puertos falsos (decisión 6): el test controla el tiempo, los ids y la planificación ------------
+
+# "ahora" de la spec: 2026-10-06T15:20:00Z.
+AHORA = 1_791_300_000
+AUTH_KT = {"Authorization": f"Bearer {KT}"}
+AUTH_KT2 = {"Authorization": f"Bearer {KT2}"}
+AUTH_KL = {"Authorization": f"Bearer {KL}"}
+BASE_PROBLEMAS = "https://lector-cedula.example/problemas/"
+
+
+class RelojFalso:
+    """Reloj que solo avanza cuando el test lo pide."""
+
+    def __init__(self, instante: float = AHORA) -> None:
+        self.instante = instante
+
+    def ahora(self) -> float:
+        return self.instante
+
+    def avanzar(self, segundos: float) -> None:
+        self.instante += segundos
+
+    def fijar(self, instante: float) -> None:
+        self.instante = instante
+
+
+class PlanificadorFalso:
+    """Guarda las tareas programadas; el test las ejecuta con `ejecutar_hasta`, nunca con esperas."""
+
+    def __init__(self) -> None:
+        self.tareas: list[list[Any]] = []
+
+    def programar(self, instante: float, funcion: Any) -> Any:
+        entrada = [instante, funcion, False]
+        self.tareas.append(entrada)
+
+        class _Cancelable:
+            def cancel(self) -> None:
+                entrada[2] = True
+
+        return _Cancelable()
+
+    def ejecutar_hasta(self, instante: float) -> int:
+        """Ejecuta, en orden de instante, las tareas no canceladas con instante <= `instante`."""
+        ejecutadas = 0
+        for entrada in sorted(self.tareas, key=lambda e: e[0]):
+            if entrada[0] <= instante and not entrada[2]:
+                entrada[2] = True
+                entrada[1]()
+                ejecutadas += 1
+        return ejecutadas
+
+
+class NotificadorEspia:
+    """Registra las validaciones que llegan a un estado terminal (puerto de los webhooks)."""
+
+    def __init__(self) -> None:
+        self.notificadas: list[str] = []
+
+    def __call__(self, validacion: Any) -> None:
+        self.notificadas.append(validacion.id)
+
+
+def puertos_de_prueba(**cambios: Any) -> Any:
+    from app.puertos import Puertos
+
+    valores: dict[str, Any] = {"reloj": RelojFalso(), "planificador": PlanificadorFalso()}
+    valores.update(cambios)
+    return Puertos(**valores)
+
+
+def crear_cliente_con(puertos: Any = None, **cambios: Any) -> TestClient:
+    """Como `crear_cliente`, con puertos inyectados (por defecto, reloj fijo en `AHORA`)."""
+    from app.main import crear_app
+
+    aplicacion = crear_app(config_de_prueba(**cambios), puertos or puertos_de_prueba())
+    return TestClient(aplicacion, raise_server_exceptions=False)
+
+
+def reloj_de(cliente: TestClient) -> RelojFalso:
+    return cliente.app.state.puertos.reloj  # type: ignore[attr-defined]
+
+
+def crear(cliente: TestClient, cabeceras: dict[str, str] | None = None, **campos: Any) -> Any:
+    """`CREAR` de la spec con campos cambiados (un valor `...` elimina la clave)."""
+    cuerpo = {**CREAR_CUERPO, **campos}
+    cuerpo = {clave: valor for clave, valor in cuerpo.items() if valor is not ...}
+    return cliente.post("/v1/validations", headers=cabeceras or AUTH_KT, json=cuerpo)
+
+
+def ruta_de_subida(validacion: dict[str, Any]) -> str:
+    """Ruta y query de `upload.url` (el cliente de pruebas habla con `http://testserver`)."""
+    from urllib.parse import urlsplit
+
+    partes = urlsplit(validacion["upload"]["url"])
+    return f"{partes.path}?{partes.query}"
+
+
+def subir(
+    cliente: TestClient,
+    ruta: str,
+    partes: dict[str, tuple[bytes, str]],
+    cabeceras: dict[str, str] | None = None,
+) -> Any:
+    archivos = {nombre: (f"{nombre}.bin", datos, tipo) for nombre, (datos, tipo) in partes.items()}
+    return cliente.post(ruta, files=archivos, headers=cabeceras or {})

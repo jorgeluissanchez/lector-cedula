@@ -85,7 +85,7 @@ class MiddlewareSeguridad:
             "request_id": request_id,
             "method": scope.get("method"),
             "route": plantilla_de_ruta(scope),
-            "sandbox": getattr(cliente, "sandbox", None),
+            "sandbox": estado_peticion.get("sandbox", getattr(cliente, "sandbox", None)),
         }
         if estado_peticion.get("validation_id"):
             campos["validation_id"] = estado_peticion["validation_id"]

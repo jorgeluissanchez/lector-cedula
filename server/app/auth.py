@@ -51,3 +51,18 @@ async def cliente_requerido(request: Request) -> Cliente:
         raise ErrorApi(401, "unauthorized", cabeceras={"WWW-Authenticate": "Bearer"})
     request.state.cliente = cliente
     return cliente
+
+
+def aplicar_limite(request: Request, propietario: str) -> None:
+    """AV-11: 429 `rate-limited` si la clave `propietario` agotó su ventana. Se llama antes de leer el
+    cuerpo; las subidas con token cuentan para la clave creadora."""
+    espera = request.app.state.limitador.registrar(propietario, request.app.state.puertos.reloj.ahora())
+    if espera is not None:
+        raise ErrorApi(429, "rate-limited", cabeceras={"Retry-After": str(espera)})
+
+
+async def cliente_limitado(request: Request) -> Cliente:
+    """Dependencia de las rutas `/v1` con clave: autentica (401) y aplica el límite (429)."""
+    cliente = await cliente_requerido(request)
+    aplicar_limite(request, cliente.hash_clave)
+    return cliente

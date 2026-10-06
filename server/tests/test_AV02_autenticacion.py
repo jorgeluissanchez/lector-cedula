@@ -4,7 +4,6 @@ from typing import Any
 
 import pytest
 
-from app.almacen import Validacion
 from app.auth import autenticar
 from tests.utilidades import (
     CREAR_CUERPO,
@@ -61,15 +60,15 @@ def test_AV02_validacion_de_otro_cliente() -> None:
     """Validación de otro cliente: una validación de `KT` consultada con `KT2` responde 404
     `PROBLEM(not-found)`, idéntica a la de un `id` inexistente salvo `request_id`.
 
-    Hasta la tarea 4.1 (creación), la validación de `KT` se siembra en el almacén; la prueba exige
-    además que `KT` sí la encuentre (no responde 404), para que el 404 de `KT2` sea por aislamiento."""
+    La validación se crea con `CREAR` (tarea 4.1). La prueba exige además que `KT` sí la encuentre,
+    para que el 404 de `KT2` sea por aislamiento y no por inexistencia."""
     cliente = crear_cliente()
-    cliente.app.state.almacen.guardar(  # type: ignore[attr-defined]
-        Validacion(id=ID_A, propietario=hash_clave(KT), sandbox=True)
-    )
-    ajena = cliente.get(f"/v1/validations/{ID_A}", headers={"Authorization": f"Bearer {KT2}"})
+    creada = cliente.post("/v1/validations", headers={"Authorization": f"Bearer {KT}"}, json=CREAR_CUERPO)
+    assert creada.status_code == 201
+    id_a = creada.json()["id"]
+    ajena = cliente.get(f"/v1/validations/{id_a}", headers={"Authorization": f"Bearer {KT2}"})
     inexistente = cliente.get(f"/v1/validations/{ID_INEXISTENTE}", headers={"Authorization": f"Bearer {KT2}"})
-    propia = cliente.get(f"/v1/validations/{ID_A}", headers={"Authorization": f"Bearer {KT}"})
+    propia = cliente.get(f"/v1/validations/{id_a}", headers={"Authorization": f"Bearer {KT}"})
 
     assert ajena.status_code == 404
     assert ajena.headers["content-type"] == "application/problem+json"
@@ -77,10 +76,11 @@ def test_AV02_validacion_de_otro_cliente() -> None:
     assert inexistente.status_code == 404
     assert _sin_request_id(ajena.json()) == _sin_request_id(inexistente.json())
     assert ajena.json()["request_id"] != inexistente.json()["request_id"]
-    assert propia.status_code != 404
+    assert propia.status_code == 200
+    assert propia.json()["id"] == id_a
 
     for metodo in ("DELETE",):
-        ajena = cliente.request(metodo, f"/v1/validations/{ID_A}", headers={"Authorization": f"Bearer {KT2}"})
+        ajena = cliente.request(metodo, f"/v1/validations/{id_a}", headers={"Authorization": f"Bearer {KT2}"})
         assert ajena.status_code == 404
         assert _sin_request_id(ajena.json()) == _sin_request_id(inexistente.json())
 

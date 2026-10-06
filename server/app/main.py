@@ -13,13 +13,18 @@ from fastapi import FastAPI
 from app.almacen import Almacen
 from app.config import Config
 from app.contrato import cargar_contrato
+from app.cors import MiddlewareCorsSubida
 from app.errores import registrar_manejadores
+from app.idempotencia import RegistroIdempotencia
+from app.limite import VentanaDeslizante
 from app.logs import configurar_logs
+from app.puertos import Puertos
 from app.rutas import validaciones
 from app.seguridad import MiddlewareSeguridad
+from app.servicio import ServicioValidaciones
 
 
-def crear_app(config: Config | None = None) -> FastAPI:
+def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> FastAPI:
     configurar_logs()
     config = config or Config.desde_entorno(os.environ)
     contrato = cargar_contrato()
@@ -32,7 +37,16 @@ def crear_app(config: Config | None = None) -> FastAPI:
     )
     aplicacion.state.config = config
     aplicacion.state.almacen = Almacen()
+    aplicacion.state.puertos = puertos or Puertos()
+    aplicacion.state.idempotencia = RegistroIdempotencia()
+    aplicacion.state.limitador = VentanaDeslizante(config.limite_peticiones_por_minuto)
+    aplicacion.state.servicio = ServicioValidaciones(
+        aplicacion.state.almacen, aplicacion.state.puertos, config
+    )
     registrar_manejadores(aplicacion)
+    # Orden: el último añadido es el más externo. Seguridad envuelve a CORS para que el preflight también
+    # lleve las cabeceras de AV-33 y su línea de log.
+    aplicacion.add_middleware(MiddlewareCorsSubida, origenes=config.origenes_cors)
     aplicacion.add_middleware(MiddlewareSeguridad, base_tipos_problema=config.base_tipos_problema)
 
     def servir_contrato() -> dict[str, Any]:

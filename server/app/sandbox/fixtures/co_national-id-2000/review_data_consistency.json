@@ -1,0 +1,61 @@
+{
+  "sintetico": true,
+  "descripcion": "Sandbox co_national-id-2000 / review_data_consistency: El nombre del código y el impreso difieren: revisión humana. Persona ficticia (skill fixture-sintetico).",
+  "status": "review",
+  "declined_reason": "data_inconsistent",
+  "checks": [
+    {
+      "category": "image_quality",
+      "status": "passed",
+      "reasons": []
+    },
+    {
+      "category": "data_validation",
+      "status": "passed",
+      "reasons": []
+    },
+    {
+      "category": "data_consistency",
+      "status": "warning",
+      "reasons": [
+        "name_mismatch"
+      ]
+    },
+    {
+      "category": "document_liveness",
+      "status": "passed",
+      "reasons": []
+    },
+    {
+      "category": "face_match",
+      "status": "passed",
+      "reasons": []
+    }
+  ],
+  "document": {
+    "type": "co_national-id-2000",
+    "document_number": "9999123456",
+    "first_surname": "PEÑA",
+    "second_surname": "DE LA OSSA",
+    "first_name": "FICTICIA",
+    "second_name": null,
+    "sex": "F",
+    "date_of_birth": "1990-02-28",
+    "place_of_birth": {
+      "divipol_department": "01",
+      "divipol_municipality": "001"
+    },
+    "blood_type": "AB-",
+    "date_of_issue": null,
+    "place_of_issue": null,
+    "date_of_expiry": null,
+    "sources": [
+      "pdf417"
+    ],
+    "warnings": [
+      "H03",
+      "H05",
+      "H06"
+    ]
+  }
+}

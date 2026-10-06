@@ -61,6 +61,10 @@ Toda ruta bajo `/v1` SHALL exigir `Authorization: Bearer <clave>` con una clave 
 - **WHEN** se hace `CREAR` añadiendo `"nombre_cliente": "PRUEBA"` al cuerpo
 - **THEN** la respuesta es 422 `PROBLEM(invalid-request)` con `errors` `[{"pointer": "/nombre_cliente", "code": "unexpected_field"}]`
 
+#### Scenario: Campo no declarado con un nombre que no se reproduce
+- **WHEN** se hace `CREAR` añadiendo `"campo_9999123456": "FICTICIA"` al cuerpo, cuyo nombre no cumple `^[a-z_]{1,64}$`
+- **THEN** la respuesta es 422 `PROBLEM(invalid-request)` con `errors` `[{"pointer": "", "code": "unexpected_field"}]`: el `pointer` solo reproduce nombres de campo que cumplen `^[a-z_]{1,64}$` y, si un segmento no lo cumple, se corta en su padre (aquí, la raíz), para no devolver datos del cliente (AV-29)
+
 #### Scenario: Cuerpo JSON demasiado grande
 - **WHEN** se hace `POST /v1/validations` con `KT` y un cuerpo de 16385 bytes
 - **THEN** la respuesta es 413 `PROBLEM(request-too-large)`
