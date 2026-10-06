@@ -1,24 +1,34 @@
 // PreToolUse (Bash|PowerShell): puertas antes de commits e instalaciones.
-import { bloquear, cola, correr, correrNode, leerEvento, paquetes, quitarHeredocs } from "./lib.mjs";
+import { evaluarNombre } from "../../tools/licencia-check.mjs";
+import { instalaciones, nombreNpm, nombrePip } from "./instalaciones.mjs";
+import { bloquear, cola, correr, correrNode, leerEvento, quitarHeredocs } from "./lib.mjs";
 
 const evento = await leerEvento();
 const comando = quitarHeredocs(String(evento.tool_input?.command ?? ""));
+const { npm, pip, efimeros } = instalaciones(comando);
 
-// 1. Instalaciones npm: revisar licencia antes de instalar (principio IV).
-const npm = paquetes(comando, /\bnpm\s+(?:i|install|add)\s+([^;&|\n]+)/);
+// 1. Instalaciones npm, pnpm, yarn y bun: revisar licencia en el registro antes de instalar (principio IV).
 if (npm.length > 0) {
   const r = correrNode(["tools/licencia-check.mjs", "--package", ...npm], { timeoutMs: 90_000 });
   if (!r.ok) bloquear(`Instalación bloqueada por licencia-check:\n${cola(r.salida)}`);
 }
 
-// 2. Instalaciones Python.
-const pip = paquetes(comando, /\b(?:pip3?\s+install|uv\s+add|uv\s+pip\s+install)\s+([^;&|\n]+)/);
+// 2. Instalaciones Python (pip, python -m pip, uv, pipx, poetry, pdm).
 if (pip.length > 0) {
-  const r = correrNode(["tools/licencia-check.mjs", "--pip", ...pip], { timeoutMs: 30_000 });
+  const r = correrNode(["tools/licencia-check.mjs", "--pip", ...pip.map(nombrePip)], { timeoutMs: 30_000 });
   if (!r.ok) bloquear(`Instalación bloqueada por licencia-check:\n${cola(r.salida)}`);
 }
 
-// 3. Commits: privacidad, licencias y tipos (principios II, III y IV).
+// 3. Ejecutores efímeros (npx, dlx, bunx, uvx, pipx run): no añaden dependencias, pero ejecutan el paquete.
+//    Solo lista negra, sin red (ver la decisión en instalaciones.mjs).
+const prohibidos = efimeros
+  .map(({ tipo, nombre }) => evaluarNombre(tipo === "pip" ? nombrePip(nombre) : nombreNpm(nombre)))
+  .filter((r) => !r.ok);
+if (prohibidos.length > 0) {
+  bloquear(`Ejecución bloqueada por licencia-check:\n${prohibidos.map((r) => `  - ${r.motivo}`).join("\n")}`);
+}
+
+// 4. Commits: privacidad, licencias y tipos (principios II, III y IV).
 if (/\bgit\b(?:\s+-c\s+\S+)*\s+commit\b/.test(comando)) {
   const puertas = [
     ["privacidad-check", "node tools/privacidad-check.mjs --staged"],
