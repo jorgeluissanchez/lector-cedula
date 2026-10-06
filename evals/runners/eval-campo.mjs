@@ -8,7 +8,7 @@
  *   node evals/runners/eval-campo.mjs --quick            # solo fixtures sintéticos rápidos
  *   node evals/runners/eval-campo.mjs --guardar-baseline # fija el resultado actual como baseline
  *
- * Formato de fixture (JSON): {"sintetico": true, "tipo": "<evaluador>", "entrada": ..., "esperado": {...}}
+ * Formato de fixture (JSON): {"sintetico": true, "tipo": "<evaluador>", "entrada": ..., "opciones"?: {...}, "esperado": {...}}
  * Los evaluadores se registran en evals/runners/registro.mjs.
  */
 import { execSync } from "node:child_process";
@@ -37,7 +37,10 @@ async function cargarEvaluador(tipo) {
   const mod = await import(pathToFileURL(join(RAIZ, def.modulo)).href);
   const fn = mod[def.exportar];
   if (typeof fn !== "function") throw new Error(`${def.modulo} no exporta la función ${def.exportar}`);
-  return (entrada) => (def.adaptar ? def.adaptar(fn(entrada)) : fn(entrada));
+  return (entrada, opciones) => {
+    const r = opciones === undefined ? fn(entrada) : fn(entrada, opciones);
+    return def.adaptar ? def.adaptar(r) : r;
+  };
 }
 
 async function main(argv) {
@@ -60,7 +63,7 @@ async function main(argv) {
     if (!cache.has(f.tipo)) cache.set(f.tipo, await cargarEvaluador(f.tipo));
     let obtenido;
     try {
-      obtenido = cache.get(f.tipo)(f.entrada);
+      obtenido = cache.get(f.tipo)(f.entrada, f.opciones);
     } catch (e) {
       errores.push(`${f.ruta}: ${e.message}`);
       obtenido = {};

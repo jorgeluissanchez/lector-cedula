@@ -28,3 +28,9 @@ Estados: **pendiente**, **confirmada**, **refutada**. La evidencia de confirmaci
 | M02 | El NUIP va en el opcional de la línea 2 [18-28], 10 dígitos (Eitol) u 11 (fgardila) | Eitol, fgardila | pendiente | |
 | M03 | El opcional de la línea 1 [15-19] es el DIVIPOL de expedición (depto 2 + municipio 3) | Eitol | pendiente | fgardila lo ignora |
 | M04 | El espécimen público `back-ccd.png` tiene el dígito compuesto inválido | fgardila | pendiente | Calcula 9, impreso 8 |
+
+## Número de identificación (formato)
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| N01 | El número de la tarjeta de identidad puede tener 11 dígitos además de los 10 del NUIP; el validador los clasifica como `ti-antigua` (relacionada con H10 y M02) | fgardila (lee 11 en la MRZ), conocimiento general | pendiente | Sin payloads ni especímenes públicos; lo aplica el cambio OpenSpec `validador-formato-nuip` (NF-09) |
