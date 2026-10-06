@@ -302,7 +302,7 @@ describe("Mutación de metricas.mjs: levenshtein y CER", () => {
     return d(a.length, b.length);
   }
 
-  it("levenshtein coincide con la definición recursiva, incluidas cadenas iguales y vacías (demuestra la equivalencia de los mutantes de los atajos de las líneas 7 a 9)", () => {
+  it("levenshtein coincide con la definición recursiva, incluidas cadenas iguales y vacías (demuestra que la variante false de los atajos de levenshtein es equivalente y atrapa la variante true)", () => {
     const corta = fc.string({ unit: fc.constantFrom("a", "b"), maxLength: 6 });
     // Un tercio de pares cualesquiera, un tercio de cadenas iguales y un tercio con una cadena vacía.
     const par = fc.oneof(

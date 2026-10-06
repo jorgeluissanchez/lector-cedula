@@ -98,16 +98,14 @@ describe("eval-campo.mjs (integración con directorios temporales)", () => {
 
       expect(r.status).toBe(1);
       expect(r.stderr).toContain("nuip-formato.valido");
-      // Los dos valores de n en la misma línea de la regresión (las rutas temporales también tienen dígitos).
-      const linea = r.stderr.split("\n").find((l) => l.includes("nuip-formato.valido"));
-      expect(linea).toContain("3");
-      expect(linea).toContain("2");
+      // Los dos valores de n y su orden (las rutas temporales también tienen dígitos sueltos).
+      expect(r.stderr).toMatch(/n bajó de 3 a 2/);
     },
     LIMITE_MS,
   );
 
   it(
-    "EV-03 Un baseline de otro modo no compara n (atrapa: comparar quick con completo; decisión del orquestador)",
+    "EV-03 Un baseline de otro modo no compara n (atrapa: comparar el n de quick con el de completo)",
     () => {
       const fixtures = directorioTemporal("fix");
       const reportes = directorioTemporal("rep");
@@ -122,6 +120,26 @@ describe("eval-campo.mjs (integración con directorios temporales)", () => {
 
       expect(r.status, r.stderr).toBe(0);
       expect(r.stderr).not.toContain("n bajó");
+    },
+    LIMITE_MS,
+  );
+
+  it(
+    "EV-03 Un baseline del mismo modo sí compara n (atrapa: ignorar n cuando el baseline registra modo)",
+    () => {
+      const fixtures = directorioTemporal("fix");
+      const reportes = directorioTemporal("rep");
+      writeFileSync(
+        join(reportes, "baseline.json"),
+        JSON.stringify({ modo: "quick", metricas: { "nuip-formato": { valido: { n: 3, exact_match: 1, cer: 0 } } } }),
+      );
+      escribirFixture(fixtures, "uno.json", fixtureValido({ esperado: { valido: true } }));
+      escribirFixture(fixtures, "dos.json", fixtureValido({ esperado: { valido: true } }));
+
+      const r = correr(fixtures, reportes);
+
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/n bajó de 3 a 2/);
     },
     LIMITE_MS,
   );

@@ -897,15 +897,21 @@ describe("validarFormatoNuip", () => {
     });
 
     it("NF-10 Propiedad sobre tipoDocumento que no es texto (atrapa: valor no texto aceptado o convertido a texto)", () => {
+      // Salvaguarda de vacuidad: el filtro cuenta cada valor generado y cuántos acepta.
+      const cuenta = crearContadores();
+      const noTextoNiAusente = (v: unknown) => {
+        const util = typeof v !== "string" && v !== undefined;
+        cuenta.caso({ aceptado: util });
+        return util;
+      };
       fc.assert(
-        fc.property(
-          fc.anything().filter((v) => typeof v !== "string" && v !== undefined),
-          (tipoDocumento) => {
-            expect(validarFormatoNuip("99991234567", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
-          },
-        ),
+        fc.property(fc.anything().filter(noTextoNiAusente), (tipoDocumento) => {
+          expect(validarFormatoNuip("99991234567", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
+        }),
         { numRuns: 1000 },
       );
+      expect(cuenta.veces("aceptado")).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("aceptado")).toBeGreaterThan(0.5);
     });
 
     it("NF-10 Propiedad sobre opciones primitivas (atrapa: opciones primitivas leídas como objeto o como cédula)", () => {

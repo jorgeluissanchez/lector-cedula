@@ -7,11 +7,15 @@ export function levenshtein(a, b) {
   // Los tres atajos son equivalentes a la programación dinámica de abajo (tools/test/metricas.test.mjs,
   // "levenshtein coincide con la definición recursiva"): con s === t la diagonal suma 0; con s vacía no
   // entra en el bucle y devuelve prev[t.length] = t.length; con t vacía cada fila es [i] y devuelve s.length.
-  // Stryker disable next-line ConditionalExpression: equivalente; atajo de rendimiento para el caso exacto.
+  // Por eso, de las dos variantes de ConditionalExpression de cada atajo, solo la `false` (quitar el atajo)
+  // es equivalente. La `true` (tomar siempre el atajo) no lo es: devolvería 0, t.length o s.length para
+  // cualquier par. Se desactivan las dos a conciencia porque Stryker no permite desactivar una sola variante;
+  // la `true` la cubre la propiedad contra el oráculo recursivo de tools/test/metricas.test.mjs.
+  // Stryker disable next-line ConditionalExpression: solo la variante false es equivalente; true la cubre el oráculo.
   if (s === t) return 0;
-  // Stryker disable next-line ConditionalExpression: equivalente; la fila inicial ya vale t.length.
+  // Stryker disable next-line ConditionalExpression: solo la variante false es equivalente; true la cubre el oráculo.
   if (s.length === 0) return t.length;
-  // Stryker disable next-line ConditionalExpression: equivalente; sin columnas la última fila es [s.length].
+  // Stryker disable next-line ConditionalExpression: solo la variante false es equivalente; true la cubre el oráculo.
   if (t.length === 0) return s.length;
   let prev = Array.from({ length: t.length + 1 }, (_, j) => j);
   for (let i = 1; i <= s.length; i++) {
