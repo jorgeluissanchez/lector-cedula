@@ -12,6 +12,7 @@ Convenciones de los escenarios:
 - Si un escenario no indica variante ni semilla, se usan las de omisión: variante `"completa"` (PDF417) o `"valida"` (MRZ) y semilla `1`.
 - Las hipótesis `Hxx`, `Mxx` y `Gxx` son las de `docs/decisiones/hipotesis-formato.md`, todas pendientes. Ningún escenario afirma que la cédula real sea así: afirma que el generador produce eso bajo esas hipótesis.
 - Todos los números y nombres son sintéticos (NUIP y serial con prefijo `9999`; primer nombre de la lista de marcadores de ficción).
+- La disposición de la trama PDF417 sigue la evidencia de `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md` (layout observado en un payload público, G01 corregida): `[32,40)` son 8 bytes 0x00 y `[40,48)` es un campo numérico de 8 bytes; no hay un campo de 6 dígitos en `[33,39)`.
 
 ## ADDED Requirements
 
@@ -127,11 +128,11 @@ Las funciones del paquete SHALL ser puras y deterministas: la misma persona, opc
 
 #### Scenario: Valores literales con semilla 1
 - **WHEN** se llama `generarPdf417(PERSONA_BASE, { semilla: 1 })`
-- **THEN** `bytes[0,2)` es `"60"`, `bytes[2,10)` es `"99995992"`, `bytes[33,39)` es `"674944"`, `bytes[40,48)` es `"14214037"`, `bytes[165,166)` es `"2"` y los bytes 168 a 171 son `0x30 0x0A 0x6D 0x97`
+- **THEN** `bytes[0,2)` es `"60"`, `bytes[2,10)` es `"99995992"`, `bytes[40,48)` es `"67494414"`, `bytes[165,166)` es `"2"` y los bytes 168 a 171 son `0x27 0x7D 0x11 0x65`
 
 #### Scenario: Valores literales con semilla 2
 - **WHEN** se llama `generarPdf417(PERSONA_BASE, { semilla: 2 })`
-- **THEN** `bytes[0,2)` es `"73"`, `bytes[2,10)` es `"99992586"`, `bytes[33,39)` es `"437172"`, `bytes[40,48)` es `"48516390"`, `bytes[165,166)` es `"9"` y los bytes 168 a 171 son `0x0F 0x20 0x31 0x01`
+- **THEN** `bytes[0,2)` es `"73"`, `bytes[2,10)` es `"99992586"`, `bytes[40,48)` es `"43717248"`, `bytes[165,166)` es `"5"` y los bytes 168 a 171 son `0x24 0xAC 0x5D 0xF8`
 
 #### Scenario: Copias independientes
 - **WHEN** se pone a `0xFF` el byte 48 del `bytes` devuelto por una llamada y se repite la llamada con los mismos argumentos
@@ -142,11 +143,11 @@ Las funciones del paquete SHALL ser puras y deterministas: la misma persona, opc
 - **THEN** cada par de muestras es profundamente igual
 
 ### Requirement: FX-07 Trama PDF417 completa
-Con variante `"completa"`, `generarPdf417` SHALL producir un payload de 531 bytes (H01) con la disposición de G01: 2 dígitos de cabecera, AFIS ficticio, 14 bytes 0x00, `PubDSK_1` desde el byte 24 (H02), 0x00, 6 dígitos, 0x00, 8 dígitos, el NUIP rellenado con `"0"` a la izquierda hasta 10 dígitos (H03), los cuatro nombres de 23 bytes desde el 58 (H04), el bloque demográfico desde el 150 y la cola hasta el final. Los dígitos de relleno salen del PRNG.
+Con variante `"completa"`, `generarPdf417` SHALL producir un payload de 531 bytes (H01) con la disposición de G01: 2 dígitos de cabecera, AFIS ficticio, 14 bytes 0x00, `PubDSK_1` desde el byte 24 (H02), 8 bytes 0x00, un campo numérico de 8 dígitos en `[40,48)`, el NUIP rellenado con `"0"` a la izquierda hasta 10 dígitos (H03), los cuatro nombres de 23 bytes desde el 58 (H04), el bloque demográfico desde el 150 y la cola hasta el final. Los dígitos de relleno salen del PRNG.
 
 #### Scenario: Trama completa de la persona base
 - **WHEN** se llama `generarPdf417(PERSONA_BASE)`
-- **THEN** `bytes.length` es `531`, `bytes[10,24)` es `"\0" × 14`, `bytes[24,32)` es `"PubDSK_1"`, `bytes[32,33)` y `bytes[39,40)` son `"\0"`, `bytes[48,58)` es `"9999123456"` y `bytes[0,2)`, `bytes[33,39)` y `bytes[40,48)` son solo dígitos ASCII
+- **THEN** `bytes.length` es `531`, `bytes[10,24)` es `"\0" × 14`, `bytes[24,32)` es `"PubDSK_1"`, `bytes[32,40)` es `"\0" × 8`, `bytes[48,58)` es `"9999123456"` y `bytes[0,2)` y `bytes[40,48)` son solo dígitos ASCII
 
 #### Scenario: Rangos declarados de la trama completa
 - **WHEN** se llama `generarPdf417(PERSONA_BASE)`
@@ -206,15 +207,15 @@ Con variante `"windows-truncada"`, el payload SHALL ser el de la variante `"comp
 - **THEN** `rangos.marcador` es `[13,21]`, `rangos.nuip` es `[37,47]`, `rangos.primerApellido` es `[47,70]`, `rangos.bloqueDemografico` es `[139,157]` y `rangos.cola` es `[157,520]`
 
 ### Requirement: FX-11 Variante sin PubDSK
-Con variante `"sin-pubdsk"`, el payload SHALL ser el de la variante `"completa"` con la misma persona y semilla, con los 8 bytes del marcador sustituidos por 0x00 y sin el byte 0x00 de la posición 32, de modo que todo campo posterior empieza una posición antes (H07, G03). `rangos.marcador` MUST ser `null`.
+Con variante `"sin-pubdsk"`, el payload SHALL ser el de la variante `"completa"` con la misma persona y semilla, con los 8 bytes del marcador sustituidos por 0x00 y un byte 0x00 más insertado en la posición 32, de modo que todo campo desde el byte 32 empieza una posición después (desplazamiento +1, H07, G03). El payload MUST conservar 531 bytes (H01): la cola pierde su último byte. `rangos.marcador` MUST ser `null`.
 
 #### Scenario: Relación exacta con la trama completa
 - **WHEN** se generan `c = generarPdf417(PERSONA_BASE)` y `s = generarPdf417(PERSONA_BASE, { variante: "sin-pubdsk" })`
-- **THEN** `s.bytes` es igual a `c.bytes[0,24)` + `"\0" × 8` + `c.bytes[33,531)`, `s.bytes.length` es `530`, el texto ISO-8859-1 de `s.bytes` no contiene `"PubDSK"` y `s.esperado` es profundamente igual a `c.esperado`
+- **THEN** `s.bytes` es igual a `c.bytes[0,24)` + `"\0" × 9` + `c.bytes[32,530)`, `s.bytes.length` es `531`, el texto ISO-8859-1 de `s.bytes` no contiene `"PubDSK"` y `s.esperado` es profundamente igual a `c.esperado`
 
 #### Scenario: Rangos desplazados una posición
 - **WHEN** se llama `generarPdf417(PERSONA_BASE, { variante: "sin-pubdsk" })`
-- **THEN** `rangos.marcador` es `null`, `rangos.nuip` es `[47,57]`, `rangos.primerApellido` es `[57,80]`, `rangos.bloqueDemografico` es `[149,167]` y `rangos.cola` es `[167,530]`
+- **THEN** `rangos.marcador` es `null`, `rangos.afis` es `[2,10]`, `rangos.nuip` es `[49,59]`, `rangos.primerApellido` es `[59,82]`, `rangos.bloqueDemografico` es `[151,169]` y `rangos.cola` es `[169,531]`
 
 ### Requirement: FX-12 Variante fecha-primero
 Con variante `"fecha-primero"`, la cabecera y los nombres SHALL ser los de la variante `"completa"`, y el bloque demográfico desde el byte 150 MUST ser `"02"` + `YYYYMMDD` + sexo + departamento (2) + municipio (3) + 1 dígito del PRNG + RH (H08, G04). El payload MUST medir 531 bytes; la cola ocupa el resto.
@@ -278,7 +279,7 @@ Todo fixture PDF417 SHALL declarar `rangos` y `esperado` (los campos de la perso
 
 #### Scenario: Propiedad de estructura sobre todas las variantes
 - **WHEN** se ejecutan al menos 1000 casos de `arbFixturePdf417()`
-- **THEN** en cada uno: `bytes.length` es 531, 520, 530 o 531 y `rangos.nuip[0]` es 48, 37, 47 o 48 según la variante sea `completa`, `windows-truncada`, `sin-pubdsk` o `fecha-primero`; los rangos de nombre miden 23; cada nombre decodificado de su rango sin los 0x00 finales es igual a `esperado`; `bytes[rangos.nuip]` sin ceros a la izquierda es `esperado.nuip`; `bytes[rangos.rh]` es `esperado.rh`; `bytes[rangos.bloqueDemografico]` contiene `esperado.fechaNacimiento` sin guiones; y los rangos son contiguos como exige el requisito
+- **THEN** en cada uno: `bytes.length` es 531, 520, 531 o 531 y `rangos.nuip[0]` es 48, 37, 49 o 48 según la variante sea `completa`, `windows-truncada`, `sin-pubdsk` o `fecha-primero`; los rangos de nombre miden 23; cada nombre decodificado de su rango sin los 0x00 finales es igual a `esperado`; `bytes[rangos.nuip]` sin ceros a la izquierda es `esperado.nuip`; `bytes[rangos.rh]` es `esperado.rh`; `bytes[rangos.bloqueDemografico]` contiene `esperado.fechaNacimiento` sin guiones; y los rangos son contiguos como exige el requisito
 
 ### Requirement: FX-16 MRZ TD1 válida
 Con variante `"valida"`, `generarMrzTd1` SHALL producir tres líneas de 30 caracteres de `[A-Z0-9<]` y `texto` con las tres unidas por `"\n"`. `L1` = `IC` + `COL` + serial + dígito de control + `lugarExpedicion` (M03) + `<` × 10 (M01). `L2` = nacimiento `YYMMDD` + dígito + sexo + vencimiento `YYMMDD` + dígito + `COL` + NUIP (M02) + `<` + dígito compuesto. Exige NUIP de 10 dígitos; si no, `ErrorFixture` `nuip-no-soportado-en-mrz`.

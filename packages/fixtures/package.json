@@ -1,0 +1,19 @@
+{
+  "name": "@lector-cedula/fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Generador determinista de fixtures sintéticos (PDF417 de la cédula amarilla y MRZ TD1 de la digital) solo para pruebas y evals.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "peerDependencies": {
+    "fast-check": "^4.10.2"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  }
+}

@@ -10,6 +10,7 @@ Motivación: ver `proposal.md` (Why). Requisitos: `specs/fixtures-sinteticos/spe
 - `tools/privacidad-check.mjs` marca toda línea con `PubDSK_1` en `packages/`, `apps/` o `server/`, salvo que la línea lleve `privacidad-ok:` o el archivo sea de prueba y contenga `fixture-sintetico`. También marca `writeFile` en `packages/*/src/`. Exporta `revisarArchivo(ruta, contenido)`.
 - El ejemplo MRZ de Eitol (`ICCOL000000012305001...`) tiene el dígito del documento inválido (calcula 5, impreso 3) y `C0L` con cero: no sirve como fixture positiva (igual que `back-ccd.png`, M04).
 - Los cambios paralelos `parser-pdf417-amarilla` y `parser-mrz-cedula-digital` consumen este paquete desde sus pruebas; otro redactor añadió la sección DIVIPOL (D01 a D05) al registro de hipótesis.
+- `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md` (layout observado en un payload público de 531 bytes y en código de terceros) refuta en parte G01: `[32,40)` son 8 NUL y `[40,48)` es un campo numérico de 8 bytes; no existe un campo de 6 dígitos en `[33,39)`. También indica que el desplazamiento sin `PubDSK` (H07) probablemente es +1, no −1 (evidencia [E]). Confirma H01, H03, H04 (cuatro campos de 23 bytes), H05, H06 y H09. Ver "Ajuste por evidencia" al final.
 
 ## Goals / Non-Goals
 
@@ -119,8 +120,8 @@ Motivación: ver `proposal.md` (Why). Requisitos: `specs/fixtures-sinteticos/spe
 3. **Validación de la persona** (FX-03, FX-04). Un único `validarPersona(valor: unknown)` interno, común a ambos generadores, recorre los campos en el orden de FX-03 y lanza el primer `ErrorFixture`. Fechas: `^[0-9]{4}-[0-9]{2}-[0-9]{2}$` y comprobación aritmética de mes y día (bisiestos gregorianos) sin `Date` (FX-01 prohíbe `new Date(`). Después se validan las opciones (`variante` en la lista, `semilla` con `Number.isInteger` y rango, opciones OCR) y por último las restricciones de la MRZ.
 
 4. **Construcción del PDF417: una trama completa y transformaciones** (FX-07 a FX-13, G01 a G04). `construirCompleta(persona, prng, bloque)` escribe la disposición de G01; las variantes se derivan:
-   - `windows-truncada` = completa sin `[13,24)`; `sin-pubdsk` = completa con `[24,32)` a NUL y sin el byte 32; `fecha-primero` = completa con el bloque fecha-primero.
-   - Los `rangos` se calculan desplazando los de la completa (−11 o −1 desde el byte 24/33), no a mano.
+   - `windows-truncada` = completa sin `[13,24)`; `sin-pubdsk` = completa con `[24,32)` a NUL, un NUL insertado en la posición 32 y sin el último byte de la cola (531 bytes, H01); `fecha-primero` = completa con el bloque fecha-primero.
+   - Los `rangos` se calculan desplazando los de la completa (−11 desde el byte 24 o +1 desde el byte 32), no a mano.
    - Por qué: los escenarios de FX-10 y FX-11 son relaciones exactas con la completa; derivarlas garantiza por construcción que "misma persona, trama completa y truncada" difieren solo donde la hipótesis dice.
    - Codificación ISO-8859-1 propia (cada carácter de `[A-ZÑ 0-9]` es un byte; la Ñ es 0xD1), sin `TextEncoder` (solo UTF-8).
    - Tabla de hipótesis por variante: constante en `src/hipotesis.ts`, idéntica a la de FX-14.
@@ -140,7 +141,7 @@ Motivación: ver `proposal.md` (Why). Requisitos: `specs/fixtures-sinteticos/spe
    ```
 
    - Dígito = `Math.floor(r() * 10)`; byte = `Math.floor(r() * 256)`.
-   - Orden en el PDF417 (un PRNG nuevo por llamada): 2 dígitos de cabecera, 4 dígitos del AFIS (tras el prefijo `9999`), 6 dígitos, 8 dígitos, 1 dígito desconocido del bloque, y los bytes de la cola en orden. La cola depende así solo de la semilla y de su longitud (FX-13).
+   - Orden en el PDF417 (un PRNG nuevo por llamada): 2 dígitos de cabecera, 4 dígitos del AFIS (tras el prefijo `9999`), 8 dígitos del campo numérico `[40,48)`, 1 dígito desconocido del bloque, y los bytes de la cola en orden. La cola depende así solo de la semilla y de su longitud (FX-13).
    - MRZ: solo la variante `ocr-b` consume el PRNG (decisión 7).
    - Los valores literales de FX-06 (semillas 1 y 2) y de FX-20 (semilla 1) se calcularon con esta implementación fuera del repositorio al redactar la spec; son el oráculo literal del PRNG.
    - Alternativa descartada: el generador de `fast-check` como PRNG. Ataría los bytes a la versión de `fast-check` y obligaría a pasar un `Random` desde fuera.
@@ -237,3 +238,12 @@ Comandos: `V` = `npx vitest run packages/fixtures`; `C` = `npx vitest run packag
 - Preguntas 2 a 5: se aceptan las suposiciones como hipótesis G01-G05 explícitas; cada variante las declara y el investigador de hipótesis las contrastará.
 - Pregunta 6: el alcance excluido queda para cambios posteriores.
 - Pregunta 7: los parsers traducen `esperado` en sus pruebas hasta que exista la spec `salida-json`.
+
+## Ajuste por evidencia (2026-10-06, pedido por el orquestador antes de publicar la interfaz)
+
+Fuente: `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`. Como la interfaz aún no se había publicado ni consumido, se ajusta sin subir el MAJOR (`VERSION_CONTRATO` sigue en `"1.0.0"`); los tipos exportados no cambian.
+
+- **G01 corregida.** Trama completa: `[0,2)` 2 dígitos, `[2,10)` AFIS (`9999` + 4), `[10,24)` 14 NUL, `[24,32)` `PubDSK_1`, `[32,40)` 8 NUL, `[40,48)` campo numérico de 8 dígitos del PRNG, `[48,58)` NUIP, nombres de 23 bytes desde 58, bloque desde 150. El payload público trae en `[40,48)` 6 dígitos + 2 NUL y los volcados, 8 dígitos en 2 de 3: el generador usa 8 dígitos (un único caso; la variante de 6 + 2 NUL queda para un cambio posterior si un parser la necesita).
+- **Orden de consumo del PRNG.** Desaparecen los 6 dígitos: 2 + 4 + 8 + 1 dígitos y después la cola. Los literales de FX-06 (semillas 1 y 2) se recalcularon fuera del repositorio con la implementación de referencia de la decisión 5 (script en el scratchpad de la sesión, no con el código del paquete); son coherentes con los antiguos: los 15 primeros dígitos de cada secuencia coinciden y cada byte nuevo cae en el intervalo `[d·25.6, (d+1)·25.6)` del dígito antiguo en esa posición.
+- **G03 con dirección en duda: se adopta +1.** La única fuente con dirección (la app comercial decompilada S5) apunta a +1 bajo la lectura coherente con el payload público ([E]). `sin-pubdsk` = completa con el marcador a NUL y un NUL insertado en 32: todo campo desde el byte 32 se desplaza +1 y la trama conserva 531 bytes (H01) recortando el último byte de la cola. G03 sigue pendiente; si se confirma −1, se cambia esta transformación y sus literales en un cambio OpenSpec.
+- Sin cambios: el dígito desconocido del bloque sigue saliendo del PRNG (la evidencia lo ve `0` en 4 de 4, pero su significado es desconocido) y la cola sigue siendo ruido uniforme (principio III; no imita las plantillas de H13).
