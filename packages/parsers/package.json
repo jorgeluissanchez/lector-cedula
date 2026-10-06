@@ -1,0 +1,16 @@
+{
+  "name": "@lector-cedula/parsers",
+  "version": "0.0.0",
+  "description": "Parsers deterministas de la cédula colombiana: PDF417 (amarilla), MRZ TD1 (digital), DIVIPOL y validadores.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  }
+}

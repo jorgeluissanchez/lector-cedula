@@ -1,0 +1,13 @@
+services:
+  pruebas:
+    build: { context: ., target: dev }
+    command: sh -c "uv run ruff check . && uv run ruff format --check . && uv run pytest -q"
+    volumes:
+      - ./app:/srv/app:ro
+      - ./tests:/srv/tests:ro
+
+  api:
+    build: { context: ., target: produccion }
+    ports: ["8000:8000"]
+    read_only: true
+    tmpfs: ["/tmp"]

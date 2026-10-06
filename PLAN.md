@@ -100,17 +100,17 @@ Regla de uso: Spec Kit para abrir una capacidad nueva (una por fase), OpenSpec p
 
 | Evento | Acción | Propósito |
 |---|---|---|
-| PostToolUse (Edit/Write en `packages/**`) | `pnpm vitest related --run` sobre el archivo tocado + `eslint --fix` | Retroalimentación inmediata al agente |
+| PostToolUse (Edit/Write en `packages/**`) | `npx vitest related --run` sobre el archivo tocado + `eslint --fix` | Retroalimentación inmediata al agente |
 | PostToolUse (Edit/Write en `server/**`) | `ruff check --fix` + `pytest -x` del módulo | Igual en Python |
-| PreToolUse (Bash con `git commit`) | `privacidad-check` + `licencia-check` + `pnpm typecheck` | Bloquea commits con PII, fixtures reales o licencias prohibidas |
-| PreToolUse (Bash con `pnpm add` o `pip install`) | `licencia-check` del paquete | Evita que entre AGPL por descuido |
+| PreToolUse (Bash con `git commit`) | `privacidad-check` + `licencia-check` + `npm run typecheck` | Bloquea commits con PII, fixtures reales o licencias prohibidas |
+| PreToolUse (Bash con `npm install` o `pip install`) | `licencia-check` del paquete | Evita que entre AGPL por descuido |
 | Stop | `eval-campo --quick` sobre fixtures sintéticos y comparación con `evals/reports/baseline.json` | El agente no termina si bajó una métrica |
 | SubagentStop | Verifica que el subagente dejó `tasks.md` actualizado y pruebas en verde | Cierre honesto de cada tarea |
 | UserPromptSubmit | Inyecta el estado de `openspec/changes/` activo | Contexto de qué spec está en curso |
 
 ### 2.5 CLAUDE.md (contenido mínimo)
 
-- Comandos: `pnpm test`, `pnpm eval`, `pnpm dev`, `uv run pytest`, `openspec list`.
+- Comandos: `npm run check`, `npm run eval`, `docker compose -f server/compose.yaml run --rm pruebas`, `openspec list`.
 - Mapa del repo en diez líneas.
 - Reglas no negociables (los 7 principios en una línea cada uno).
 - Sección "Errores pasados" que los revisores van alimentando: la primera entrada es la lista de bugs de repos antiguos del punto 1 del documento de formato (RH `AB`, sexo por `contains`, Ñ, `-` del RH, apellidos invertidos).
@@ -155,7 +155,7 @@ Objetivo: que el repositorio sea operable por agentes desde el primer commit.
 Spec: `openspec/specs/harness/`.
 
 Tareas para subagentes:
-1. Inicializar monorepo pnpm + Vite + TypeScript estricto + Vitest, y `server/` con uv + FastAPI + pytest.
+1. Inicializar monorepo con npm workspaces (pnpm bloqueado, ver docs/decisiones/2026-10-06-entorno-desarrollo.md) + Vite + TypeScript estricto + Vitest, y `server/` con uv + FastAPI + pytest dentro de Docker.
 2. `specify init` y `/speckit-constitution` con los 7 principios. `openspec init`. Instalar Superpowers.
 3. Escribir `CLAUDE.md`, los 8 agentes de `.claude/agents/`, las 7 skills y los hooks de la tabla 2.4. Probar cada hook con un caso que deba bloquear.
 4. Crear `evals/` con el runner de métricas y un baseline vacío.

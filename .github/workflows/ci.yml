@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Puerta completa (tipos, lint, pruebas, licencias, privacidad, evals)
+        run: npm run check
+      - name: Reporte de evals
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-${{ github.sha }}
+          path: evals/reports/latest.json
+          if-no-files-found: ignore
+
+  servidor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+      - name: Licencias Python (lista negra)
+        working-directory: .
+        run: node tools/licencia-check.mjs --pip $(sed -n '/^dependencies/,/]/p' server/pyproject.toml | grep -oE '"[a-zA-Z0-9_.-]+' | tr -d '"')
