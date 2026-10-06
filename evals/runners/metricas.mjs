@@ -30,14 +30,34 @@ function normalizar(v) {
   return v === undefined ? null : JSON.stringify(v);
 }
 
+/** Campo de métrica reservado para la comparación del conjunto de claves (EV-01, EV-02). */
+export const CAMPO_CLAVES = "__claves";
+
+/** Claves propias enumerables ordenadas, como JSON; conjunto vacío si no es objeto o es null (EV-01). */
+function clavesOrdenadas(v) {
+  return JSON.stringify(typeof v === "object" && v !== null ? Object.keys(v).sort() : []);
+}
+
 /**
  * Agrega resultados: {tipo: {campo: {n, exactos, cerSuma}}} -> {tipo: {campo: {n, exact_match, cer}}}
- * @param {{tipo: string, esperado: object, obtenido: object}[]} casos
+ * Con `clavesExactas: true` el caso suma además el campo `__claves` (EV-01): exacto si el conjunto de
+ * claves del resultado es igual al de `esperado`, con CER 0 o 1. `__claves` en `esperado` lanza (EV-02).
+ * @param {{tipo: string, esperado: object, obtenido: unknown, clavesExactas?: boolean}[]} casos
  */
 export function agregar(casos) {
   const acc = {};
-  for (const { tipo, esperado, obtenido } of casos) {
+  for (const { tipo, esperado, obtenido, clavesExactas } of casos) {
+    if (Object.hasOwn(esperado, CAMPO_CLAVES)) {
+      throw new Error(`El esperado de un caso de tipo "${tipo}" usa el campo reservado "${CAMPO_CLAVES}" (EV-02)`);
+    }
     acc[tipo] ??= {};
+    if (clavesExactas === true) {
+      const a = (acc[tipo][CAMPO_CLAVES] ??= { n: 0, exactos: 0, cerSuma: 0 });
+      const exacto = clavesOrdenadas(obtenido) === clavesOrdenadas(esperado);
+      a.n += 1;
+      if (exacto) a.exactos += 1;
+      else a.cerSuma += 1;
+    }
     for (const [campo, valor] of Object.entries(esperado)) {
       const real = obtenido?.[campo];
       const a = (acc[tipo][campo] ??= { n: 0, exactos: 0, cerSuma: 0 });

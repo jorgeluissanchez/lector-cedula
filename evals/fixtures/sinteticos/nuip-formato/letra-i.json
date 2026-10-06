@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-05: letra I en lugar de 1 no se corrige",
   "entrada": "9999I23456",
+  "clavesExactas": true,
   "esperado": {
     "valido": false,
     "motivo": "caracteres-invalidos"

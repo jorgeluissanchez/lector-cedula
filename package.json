@@ -21,6 +21,8 @@
     "check:licencias": "node tools/licencia-check.mjs",
     "check:privacidad": "node tools/privacidad-check.mjs",
     "check": "npm run typecheck && npm run lint && npm test && npm run check:licencias && npm run check:privacidad && npm run eval:quick",
+    "test:mutacion": "stryker run",
+    "check:completo": "npm run check && npm run test:mutacion",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

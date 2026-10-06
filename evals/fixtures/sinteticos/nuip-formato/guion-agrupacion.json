@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-03/NF-08: guiones de agrupación (más de un dígito tras el guion) son separadores",
   "entrada": "9999-123-456",
+  "clavesExactas": true,
   "esperado": {
     "valido": true,
     "numero": "9999123456",

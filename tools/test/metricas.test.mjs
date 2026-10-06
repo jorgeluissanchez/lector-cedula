@@ -37,3 +37,74 @@ describe("regresiones", () => {
     expect(regresiones({}, base)).toHaveLength(1);
   });
 });
+
+describe("EV-01 Comparación exacta del conjunto de claves", () => {
+  it("EV-01 Mismas claves", () => {
+    const m = agregar([
+      { tipo: "t", clavesExactas: true, esperado: { valido: false, motivo: "vacio" }, obtenido: { valido: false, motivo: "vacio" } },
+    ]);
+    expect(m.t.__claves).toStrictEqual({ n: 1, exact_match: 1, cer: 0 });
+  });
+
+  it("EV-01 Clave sobrante", () => {
+    const m = agregar([
+      {
+        tipo: "t",
+        clavesExactas: true,
+        esperado: { valido: false, motivo: "vacio" },
+        obtenido: { valido: false, motivo: "vacio", numero: "9999" },
+      },
+    ]);
+    expect(m.t.__claves).toStrictEqual({ n: 1, exact_match: 0, cer: 1 });
+    expect(m.t.valido.exact_match).toBe(1);
+    expect(m.t.motivo.exact_match).toBe(1);
+  });
+
+  it("EV-01 Clave faltante", () => {
+    const m = agregar([
+      { tipo: "t", clavesExactas: true, esperado: { valido: true, numero: "9999123456" }, obtenido: { valido: true } },
+    ]);
+    expect(m.t.__claves).toStrictEqual({ n: 1, exact_match: 0, cer: 1 });
+  });
+
+  it("EV-01 El orden de las claves no importa", () => {
+    const m = agregar([
+      { tipo: "t", clavesExactas: true, esperado: { valido: false, motivo: "vacio" }, obtenido: { motivo: "vacio", valido: false } },
+    ]);
+    expect(m.t.__claves).toStrictEqual({ n: 1, exact_match: 1, cer: 0 });
+  });
+
+  it("EV-01 Resultado que no es objeto", () => {
+    const m = agregar(
+      [null, undefined, "x"].map((obtenido) => ({ tipo: "t", clavesExactas: true, esperado: { valido: false }, obtenido })),
+    );
+    expect(m.t.__claves).toStrictEqual({ n: 3, exact_match: 0, cer: 1 });
+  });
+
+  it("EV-01 Sin la marca no se compara", () => {
+    const obtenido = { valido: false, motivo: "vacio", numero: "9999" };
+    const m = agregar([
+      { tipo: "t", esperado: { valido: false, motivo: "vacio" }, obtenido },
+      { tipo: "t", clavesExactas: false, esperado: { valido: false, motivo: "vacio" }, obtenido },
+    ]);
+    expect(Object.hasOwn(m.t, "__claves")).toBe(false);
+  });
+
+  it("EV-01 Mezcla de casos con y sin marca", () => {
+    const m = agregar([
+      { tipo: "t", clavesExactas: true, esperado: { valido: false }, obtenido: { valido: false } },
+      { tipo: "t", esperado: { valido: false }, obtenido: { valido: false } },
+    ]);
+    expect(m.t.__claves.n).toBe(1);
+    expect(m.t.valido.n).toBe(2);
+  });
+});
+
+describe("EV-02 Nombre de campo reservado", () => {
+  it("EV-02 Esperado con la clave reservada", () => {
+    const llamar = () => agregar([{ tipo: "t", esperado: { __claves: 1 }, obtenido: {} }]);
+    expect(llamar).toThrow(Error);
+    expect(llamar).toThrow(/__claves/);
+    expect(llamar).toThrow(/"t"/);
+  });
+});

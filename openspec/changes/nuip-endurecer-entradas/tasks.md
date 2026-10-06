@@ -13,7 +13,7 @@ Pruebas del validador en `packages/parsers/test/nuip-formato.test.ts`; del corre
 
 ## 1. Pruebas de mutación
 
-- [ ] 1.1 Configurar Stryker para `packages/parsers` según design.md (decisiones 7 y 14):
+- [x] 1.1 Configurar Stryker para `packages/parsers` según design.md (decisiones 7 y 14):
   - `stryker.config.mjs` en la raíz con `testRunner: "vitest"`, `mutate` sobre `packages/parsers/src/**/*.ts` sin `index.ts`, `thresholds: { high: 95, low: 85, break: 85 }`, `coverageAnalysis: "perTest"` y reportes `clear-text`, `progress` y `html` (en `reports/mutation/`).
   - Scripts raíz en `package.json`: `"test:mutacion": "stryker run"` y `"check:completo": "npm run check && npm run test:mutacion"`. `npm run check` NO incluye la mutación.
   - Job `mutacion` separado en `.github/workflows/ci.yml` (Node 24, `npm ci`, `npm run test:mutacion`, sube `reports/mutation/` como artefacto con `if: always()`).
@@ -24,8 +24,8 @@ Pruebas del validador en `packages/parsers/test/nuip-formato.test.ts`; del corre
 
 ## 2. Corredor de evals: claves exactas
 
-- [ ] 2.1 Ampliar `agregar` en `evals/runners/metricas.mjs` para aceptar `clavesExactas?: boolean` por caso y producir el campo `__claves` (design.md, decisión 6), y lanzar `Error` si `esperado` contiene `__claves`. Escribir antes en `tools/test/metricas.test.mjs` un caso por escenario de EV-01 (salvo "El corredor propaga la marca del fixture") y el de EV-02, con valores exactos (`{ n, exact_match, cer }` con `toStrictEqual`). Las pruebas existentes de `agregar` siguen en verde sin cambios. Cubre EV-01, EV-02. Tipos de prueba: **unitaria**. Verificación: `npx vitest run tools/test/metricas.test.mjs` en verde y `npm test` en verde.
-- [ ] 2.2 Hacer que `evals/runners/eval-campo.mjs` copie `clavesExactas: f.clavesExactas === true` en cada caso, y añadir `"clavesExactas": true` a los 18 fixtures existentes de `evals/fixtures/sinteticos/nuip-formato/` sin cambiar su `esperado`. Documentar el campo en el comentario de formato de fixture de `eval-campo.mjs`. Cubre EV-01 (escenario "El corredor propaga la marca del fixture") y NF-01 por eval. Tipos de prueba: **eval de campo**. Verificación: `npm run eval:quick` muestra `nuip-formato.__claves` con `n=18`, `exact=100.0%`, `CER=0.00%`, 0 excepciones y sin regresiones; `npm run check` en verde.
+- [x] 2.1 Ampliar `agregar` en `evals/runners/metricas.mjs` para aceptar `clavesExactas?: boolean` por caso y producir el campo `__claves` (design.md, decisión 6), y lanzar `Error` si `esperado` contiene `__claves`. Escribir antes en `tools/test/metricas.test.mjs` un caso por escenario de EV-01 (salvo "El corredor propaga la marca del fixture") y el de EV-02, con valores exactos (`{ n, exact_match, cer }` con `toStrictEqual`). Las pruebas existentes de `agregar` siguen en verde sin cambios. Cubre EV-01, EV-02. Tipos de prueba: **unitaria**. Verificación: `npx vitest run tools/test/metricas.test.mjs` en verde y `npm test` en verde.
+- [x] 2.2 Hacer que `evals/runners/eval-campo.mjs` copie `clavesExactas: f.clavesExactas === true` en cada caso, y añadir `"clavesExactas": true` a los 18 fixtures existentes de `evals/fixtures/sinteticos/nuip-formato/` sin cambiar su `esperado`. Documentar el campo en el comentario de formato de fixture de `eval-campo.mjs`. Cubre EV-01 (escenario "El corredor propaga la marca del fixture") y NF-01 por eval. Tipos de prueba: **eval de campo**. Verificación: `npm run eval:quick` muestra `nuip-formato.__claves` con `n=18`, `exact=100.0%`, `CER=0.00%`, 0 excepciones y sin regresiones; `npm run check` en verde.
 
 ## 3. Entrada que no es texto y tipo de documento
 

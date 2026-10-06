@@ -1,7 +1,12 @@
 {
-  "fecha": "2026-10-06T17:34:46.122Z",
+  "fecha": "2026-10-06T18:16:52.291Z",
   "metricas": {
     "nuip-formato": {
+      "__claves": {
+        "n": 18,
+        "exact_match": 1,
+        "cer": 0
+      },
       "valido": {
         "n": 18,
         "exact_match": 1,

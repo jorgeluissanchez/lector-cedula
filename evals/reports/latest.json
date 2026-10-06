@@ -1,10 +1,15 @@
 {
-  "fecha": "2026-10-06T17:41:50.194Z",
+  "fecha": "2026-10-06T18:16:52.291Z",
   "modo": "quick",
   "casos": 18,
   "excepciones": [],
   "metricas": {
     "nuip-formato": {
+      "__claves": {
+        "n": 18,
+        "exact_match": 1,
+        "cer": 0
+      },
       "valido": {
         "n": 18,
         "exact_match": 1,

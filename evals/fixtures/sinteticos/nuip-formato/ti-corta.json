@@ -6,6 +6,7 @@
   "opciones": {
     "tipoDocumento": "ti"
   },
+  "clavesExactas": true,
   "esperado": {
     "valido": false,
     "motivo": "longitud-invalida"

@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-04: diez caracteres con cero inicial no son NUIP",
   "entrada": "0999912345",
+  "clavesExactas": true,
   "esperado": {
     "valido": true,
     "numero": "999912345",

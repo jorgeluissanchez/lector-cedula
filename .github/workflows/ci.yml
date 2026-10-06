@@ -28,6 +28,25 @@ jobs:
           path: evals/reports/latest.json
           if-no-files-found: ignore
 
+  mutacion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Pruebas de mutación (Stryker, break 85)
+        run: npm run test:mutacion
+      - name: Reporte de mutación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutacion-${{ github.sha }}
+          path: reports/mutation/
+          if-no-files-found: ignore
+
   servidor:
     runs-on: ubuntu-latest
     defaults:

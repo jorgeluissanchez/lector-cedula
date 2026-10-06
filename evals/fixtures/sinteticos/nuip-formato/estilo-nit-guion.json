@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-08: formato estilo NIT con guion y un dígito final se rechaza",
   "entrada": "999.912.345-6",
+  "clavesExactas": true,
   "esperado": {
     "valido": false,
     "motivo": "posible-digito-verificacion"

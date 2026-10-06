@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-04: ceros a la izquierda en un NUIP",
   "entrada": "0009999123456",
+  "clavesExactas": true,
   "esperado": {
     "valido": true,
     "numero": "9999123456",

@@ -8,7 +8,10 @@
  *   node evals/runners/eval-campo.mjs --quick            # solo fixtures sintéticos rápidos
  *   node evals/runners/eval-campo.mjs --guardar-baseline # fija el resultado actual como baseline
  *
- * Formato de fixture (JSON): {"sintetico": true, "tipo": "<evaluador>", "entrada": ..., "opciones"?: {...}, "esperado": {...}}
+ * Formato de fixture (JSON): {"sintetico": true, "tipo": "<evaluador>", "entrada": ..., "opciones"?: {...}, "esperado": {...},
+ *   "clavesExactas"?: true}
+ * Con "clavesExactas": true se mide además el campo __claves: el conjunto de claves del resultado debe ser
+ * igual al de "esperado" (EV-01). "__claves" es un nombre reservado y no puede aparecer en "esperado" (EV-02).
  * Los evaluadores se registran en evals/runners/registro.mjs.
  */
 import { execSync } from "node:child_process";
@@ -68,7 +71,7 @@ async function main(argv) {
       errores.push(`${f.ruta}: ${e.message}`);
       obtenido = {};
     }
-    casos.push({ tipo: f.tipo, esperado: f.esperado, obtenido });
+    casos.push({ tipo: f.tipo, esperado: f.esperado, obtenido, clavesExactas: f.clavesExactas === true });
   }
 
   const metricas = agregar(casos);

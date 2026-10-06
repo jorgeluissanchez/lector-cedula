@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-07: límite inferior aceptado (5 dígitos)",
   "entrada": "99991",
+  "clavesExactas": true,
   "esperado": {
     "valido": true,
     "numero": "99991",

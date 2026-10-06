@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-03: puntos de miles en un NUIP de 10 dígitos",
   "entrada": "9.999.123.456",
+  "clavesExactas": true,
   "esperado": {
     "valido": true,
     "numero": "9999123456",

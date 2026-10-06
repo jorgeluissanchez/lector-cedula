@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-07: cuatro dígitos es longitud inválida",
   "entrada": "9999",
+  "clavesExactas": true,
   "esperado": {
     "valido": false,
     "motivo": "longitud-invalida"

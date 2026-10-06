@@ -3,6 +3,7 @@
   "tipo": "nuip-formato",
   "descripcion": "NF-06: cadena vacía",
   "entrada": "",
+  "clavesExactas": true,
   "esperado": {
     "valido": false,
     "motivo": "vacio"

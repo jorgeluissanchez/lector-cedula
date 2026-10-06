@@ -6,6 +6,7 @@
   "opciones": {
     "tipoDocumento": "ti"
   },
+  "clavesExactas": true,
   "esperado": {
     "valido": true,
     "numero": "9999123456",
