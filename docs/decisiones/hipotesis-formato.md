@@ -67,3 +67,30 @@ Las aplica el cambio OpenSpec `captura-calidad-pwa`: C01 fija la proporción de 
 |---|---|---|---|---|
 | C01 | La cédula amarilla y la digital tienen formato ID-1 de ISO/IEC 7810 (85,60 x 53,98 mm, proporción 1,5858) | ICAO 9303 (TD1 implica ID-1) para la digital; conocimiento general para la amarilla | pendiente | La digital usa MRZ TD1 (doc 01, sección 2); ninguna medición publicada de la amarilla |
 | C02 | El PDF417 del reverso de la amarilla ocupa al menos el 75 % del ancho de la tarjeta, de modo que con la guía de 1541 px de CAM-08 sobre un frame de 1920x1080 el código mide unos 1156 px o más (2 px por módulo) | Skill `captura-movil` (1156 px), estimación sin medir | pendiente | Sin medición sobre espécimen ni cédula real; si el código es más estrecho, 1920x1080 no basta y habrá que pedir 4K o acercar más |
+
+## Actualización de estados (2026-10-06, evidencia pública)
+
+Fuente: `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`. Esta tabla prevalece sobre la columna Estado de las tablas anteriores.
+
+| ID | Nuevo estado | Nota |
+|---|---|---|
+| H01 | confirmada | 531 bytes; un lector comercial rechaza tramas menores |
+| H02 | confirmada en parte | Byte 24 confirmado; la posición 13 no es regla (hay lectores que quitan todos los NUL) |
+| H03 | confirmada | NUIP en [48,58), 4 payloads |
+| H04 | confirmada con corrección | 4 campos de 23 bytes: [58,81), [81,104), [104,127), [127,150) |
+| H05 | confirmada | El dígito desconocido es siempre 0 en la evidencia |
+| H06 | confirmada | Departamento 2 + municipio 3 (DIVIPOL) |
+| H07 | pendiente | Existencia probable; desplazamiento probablemente +1 (evidencia [E]) |
+| H08 | pendiente | Sin evidencia; probable artefacto |
+| H09 | confirmada | Tras el byte 168, dos bloques binarios con cabecera `02 xx 00 xx xx FF 80 80` |
+| H10 | pendiente (probable) | Prefijo `I3` con el mismo layout |
+| H11 | confirmada | P/A/R está en la línea impresa, no en el payload |
+| M01 | confirmada | |
+| M02 | confirmada con corrección | Campo de 11 caracteres = NUIP de 10 + `<` |
+| M03 | pendiente | Codificación DIVIPOL; lugar (expedición o nacimiento) incierto; puede venir vacío |
+| M04 | confirmada con corrección | Impreso 9, calculado 8; el espécimen anterior también es inválido |
+| N01 | confirmada | Norma oficial: NIP histórico de 11 = AAMMDD + 5 |
+| D05 | confirmada | `05001` es Cartagena en DIVIPOL |
+| G01 | refutada en parte | [32,40) son NUL y [40,48) numérico de 8 bytes |
+
+Propuestas nuevas del investigador (pendientes): H13 (dos plantillas dactilares), H14 (tramas sin NUL pierden fronteras entre nombres), H16 (prefijo de 2 bytes = tipo de documento; renumerada para no chocar con la H15 del parser PDF417), M05 (especímenes no autoconsistentes), N02 (estructura del NIP).
