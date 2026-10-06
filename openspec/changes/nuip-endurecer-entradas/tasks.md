@@ -60,7 +60,7 @@ Pruebas del validador en `packages/parsers/test/nuip-formato.test.ts`; del corre
 
 ## 6. Regla del dígito de verificación (NIT)
 
-- [ ] 6.1 Escribir las pruebas de todos los escenarios de NF-08 y de los escenarios nuevos de NF-09 ("Patrón NIT con espacios o separador final en tarjeta de identidad" y "Tarjeta de identidad con ceros a la izquierda"). Verlas fallar. Luego implementar la regla NIT con H y los separadores de NF-03 (design.md, decisión 2). Cubre NF-08, NF-09, NF-13. Tipos de prueba:
+- [x] 6.1 Escribir las pruebas de todos los escenarios de NF-08 y de los escenarios nuevos de NF-09 ("Patrón NIT con espacios o separador final en tarjeta de identidad" y "Tarjeta de identidad con ceros a la izquierda"). Verlas fallar. Luego implementar la regla NIT con H y los separadores de NF-03 (design.md, decisión 2). Cubre NF-08, NF-09, NF-13. Tipos de prueba:
   - **unitaria**: cada entrada citada en los escenarios, incluidas `"-6"`, `"0-0"`, `"9999-123-456"`, `"9999123456-"`, `"9999-123-45 6"` y `"999912345.6"`.
   - **propiedad P3**: para N de 4 a 9 dígitos ASCII, un dígito d, un guion h de H y secuencias a, b, c de separadores de NF-03 con longitud total <= 64, `N + a + h + b + d + c` da exactamente `{ valido: false, motivo: "posible-digito-verificacion" }`, con y sin `"ti"`.
   - **propiedad P4**: toda cadena de hasta 64 caracteres de dígitos y separadores sin ningún carácter de H nunca da `posible-digito-verificacion`.

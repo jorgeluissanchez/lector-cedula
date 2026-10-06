@@ -48,8 +48,13 @@ export type ResultadoFormatoNuip =
  */
 /** Dígitos ASCII y separadores S, y nada más (NF-03, NF-05). */
 const SOLO_ADMITIDOS = /^[0-9.\-\u2010\u2011\u2013\u2212 \t\n\r\u00A0\u202F]*$/;
-/** Guion final seguido de exactamente un dígito: posible dígito de verificación estilo NIT (NF-08). */
-const PATRON_NIT = /-[0-9]\s*$/;
+/**
+ * Posible dígito de verificación estilo NIT (NF-08): un guion de H, luego solo separadores S, exactamente
+ * un dígito y solo separadores S hasta el final. Se aplica tras SOLO_ADMITIDOS, así que el dígito final
+ * no tiene otro dígito pegado delante y entre él y el dígito anterior hay al menos un guion.
+ */
+const PATRON_NIT =
+  /[-\u2010\u2011\u2013\u2212][.\-\u2010\u2011\u2013\u2212 \t\n\r\u00A0\u202F]*[0-9][.\-\u2010\u2011\u2013\u2212 \t\n\r\u00A0\u202F]*$/;
 /** Separadores S que se eliminan en cualquier posición (NF-03, NF-06). */
 const SEPARADORES = /[.\-\u2010\u2011\u2013\u2212 \t\n\r\u00A0\u202F]/g;
 const CEROS_IZQUIERDA = /^0+/;

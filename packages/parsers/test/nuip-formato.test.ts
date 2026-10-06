@@ -37,6 +37,7 @@ const NBSP = "\u00A0";
 const NO_TEXTO = { valido: false, motivo: "entrada-no-texto" };
 const TIPO_INVALIDO = { valido: false, motivo: "tipo-documento-invalido" };
 const DEMASIADO_LARGA = { valido: false, motivo: "entrada-demasiado-larga" };
+const NIT = { valido: false, motivo: "posible-digito-verificacion" };
 const NUIP_VALIDO = { valido: true, numero: "9999123456", tipoProbable: "nuip", digitos: 10, warnings: [] };
 const TI_ANTIGUA = { valido: true, numero: "99991234567", tipoProbable: "ti-antigua", digitos: 11, warnings: ["N01"] };
 
@@ -397,6 +398,44 @@ describe("validarFormatoNuip", () => {
       }
     });
 
+    it("Dígito de verificación separado por espacios", () => {
+      for (const entrada of ["999.912.345- 6", "999.912.345 - 6"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NIT);
+      }
+    });
+
+    it("Separador después del dígito de verificación", () => {
+      for (const entrada of ["999.912.345-6.", "999.912.345-6-"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NIT);
+      }
+    });
+
+    it("Variantes de guion activan la regla", () => {
+      for (const entrada of [
+        "999.912.345\u20136",
+        "999912345 \u2212 6",
+        "999912345\u20106",
+        "999912345\u2011\u00A06",
+      ]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NIT);
+      }
+    });
+
+    it("Guion y un solo dígito sin número delante", () => {
+      for (const entrada of ["-6", "0-0"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NIT);
+      }
+    });
+
+    it("Cada guion de NF-03 y cada separador alrededor del dígito activan la regla", () => {
+      for (const guion of GUIONES_ADMITIDOS) {
+        for (const sep of SEPARADORES_ADMITIDOS) {
+          expect(validarFormatoNuip(`999912345${guion}${sep}6`)).toStrictEqual(NIT);
+          expect(validarFormatoNuip(`999912345${guion}6${sep}`)).toStrictEqual(NIT);
+        }
+      }
+    });
+
     it("Guion final seguido de más de un dígito es separador", () => {
       expect(validarFormatoNuip("9999-123-456")).toStrictEqual({
         valido: true,
@@ -408,15 +447,62 @@ describe("validarFormatoNuip", () => {
     });
 
     it("Guion final aislado es separador", () => {
-      expect(validarFormatoNuip("9999123456-")).toMatchObject({ valido: true, numero: "9999123456" });
+      for (const entrada of ["9999123456-", "9999123456 - "]) {
+        expect(validarFormatoNuip(entrada)).toMatchObject({ valido: true, numero: "9999123456" });
+      }
+    });
+
+    it("Dígito final aislado sin guion no activa la regla", () => {
+      for (const entrada of ["9999-123-45 6", "999912345.6"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NUIP_VALIDO);
+      }
     });
 
     it("Prioridad de caracteres inválidos sobre el patrón NIT", () => {
-      expect(validarFormatoNuip("999A12345-6")).toStrictEqual({ valido: false, motivo: "caracteres-invalidos" });
+      for (const entrada of ["999A12345-6", "999912345-6\u3000"]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual({ valido: false, motivo: "caracteres-invalidos" });
+      }
     });
 
     it("Prioridad del patrón NIT sobre la longitud", () => {
-      expect(validarFormatoNuip("99-6")).toStrictEqual({ valido: false, motivo: "posible-digito-verificacion" });
+      expect(validarFormatoNuip("99-6")).toStrictEqual(NIT);
+    });
+
+    it("Propiedad P3: N + a + guion + b + dígito + c da posible-digito-verificacion (cc y ti)", () => {
+      const separadores = fc
+        .array(fc.constantFrom(...SEPARADORES_ADMITIDOS), { maxLength: 17 })
+        .map((partes) => partes.join(""));
+      fc.assert(
+        fc.property(
+          fc.array(fc.constantFrom(...DIGITOS_ASCII), { minLength: 4, maxLength: 9 }).map((p) => p.join("")),
+          separadores,
+          fc.constantFrom(...GUIONES_ADMITIDOS),
+          separadores,
+          fc.constantFrom(...DIGITOS_ASCII),
+          separadores,
+          fc.constantFrom(undefined, { tipoDocumento: "ti" }),
+          (n, a, h, b, d, c, opciones) => {
+            const entrada = n + a + h + b + d + c;
+            expect(entrada.length).toBeLessThanOrEqual(64);
+            expect(validarFormatoNuip(entrada, opciones)).toStrictEqual(NIT);
+          },
+        ),
+        { numRuns: 1000 },
+      );
+    });
+
+    it("Propiedad P4: sin ningún guion de NF-03 nunca da posible-digito-verificacion", () => {
+      const sinGuiones = fc
+        .array(fc.constantFrom(...DIGITOS_ASCII, ".", ...BLANCOS_ADMITIDOS), { maxLength: 64 })
+        .map((partes) => partes.join(""));
+      fc.assert(
+        fc.property(sinGuiones, fc.constantFrom(undefined, { tipoDocumento: "ti" }), (s, opciones) => {
+          const r = validarFormatoNuip(s, opciones);
+          expect(cumpleFormaNf01(r)).toBe(true);
+          expect(r).not.toStrictEqual(NIT);
+        }),
+        { numRuns: 1000 },
+      );
     });
   });
 
@@ -448,6 +534,16 @@ describe("validarFormatoNuip", () => {
         valido: false,
         motivo: "posible-digito-verificacion",
       });
+    });
+
+    it("Patrón NIT con espacios o separador final en tarjeta de identidad", () => {
+      for (const entrada of ["9999123456 - 7", "9999123456-\u00A07", "9999123456-7."]) {
+        expect(validarFormatoNuip(entrada, ti)).toStrictEqual(NIT);
+      }
+    });
+
+    it("Tarjeta de identidad con ceros a la izquierda", () => {
+      expect(validarFormatoNuip("09999123456", ti)).toStrictEqual(NUIP_VALIDO);
     });
 
     it("Tarjeta de identidad corta", () => {
