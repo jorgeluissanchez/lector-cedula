@@ -10,7 +10,7 @@ Huecos de spec encontrados por el verificador al cerrar `nuip-endurecer-entradas
 | 4 | No hay escenario que fije qué pasa si los accesores o proxies de `opciones` lanzan | Bajo | Escenario explícito: la excepción se propaga sin envolver |
 | 5 | Pares surrogate válidos (emoji, dígitos matemáticos) dan `caracteres-invalidos`, pero ningún escenario lo fija | Bajo | Añadir escenario |
 | 6 | `toLowerCase` es Unicode completo: `"Tİ"` y `"ＴＩ"` son inválidos sin escenario | Bajo | Añadir escenario |
-| 7 | `regresiones()` no compara `n`: si se borran fixtures, la eval no avisa | **Medio: harness** | Tratar una caída de `n` frente al baseline como regresión (cambio en `evals-por-campo`) |
+| 7 | ~~`regresiones()` no compara `n`: si se borran fixtures, la eval no avisa~~ **Resuelto** por el cambio `pruebas-nuip-y-evals-robustas` (requisito EV-03, design.md decisión 12): una caída de `n` frente al baseline cuenta como regresión y `eval-campo.mjs` sale con código 1 | **Medio: harness** | Tratar una caída de `n` frente al baseline como regresión (cambio en `evals-por-campo`) |
 | 8 | `tipoDocumento` no tiene tope de longitud | Bajo | Rechazar `tipoDocumento` de más de 8 caracteres |
 
 Pendiente humano: ratificar las 15 decisiones del orquestador registradas en `openspec/changes/archive/*-nuip-endurecer-entradas/design.md`.

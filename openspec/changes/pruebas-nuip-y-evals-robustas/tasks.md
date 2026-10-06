@@ -44,7 +44,7 @@ Reglas para todas las tareas: TDD (principio II): la prueba nueva o reescrita se
 
 ## 7. Integración
 
-- [ ] 7.1 Comprobación final de todo el cambio y del backlog. Marcar el hueco #7 de `docs/decisiones/backlog-formato-nuip.md` como resuelto por este cambio. Tipos de prueba: todos los anteriores. Verificación: `npm run check:completo` en verde (tipos, lint, pruebas, licencias, privacidad, evals rápidas y mutación); `git diff --stat packages/parsers/src evals/reports/baseline.json` vacío.
+- [x] 7.1 Comprobación final de todo el cambio y del backlog. Marcar el hueco #7 de `docs/decisiones/backlog-formato-nuip.md` como resuelto por este cambio. Tipos de prueba: todos los anteriores. Verificación: `npm run check:completo` en verde (tipos, lint, pruebas, licencias, privacidad, evals rápidas y mutación); `git diff --stat packages/parsers/src evals/reports/baseline.json` vacío.
 
 ## Workflow follow-up
 
