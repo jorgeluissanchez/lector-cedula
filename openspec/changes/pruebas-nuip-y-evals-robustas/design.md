@@ -120,3 +120,5 @@ Requieren decisión humana; ninguna bloquea las tareas, que evitan fijar comport
 - Pregunta 5: se aceptan los umbrales de cobertura de categorías propuestos.
 - Preguntas 1, 4 y 6: quedan para decisión humana (backlog de formato-nuip).
 - Ejecución: un implementador por grupo numerado de tareas (1 a 7), porque las tareas de cada grupo tocan el mismo bloque de pruebas; cada grupo cierra con `npm run check` en verde.
+- Baseline oficial: se fija siempre en modo `quick` (`node evals/runners/eval-campo.mjs --quick --guardar-baseline`), porque es el modo que ejecuta el hook de Stop. Un baseline sin `modo` (anteriores) compara `n` siempre. `evals/reports/latest.json` deja de versionarse: lo reescribe cada ejecución.
+- Ampliación de la decisión 14: `vitest.stryker.config.ts` excluye también `tools/test/hooks.test.mjs`, porque lanza procesos y escribe archivos temporales en el repositorio; Stryker no muta los hooks.

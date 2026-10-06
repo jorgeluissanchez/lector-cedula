@@ -49,14 +49,6 @@ const BLANCOS_ADMITIDOS = [" ", "\t", "\n", "\r", "\u00A0", "\u202F"];
 const SEPARADORES_ADMITIDOS = [".", ...GUIONES_ADMITIDOS, ...BLANCOS_ADMITIDOS];
 const DIGITOS_ASCII = "0123456789".split("");
 
-/** Cadenas formadas solo por dígitos y separadores admitidos: producen resultados válidos con frecuencia. */
-const capturaPlausible = fc
-  .array(
-    fc.constantFrom(..."00123456789999.- \t\n".split(""), NBSP, "\u2010", "\u2011", "\u2013", "\u2212", "\u202F", "\r"),
-    { maxLength: 16 },
-  )
-  .map((partes) => partes.join(""));
-
 /** Cadenas de dígitos ASCII y separadores de NF-03 de hasta `maxLength` caracteres (propiedad P1). */
 const digitosYSeparadores = (maxLength: number) =>
   fc
@@ -67,6 +59,98 @@ const digitosYSeparadores = (maxLength: number) =>
 const caracterNoAdmitido = fc
   .string({ unit: "binary", minLength: 1, maxLength: 1 })
   .filter((c) => !DIGITOS_ASCII.includes(c) && !SEPARADORES_ADMITIDOS.includes(c));
+
+/*
+ * Generadores válidos por construcción (design.md de pruebas-nuip-y-evals-robustas, decisión 1).
+ */
+
+/** Una racha de 0 a `max` caracteres tomados de `alfabeto`. */
+const racha = (alfabeto: readonly string[], max: number) =>
+  fc.array(fc.constantFrom(...alfabeto), { maxLength: max }).map((partes) => partes.join(""));
+
+/** Captura construida a partir de un número conocido `D` (sin ceros a la izquierda). */
+interface CapturaConocida {
+  entrada: string;
+  D: string;
+  ceros: number;
+}
+
+/**
+ * Captura de D = "9999" + `minResto`..`maxResto` dígitos, precedida de 0 a 5 ceros, con una racha de 0 a 2
+ * separadores de S antes del primer carácter, entre cada par de caracteres consecutivos y después del
+ * último, salvo entre los dos últimos dígitos de D, que van pegados para que la regla NIT (NF-08) no
+ * pueda activarse.
+ */
+const capturaConocida = (minResto: number, maxResto: number): fc.Arbitrary<CapturaConocida> =>
+  fc
+    .tuple(
+      fc.array(fc.constantFrom(...DIGITOS_ASCII), { minLength: minResto, maxLength: maxResto }),
+      fc.integer({ min: 0, max: 5 }),
+    )
+    .chain(([resto, ceros]) => {
+      const D = "9999" + resto.join("");
+      const caracteres = "0".repeat(ceros) + D;
+      return fc.array(racha(SEPARADORES_ADMITIDOS, 2), {
+        minLength: caracteres.length + 1,
+        maxLength: caracteres.length + 1,
+      }).map((rachas) => {
+        let entrada = rachas[0];
+        for (let i = 0; i < caracteres.length; i++) {
+          const pegadoAlUltimo = i === caracteres.length - 2;
+          entrada += caracteres[i] + (pegadoAlUltimo ? "" : rachas[i + 1]);
+        }
+        return { entrada, D, ceros };
+      });
+    });
+
+/** G_cc: D de 5 a 10 dígitos (NF-14, cédula). */
+const G_cc = capturaConocida(1, 6);
+/** G_ti: D de 10 u 11 dígitos (NF-14, tarjeta de identidad). */
+const G_ti = capturaConocida(6, 7);
+/** Entrada de G_cc o de G_ti (NF-02: nunca lanza y determinismo). */
+const capturaCcOTi = fc.oneof(G_cc, G_ti).map((c) => c.entrada);
+/**
+ * G_sinGuion: de 0 a 12 dígitos ASCII cualesquiera (el primero puede ser 0) con rachas de 0 a 3 caracteres
+ * de punto y W antes, entre y después. Sin guiones: la regla NIT no aplica (NF-14). La cantidad de dígitos
+ * se elige uniforme en 0..12: `fc.array` con `maxLength` sesga hacia arreglos cortos y dejaba la tarjeta de
+ * identidad (10 u 11 dígitos) por debajo del 10 % de casos válidos.
+ */
+const G_sinGuion = fc
+  .integer({ min: 0, max: 12 })
+  .chain((n) => fc.array(fc.constantFrom(...DIGITOS_ASCII), { minLength: n, maxLength: n }))
+  .chain((digitos) =>
+    fc
+      .array(racha([".", ...BLANCOS_ADMITIDOS], 3), { minLength: digitos.length + 1, maxLength: digitos.length + 1 })
+      .map((rachas) => rachas[0] + digitos.map((d, i) => d + rachas[i + 1]).join("")),
+  );
+
+/** ¿Contiene la cadena algún guion de NF-03? */
+const tieneGuion = (s: string) => GUIONES_ADMITIDOS.some((h) => s.includes(h));
+
+/**
+ * Contadores de cobertura de una propiedad (salvaguarda contra vacuidad; design.md de
+ * pruebas-nuip-y-evals-robustas, decisión 2). El predicado llama a `caso` una vez por ejecución con las
+ * categorías que cumple; después de `fc.assert`, `proporcion` da la fracción sobre los casos ejecutados
+ * (el denominador es el contador, no la constante `numRuns`).
+ */
+function crearContadores() {
+  const cuentas = new Map<string, number>();
+  let total = 0;
+  return {
+    caso(marcas: Record<string, boolean>): void {
+      total += 1;
+      for (const [categoria, cumple] of Object.entries(marcas)) {
+        if (cumple) cuentas.set(categoria, (cuentas.get(categoria) ?? 0) + 1);
+      }
+    },
+    get total(): number {
+      return total;
+    },
+    proporcion(categoria: string): number {
+      return total === 0 ? 0 : (cuentas.get(categoria) ?? 0) / total;
+    },
+  };
+}
 
 describe("validarFormatoNuip", () => {
   describe("NF-01 Forma del resultado", () => {
@@ -112,16 +196,22 @@ describe("validarFormatoNuip", () => {
       );
     });
 
-    it("Nunca lanza con opciones arbitrarias", () => {
+    it("NF-02 Nunca lanza con opciones arbitrarias (atrapa: excepción o resultado distinto de los dos objetos del escenario)", () => {
+      // Disyunción literal (design.md de pruebas-nuip-y-evals-robustas, decisión 6): el resultado es exactamente
+      // NUIP_VALIDO o exactamente TIPO_INVALIDO, sin clasificar `opciones` por tipo. Los contadores comprueban
+      // que fc.anything() ejercita las dos ramas.
+      const cuenta = crearContadores();
       fc.assert(
         fc.property(fc.anything(), (opciones) => {
           const r = validarFormatoNuip("9999123456", opciones);
-          const esperado =
-            opciones === undefined || opciones === null || typeof opciones === "object" ? NUIP_VALIDO : TIPO_INVALIDO;
-          expect(r).toStrictEqual(esperado);
+          expect(r).toStrictEqual(r.valido ? NUIP_VALIDO : TIPO_INVALIDO);
+          cuenta.caso({ valido: r.valido, invalido: !r.valido });
         }),
         { numRuns: 1000 },
       );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("valido")).toBeGreaterThanOrEqual(0.1);
+      expect(cuenta.proporcion("invalido")).toBeGreaterThanOrEqual(0.1);
     });
 
     it("Nunca lanza con fc.string({ unit: 'binary' }) y cumple NF-01", () => {
@@ -138,9 +228,12 @@ describe("validarFormatoNuip", () => {
       );
     });
 
-    it("Nunca lanza con capturas plausibles y cumple NF-01", () => {
+    it("Nunca lanza con capturas válidas por construcción y cumple NF-01", () => {
       fc.assert(
-        fc.property(capturaPlausible, (s) => cumpleFormaNf01(validarFormatoNuip(s))),
+        fc.property(capturaCcOTi, (s) => {
+          expect(s.length).toBeLessThanOrEqual(64);
+          expect(cumpleFormaNf01(validarFormatoNuip(s))).toBe(true);
+        }),
         { numRuns: 1000 },
       );
     });
@@ -151,21 +244,45 @@ describe("validarFormatoNuip", () => {
 
     it("Determinismo (propiedad)", () => {
       fc.assert(
-        fc.property(fc.oneof(fc.string(), capturaPlausible), (s) => {
+        fc.property(fc.oneof(fc.string(), capturaCcOTi), (s) => {
           expect(validarFormatoNuip(s)).toStrictEqual(validarFormatoNuip(s));
         }),
         { numRuns: 1000 },
       );
     });
 
-    it("Idempotencia de la normalización", () => {
+    it("NF-02 Idempotencia de la normalización en cédula (atrapa: segunda validación distinta o generador vacío)", () => {
+      const cuenta = crearContadores();
       fc.assert(
-        fc.property(fc.oneof(fc.string(), capturaPlausible), (s) => {
-          const primero = validarFormatoNuip(s);
+        fc.property(G_cc, ({ entrada }) => {
+          expect(entrada.length).toBeLessThanOrEqual(64);
+          const primero = validarFormatoNuip(entrada);
+          cuenta.caso({ valido: primero.valido });
           if (!primero.valido) return;
           expect(validarFormatoNuip(primero.numero)).toStrictEqual(primero);
         }),
         { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("valido"), "vacuidad: proporción de casos válidos en cédula").toBeGreaterThan(0.5);
+    });
+
+    it("NF-02 Idempotencia de la normalización en tarjeta de identidad (atrapa: segunda validación distinta o generador vacío)", () => {
+      const ti = { tipoDocumento: "ti" } as const;
+      const cuenta = crearContadores();
+      fc.assert(
+        fc.property(G_ti, ({ entrada }) => {
+          expect(entrada.length).toBeLessThanOrEqual(64);
+          const primero = validarFormatoNuip(entrada, ti);
+          cuenta.caso({ valido: primero.valido });
+          if (!primero.valido) return;
+          expect(validarFormatoNuip(primero.numero, ti)).toStrictEqual(primero);
+        }),
+        { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("valido"), "vacuidad: proporción de casos válidos en tarjeta de identidad").toBeGreaterThan(
+        0.5,
       );
     });
   });
@@ -468,28 +585,63 @@ describe("validarFormatoNuip", () => {
       expect(validarFormatoNuip("99-6")).toStrictEqual(NIT);
     });
 
-    it("Propiedad P3: N + a + guion + b + dígito + c da posible-digito-verificacion (cc y ti)", () => {
-      const separadores = fc
-        .array(fc.constantFrom(...SEPARADORES_ADMITIDOS), { maxLength: 17 })
-        .map((partes) => partes.join(""));
-      fc.assert(
-        fc.property(
-          fc.array(fc.constantFrom(...DIGITOS_ASCII), { minLength: 4, maxLength: 9 }).map((p) => p.join("")),
-          separadores,
-          fc.constantFrom(...GUIONES_ADMITIDOS),
-          separadores,
-          fc.constantFrom(...DIGITOS_ASCII),
-          separadores,
-          fc.constantFrom(undefined, { tipoDocumento: "ti" }),
-          (n, a, h, b, d, c, opciones) => {
-            const entrada = n + a + h + b + d + c;
-            expect(entrada.length).toBeLessThanOrEqual(64);
-            expect(validarFormatoNuip(entrada, opciones)).toStrictEqual(NIT);
-          },
-        ),
-        { numRuns: 1000 },
-      );
+    it("NF-08 Patrón NIT tras agrupación con guiones (atrapa: regla NIT que exige un número sin guiones antes del dígito de verificación)", () => {
+      const ti = { tipoDocumento: "ti" } as const;
+      expect(validarFormatoNuip("9999-12345-6")).toStrictEqual({ valido: false, motivo: "posible-digito-verificacion" });
+      expect(validarFormatoNuip("9999-12345-6", ti)).toStrictEqual({ valido: false, motivo: "posible-digito-verificacion" });
+      expect(validarFormatoNuip("99.99-123.45 - 6")).toStrictEqual({ valido: false, motivo: "posible-digito-verificacion" });
+      expect(validarFormatoNuip("99.99-123.45 - 6", ti)).toStrictEqual({
+        valido: false,
+        motivo: "posible-digito-verificacion",
+      });
     });
+
+    /**
+     * N de la propiedad P3 con número agrupado (design.md de pruebas-nuip-y-evals-robustas, decisión 8): vacío
+     * o de 1 a 11 dígitos ASCII (cantidad uniforme en 0..11) con rachas de 0 a 2 separadores de S, guiones
+     * incluidos, entre dígitos consecutivos; empieza y termina en dígito. Cota: 11 + 10 × 2 = 31.
+     */
+    const numeroAgrupado = fc
+      .integer({ min: 0, max: 11 })
+      .chain((k) => fc.array(fc.constantFrom(...DIGITOS_ASCII), { minLength: k, maxLength: k }))
+      .chain((digitos) =>
+        fc
+          .array(racha(SEPARADORES_ADMITIDOS, 2), {
+            minLength: Math.max(digitos.length - 1, 0),
+            maxLength: Math.max(digitos.length - 1, 0),
+          })
+          .map((rachas) => digitos.map((d, i) => (i === 0 ? d : rachas[i - 1] + d)).join("")),
+      );
+
+    const tiposP3 = [
+      { nombre: "sin tipo de documento", opciones: undefined },
+      { nombre: 'con tipo de documento "ti"', opciones: { tipoDocumento: "ti" } },
+    ];
+    for (const { nombre, opciones } of tiposP3) {
+      it(`NF-08 Propiedad del patrón NIT con número agrupado, ${nombre} (atrapa: dígito de verificación absorbido cuando el número lleva guiones o separadores)`, () => {
+        const cuenta = crearContadores();
+        fc.assert(
+          fc.property(
+            numeroAgrupado,
+            racha(SEPARADORES_ADMITIDOS, 10),
+            fc.constantFrom(...GUIONES_ADMITIDOS),
+            racha(SEPARADORES_ADMITIDOS, 10),
+            fc.constantFrom(...DIGITOS_ASCII),
+            racha(SEPARADORES_ADMITIDOS, 10),
+            (n, a, h, b, d, c) => {
+              const entrada = n + a + h + b + d + c;
+              cuenta.caso({ hasta64: entrada.length <= 64, guionEnN: tieneGuion(n) });
+              expect(entrada.length).toBeLessThanOrEqual(64);
+              expect(validarFormatoNuip(entrada, opciones)).toStrictEqual(NIT);
+            },
+          ),
+          { numRuns: 1000 },
+        );
+        expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+        expect(cuenta.proporcion("hasta64"), "entradas de 64 caracteres o menos").toBe(1);
+        expect(cuenta.proporcion("guionEnN"), "cobertura: guion de NF-03 dentro de N").toBeGreaterThanOrEqual(0.25);
+      });
+    }
 
     it("Propiedad P4: sin ningún guion de NF-03 nunca da posible-digito-verificacion", () => {
       const sinGuiones = fc
@@ -558,13 +710,10 @@ describe("validarFormatoNuip", () => {
       expect(validarFormatoNuip("99991", { tipoDocumento: "cc" })).toStrictEqual(validarFormatoNuip("99991"));
     });
 
-    it("Nunca lanza, cumple NF-01 y es idempotente con tipo de documento ti (NF-02)", () => {
+    it("Nunca lanza y cumple NF-01 con tipo de documento ti (NF-02)", () => {
       fc.assert(
-        fc.property(fc.oneof(fc.string(), capturaPlausible, fc.string({ unit: "binary" })), (s) => {
-          const primero = validarFormatoNuip(s, ti);
-          expect(cumpleFormaNf01(primero)).toBe(true);
-          if (!primero.valido) return;
-          expect(validarFormatoNuip(primero.numero, ti)).toStrictEqual(primero);
+        fc.property(fc.oneof(fc.string(), fc.string({ unit: "binary" })), (s) => {
+          expect(cumpleFormaNf01(validarFormatoNuip(s, ti))).toBe(true);
         }),
         { numRuns: 1000 },
       );
@@ -648,50 +797,134 @@ describe("validarFormatoNuip", () => {
       }
     });
 
-    it("Propiedad: todo texto que no normaliza a cc ni ti da tipo-documento-invalido", () => {
+    it("NF-10 tipoDocumento se lee una sola vez (atrapa: segunda lectura del accesor)", () => {
+      // design.md de pruebas-nuip-y-evals-robustas, decisión 7: la primera lectura da "ti" y las siguientes "xx".
+      let lecturas = 0;
+      const opciones = {};
+      Object.defineProperty(opciones, "tipoDocumento", {
+        get() {
+          lecturas += 1;
+          return lecturas === 1 ? "ti" : "xx";
+        },
+      });
+      expect(validarFormatoNuip("99991234567", opciones)).toStrictEqual(TI_ANTIGUA);
+      expect(lecturas).toBe(1);
+    });
+
+    it("NF-10 Variantes aceptadas del tipo de documento (atrapa: mayúscula o blanco de W sin normalizar)", () => {
+      for (const tipoDocumento of ["cc", "CC", "Cc", "cC", " cc", "cc\t", "\ncC\r", " CC "]) {
+        expect(validarFormatoNuip("99991234567", { tipoDocumento })).toStrictEqual(longitudInvalida);
+      }
+      for (const tipoDocumento of ["ti", "TI", "Ti", "tI", " ti", "ti\n", "\tTI\r", " Ti "]) {
+        expect(validarFormatoNuip("99991234567", { tipoDocumento })).toStrictEqual(TI_ANTIGUA);
+      }
+    });
+
+    it("NF-10 Casos frontera rechazados (atrapa: prefijo, diacrítico, i sin punto o separador aceptados)", () => {
+      // "t\u00EC": i con acento grave; "t\u0131": i sin punto (su mayúscula es "I").
+      for (const tipoDocumento of ["ti.", "t\u00EC", "t\u0131", "tii", "t", "i", "c", "ccc", "c c", "cc-", "-ti", "t-i"]) {
+        expect(validarFormatoNuip("9999123456", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
+      }
+    });
+
+    it("NF-10 Propiedad sobre texto sin las letras de cc ni ti (atrapa: texto ajeno aceptado como tipo)", () => {
+      // El generador se restringe (design.md, decisión 4c); el esperado es literal.
+      const sinLetrasDeCcNiTi = (t: string) => !/[cCtTiI]/.test(t);
+      for (const generador of [fc.string(), fc.string({ unit: "binary" })]) {
+        const cuenta = crearContadores();
+        fc.assert(
+          fc.property(generador.filter(sinLetrasDeCcNiTi), (tipoDocumento) => {
+            expect(validarFormatoNuip("9999123456", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
+            cuenta.caso({});
+          }),
+          { numRuns: 1000 },
+        );
+        expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      }
+    });
+
+    it("NF-10 Propiedad sobre variantes generadas de cc y ti (atrapa: mayúscula o blanco de W sin normalizar)", () => {
+      // Blancos solo de W (design.md, decisión 5): U+3000 y U+FEFF quedan fuera hasta decidir el hueco #1.
+      const blancos = racha(BLANCOS_ADMITIDOS, 3);
+      const variante = (canonico: "cc" | "ti", primera: readonly string[], segunda: readonly string[]) =>
+        fc
+          .tuple(blancos, fc.constantFrom(...primera), fc.constantFrom(...segunda), blancos)
+          .map(([antes, x, y, despues]) => ({ canonico, tipoDocumento: antes + x + y + despues }));
+      // Tablas literales de NF-07 y NF-09 por entrada.
+      const cedulaAntigua = { valido: true, numero: "99991", tipoProbable: "cedula-antigua", digitos: 5, warnings: [] };
+      const esperados = {
+        cc: { "99991234567": longitudInvalida, "9999123456": NUIP_VALIDO, "99991": cedulaAntigua },
+        ti: { "99991234567": TI_ANTIGUA, "9999123456": NUIP_VALIDO, "99991": longitudInvalida },
+      };
+      const cuenta = crearContadores();
       fc.assert(
         fc.property(
-          fc.string().filter((t) => !["cc", "ti"].includes(t.trim().toLowerCase())),
+          fc.oneof(variante("cc", ["c", "C"], ["c", "C"]), variante("ti", ["t", "T"], ["i", "I"])),
+          ({ canonico, tipoDocumento }) => {
+            for (const [entrada, esperado] of Object.entries(esperados[canonico])) {
+              expect(validarFormatoNuip(entrada, { tipoDocumento })).toStrictEqual(esperado);
+            }
+            cuenta.caso({
+              cc: canonico === "cc",
+              ti: canonico === "ti",
+              conBlanco: tipoDocumento.length > 2,
+              conMayuscula: /[CTI]/.test(tipoDocumento),
+            });
+          },
+        ),
+        { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("cc")).toBeGreaterThanOrEqual(0.25);
+      expect(cuenta.proporcion("ti")).toBeGreaterThanOrEqual(0.25);
+      expect(cuenta.proporcion("conBlanco")).toBeGreaterThanOrEqual(0.25);
+      expect(cuenta.proporcion("conMayuscula")).toBeGreaterThanOrEqual(0.25);
+    });
+
+    it("NF-10 Propiedad sobre tipoDocumento que no es texto (atrapa: valor no texto aceptado o convertido a texto)", () => {
+      fc.assert(
+        fc.property(
+          fc.anything().filter((v) => typeof v !== "string" && v !== undefined),
           (tipoDocumento) => {
-            expect(validarFormatoNuip("9999123456", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
+            expect(validarFormatoNuip("99991234567", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
           },
         ),
         { numRuns: 1000 },
       );
     });
 
-    it("Propiedad: cc y ti con cualquier mayúscula y espacio en blanco alrededor equivalen al tipo canónico", () => {
-      const blanco = fc.string({ unit: fc.constantFrom(" ", "\t", "\n", "\r", NBSP, "\u3000", "\uFEFF") });
-      const variante = (canonico: string) =>
-        fc
-          .tuple(fc.array(fc.boolean(), { minLength: 2, maxLength: 2 }), blanco, blanco)
-          .map(([mayus, antes, despues]) => {
-            const cuerpo = [...canonico].map((c, i) => (mayus[i] ? c.toUpperCase() : c)).join("");
-            return { canonico, tipoDocumento: antes + cuerpo + despues };
-          });
+    it("NF-10 Propiedad sobre opciones primitivas (atrapa: opciones primitivas leídas como objeto o como cédula)", () => {
+      const primitiva = fc.oneof(
+        fc.string(),
+        fc.integer(),
+        fc.double(),
+        fc.boolean(),
+        fc.bigInt(),
+        fc.string().map((descripcion) => Symbol(descripcion)),
+      );
       fc.assert(
-        fc.property(fc.oneof(variante("cc"), variante("ti")), ({ canonico, tipoDocumento }) => {
-          for (const entrada of ["9999123456", "99991234567", "99991"]) {
-            expect(validarFormatoNuip(entrada, { tipoDocumento })).toStrictEqual(
-              validarFormatoNuip(entrada, { tipoDocumento: canonico }),
-            );
-          }
+        fc.property(primitiva, (opciones) => {
+          expect(validarFormatoNuip("9999123456", opciones)).toStrictEqual(TIPO_INVALIDO);
         }),
         { numRuns: 1000 },
       );
     });
 
-    it("Fuzz: cualquier valor como tipoDocumento da cédula, tarjeta de identidad o tipo-documento-invalido", () => {
+    it("NF-10 Propiedad sobre objetos sin tipoDocumento (atrapa: objeto o array sin tipo rechazado)", () => {
+      // Sin "__proto__" para no tocar el hueco #2 del backlog (design.md, decisión 6).
+      const clave = fc.string().filter((k) => k !== "tipoDocumento" && k !== "__proto__");
+      const sinTipo = fc.oneof(fc.dictionary(clave, fc.anything()), fc.array(fc.anything()));
+      const cuenta = crearContadores();
       fc.assert(
-        fc.property(fc.anything(), (tipoDocumento) => {
-          const r = validarFormatoNuip("99991234567", { tipoDocumento });
-          const normalizado = typeof tipoDocumento === "string" ? tipoDocumento.trim().toLowerCase() : undefined;
-          if (tipoDocumento === undefined || normalizado === "cc") expect(r).toStrictEqual(longitudInvalida);
-          else if (normalizado === "ti") expect(r).toStrictEqual(TI_ANTIGUA);
-          else expect(r).toStrictEqual(TIPO_INVALIDO);
+        fc.property(sinTipo, (opciones) => {
+          expect(validarFormatoNuip("9999123456", opciones)).toStrictEqual(NUIP_VALIDO);
+          cuenta.caso({ array: Array.isArray(opciones), conClaves: Object.keys(opciones).length > 0 });
         }),
         { numRuns: 1000 },
       );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("array")).toBeGreaterThanOrEqual(0.25);
+      expect(cuenta.proporcion("conClaves")).toBeGreaterThanOrEqual(0.25);
     });
   });
 
@@ -841,6 +1074,139 @@ describe("validarFormatoNuip", () => {
 
     it("Vacío prevalece sobre la cantidad de dígitos", () => {
       expect(validarFormatoNuip(" .-. ")).toStrictEqual({ valido: false, motivo: "vacio" });
+    });
+  });
+
+  describe("NF-14 Oráculo de normalización", () => {
+    const ti = { tipoDocumento: "ti" } as const;
+
+    interface FilaTabla {
+      tipoProbable: string;
+      warnings: readonly string[];
+    }
+    /** Tabla literal de NF-07 (cédula): longitud de D -> tipoProbable y warnings. */
+    const TABLA_CC: Readonly<Partial<Record<number, FilaTabla>>> = {
+      5: { tipoProbable: "cedula-antigua", warnings: [] },
+      6: { tipoProbable: "cedula-antigua", warnings: [] },
+      7: { tipoProbable: "cedula-antigua", warnings: [] },
+      8: { tipoProbable: "cedula-antigua", warnings: [] },
+      9: { tipoProbable: "cedula-antigua", warnings: [] },
+      10: { tipoProbable: "nuip", warnings: [] },
+    };
+    /** Tabla literal de NF-09 (tarjeta de identidad; 11 dígitos es la hipótesis N01). */
+    const TABLA_TI: Readonly<Partial<Record<number, FilaTabla>>> = {
+      10: { tipoProbable: "nuip", warnings: [] },
+      11: { tipoProbable: "ti-antigua", warnings: ["N01"] },
+    };
+
+    /** Resultado de la tabla literal para un D ya normalizado. */
+    function segunTabla(D: string, tabla: Readonly<Partial<Record<number, FilaTabla>>>) {
+      const fila = tabla[D.length];
+      if (fila === undefined) return { valido: false, motivo: "longitud-invalida" };
+      return { valido: true, numero: D, tipoProbable: fila.tipoProbable, digitos: D.length, warnings: [...fila.warnings] };
+    }
+
+    /**
+     * Oráculo independiente para capturas sin guion: filtra los caracteres "0" a "9" (sin usar la lista de
+     * separadores ni las expresiones de la implementación), quita los ceros iniciales y aplica la tabla literal.
+     */
+    function oraculoSinGuion(entrada: string, tabla: Readonly<Partial<Record<number, FilaTabla>>>) {
+      const digitos = [...entrada].filter((c) => c >= "0" && c <= "9");
+      if (digitos.length === 0) return { valido: false, motivo: "vacio" };
+      let inicio = 0;
+      while (inicio < digitos.length && digitos[inicio] === "0") inicio++;
+      return segunTabla(digitos.slice(inicio).join(""), tabla);
+    }
+
+    it("NF-14 Captura válida por construcción en cédula (atrapa: numero distinto de D o tipoProbable fuera de la tabla)", () => {
+      const cuenta = crearContadores();
+      fc.assert(
+        fc.property(G_cc, ({ entrada, D, ceros }) => {
+          expect(entrada.length).toBeLessThanOrEqual(64);
+          const r = validarFormatoNuip(entrada);
+          expect(r).toStrictEqual(segunTabla(D, TABLA_CC));
+          expect(r).toMatchObject({ valido: true, numero: D });
+          cuenta.caso({
+            valido: r.valido,
+            nuip: r.valido && r.tipoProbable === "nuip",
+            cedulaAntigua: r.valido && r.tipoProbable === "cedula-antigua",
+            conCeros: ceros > 0,
+            conGuion: tieneGuion(entrada),
+          });
+        }),
+        { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("valido"), "vacuidad: válidos").toBeGreaterThan(0.5);
+      expect(cuenta.proporcion("nuip"), "cobertura: nuip").toBeGreaterThanOrEqual(0.1);
+      expect(cuenta.proporcion("cedulaAntigua"), "cobertura: cedula-antigua").toBeGreaterThanOrEqual(0.1);
+      expect(cuenta.proporcion("conCeros"), "cobertura: ceros a la izquierda").toBeGreaterThanOrEqual(0.1);
+      expect(cuenta.proporcion("conGuion"), "cobertura: guion de NF-03").toBeGreaterThanOrEqual(0.1);
+    });
+
+    it("NF-14 Captura válida por construcción en tarjeta de identidad (atrapa: numero distinto de D o tipoProbable y warnings fuera de la tabla)", () => {
+      const cuenta = crearContadores();
+      fc.assert(
+        fc.property(G_ti, ({ entrada, D, ceros }) => {
+          expect(entrada.length).toBeLessThanOrEqual(64);
+          const r = validarFormatoNuip(entrada, ti);
+          expect(r).toStrictEqual(segunTabla(D, TABLA_TI));
+          expect(r).toMatchObject({ valido: true, numero: D });
+          cuenta.caso({
+            valido: r.valido,
+            nuip: r.valido && r.tipoProbable === "nuip",
+            tiAntigua: r.valido && r.tipoProbable === "ti-antigua",
+            conCeros: ceros > 0,
+            conGuion: tieneGuion(entrada),
+          });
+        }),
+        { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("valido"), "vacuidad: válidos").toBeGreaterThan(0.5);
+      expect(cuenta.proporcion("nuip"), "cobertura: nuip").toBeGreaterThanOrEqual(0.25);
+      expect(cuenta.proporcion("tiAntigua"), "cobertura: ti-antigua").toBeGreaterThanOrEqual(0.25);
+      expect(cuenta.proporcion("conCeros"), "cobertura: ceros a la izquierda").toBeGreaterThanOrEqual(0.1);
+      expect(cuenta.proporcion("conGuion"), "cobertura: guion de NF-03").toBeGreaterThanOrEqual(0.1);
+    });
+
+    const porTipo = [
+      { nombre: "sin tipo de documento", opciones: undefined, tabla: TABLA_CC },
+      { nombre: 'con tipo de documento "ti"', opciones: ti, tabla: TABLA_TI },
+    ];
+    for (const { nombre, opciones, tabla } of porTipo) {
+      it(`NF-14 Oráculo independiente sobre capturas sin guion, ${nombre} (atrapa: separador no eliminado, ceros mal quitados o longitud fuera de la tabla)`, () => {
+        const cuenta = crearContadores();
+        fc.assert(
+          fc.property(G_sinGuion, (entrada) => {
+            expect(entrada.length).toBeLessThanOrEqual(64);
+            const r = validarFormatoNuip(entrada, opciones);
+            expect(r).toStrictEqual(oraculoSinGuion(entrada, tabla));
+            cuenta.caso({
+              valido: r.valido,
+              longitudInvalida: !r.valido && r.motivo === "longitud-invalida",
+              vacio: !r.valido && r.motivo === "vacio",
+            });
+          }),
+          { numRuns: 1000 },
+        );
+        expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+        expect(cuenta.proporcion("valido"), "cobertura: válidos").toBeGreaterThanOrEqual(0.1);
+        expect(cuenta.proporcion("longitudInvalida"), "cobertura: longitud-invalida").toBeGreaterThanOrEqual(0.1);
+        expect(cuenta.proporcion("vacio"), "cobertura: vacio").toBeGreaterThanOrEqual(0.03);
+      });
+    }
+
+    it("NF-14 Ejemplos fijos del oráculo (atrapa: ceros intercalados tratados como iniciales o ceros solos como vacío)", () => {
+      expect(validarFormatoNuip("0 0.9 999 1")).toStrictEqual({
+        valido: true,
+        numero: "99991",
+        tipoProbable: "cedula-antigua",
+        digitos: 5,
+        warnings: [],
+      });
+      expect(validarFormatoNuip("0 0.9 999 1", ti)).toStrictEqual({ valido: false, motivo: "longitud-invalida" });
+      expect(validarFormatoNuip("00.000")).toStrictEqual({ valido: false, motivo: "longitud-invalida" });
     });
   });
 });

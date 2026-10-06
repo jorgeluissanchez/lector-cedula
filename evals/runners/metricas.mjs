@@ -4,8 +4,14 @@
 export function levenshtein(a, b) {
   const s = String(a);
   const t = String(b);
+  // Los tres atajos son equivalentes a la programación dinámica de abajo (tools/test/metricas.test.mjs,
+  // "levenshtein coincide con la definición recursiva"): con s === t la diagonal suma 0; con s vacía no
+  // entra en el bucle y devuelve prev[t.length] = t.length; con t vacía cada fila es [i] y devuelve s.length.
+  // Stryker disable next-line ConditionalExpression: equivalente; atajo de rendimiento para el caso exacto.
   if (s === t) return 0;
+  // Stryker disable next-line ConditionalExpression: equivalente; la fila inicial ya vale t.length.
   if (s.length === 0) return t.length;
+  // Stryker disable next-line ConditionalExpression: equivalente; sin columnas la última fila es [s.length].
   if (t.length === 0) return s.length;
   let prev = Array.from({ length: t.length + 1 }, (_, j) => j);
   for (let i = 1; i <= s.length; i++) {
@@ -38,6 +44,18 @@ function clavesOrdenadas(v) {
   return JSON.stringify(typeof v === "object" && v !== null ? Object.keys(v).sort() : []);
 }
 
+/** `esperado` válido (EV-05): objeto no nulo que no es array. */
+function esObjetoPlano(v) {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** Nombre legible del tipo de un valor para los mensajes de EV-05. */
+function describirTipo(v) {
+  if (v === null) return "null";
+  if (Array.isArray(v)) return "array";
+  return typeof v;
+}
+
 /**
  * Agrega resultados: {tipo: {campo: {n, exactos, cerSuma}}} -> {tipo: {campo: {n, exact_match, cer}}}
  * Con `clavesExactas: true` el caso suma además el campo `__claves` (EV-01): exacto si el conjunto de
@@ -47,6 +65,9 @@ function clavesOrdenadas(v) {
 export function agregar(casos) {
   const acc = {};
   for (const { tipo, esperado, obtenido, clavesExactas } of casos) {
+    if (!esObjetoPlano(esperado)) {
+      throw new Error(`El esperado de un caso de tipo "${tipo}" no es un objeto: es ${describirTipo(esperado)} (EV-05)`);
+    }
     if (Object.hasOwn(esperado, CAMPO_CLAVES)) {
       throw new Error(`El esperado de un caso de tipo "${tipo}" usa el campo reservado "${CAMPO_CLAVES}" (EV-02)`);
     }
@@ -76,8 +97,59 @@ export function agregar(casos) {
   return salida;
 }
 
-/** Compara con el baseline y devuelve la lista de regresiones (tolerancia para ruido de punto flotante). */
-export function regresiones(actual, baseline, tolerancia = 1e-9) {
+/**
+ * Lanza un `Error` con la ruta, el tipo y la palabra `esperado` en el primer fixture cuyo `esperado` no es
+ * un objeto no nulo ni array (EV-05). El corredor la llama antes de compilar para fallar pronto.
+ * @param {{ruta: string, tipo: string, esperado: unknown}[]} fixtures
+ */
+export function validarEsperados(fixtures) {
+  for (const f of fixtures) {
+    if (!esObjetoPlano(f.esperado)) {
+      throw new Error(`${f.ruta}: el esperado del fixture de tipo "${f.tipo}" no es un objeto: es ${describirTipo(f.esperado)} (EV-05)`);
+    }
+  }
+}
+
+/**
+ * Convierte fixtures en casos para `agregar` (EV-01, EV-05). Primero valida el `esperado` de todos los
+ * fixtures y lanza un `Error` con la ruta, el tipo y la palabra `esperado` si alguno no es un objeto no
+ * nulo ni array, sin invocar al evaluador. Después evalúa cada fixture con `evaluar(tipo, entrada, opciones)`;
+ * una excepción del evaluador se recoge en `errores` como `"<ruta>: <mensaje>"` y el caso queda con
+ * resultado `{}`. `clavesExactas` solo es `true` si el fixture trae el booleano `true`.
+ * @param {{ruta: string, tipo: string, entrada: unknown, opciones?: unknown, esperado: unknown, clavesExactas?: unknown}[]} fixtures
+ * @param {(tipo: string, entrada: unknown, opciones: unknown) => unknown} evaluar
+ * @returns {{casos: {tipo: string, esperado: object, obtenido: unknown, clavesExactas: boolean}[], errores: string[]}}
+ */
+export function construirCasos(fixtures, evaluar) {
+  validarEsperados(fixtures);
+  const casos = [];
+  const errores = [];
+  for (const f of fixtures) {
+    let obtenido;
+    try {
+      obtenido = evaluar(f.tipo, f.entrada, f.opciones);
+    } catch (e) {
+      errores.push(`${f.ruta}: ${e.message}`);
+      obtenido = {};
+    }
+    casos.push({ tipo: f.tipo, esperado: f.esperado, obtenido, clavesExactas: f.clavesExactas === true });
+  }
+  return { casos, errores };
+}
+
+/**
+ * Decide si la caída de `n` se evalúa (EV-03): solo entre ejecuciones del mismo modo (`quick` o
+ * `completo`). Un baseline sin modo, guardado antes de registrar el modo, se compara siempre.
+ */
+export function mismoModo(modoBaseline, modoActual) {
+  return modoBaseline === undefined || modoBaseline === modoActual;
+}
+
+/**
+ * Compara con el baseline y devuelve la lista de regresiones: campo desaparecido, caída de `n` (EV-03,
+ * si `compararN`), caída de exact match y subida de CER (tolerancia para ruido de punto flotante).
+ */
+export function regresiones(actual, baseline, { tolerancia = 1e-9, compararN = true } = {}) {
   const r = [];
   for (const [tipo, campos] of Object.entries(baseline ?? {})) {
     for (const [campo, base] of Object.entries(campos)) {
@@ -85,6 +157,9 @@ export function regresiones(actual, baseline, tolerancia = 1e-9) {
       if (!act) {
         r.push(`${tipo}.${campo}: desapareció de las evals (antes n=${base.n})`);
         continue;
+      }
+      if (compararN && act.n < base.n) {
+        r.push(`${tipo}.${campo}: n bajó de ${base.n} a ${act.n} (se perdieron casos)`);
       }
       if (act.exact_match + tolerancia < base.exact_match) {
         r.push(`${tipo}.${campo}: exact_match bajó de ${base.exact_match.toFixed(4)} a ${act.exact_match.toFixed(4)}`);

@@ -57,7 +57,7 @@ describe("paquetes", () => {
   });
 });
 
-describe("pre-bash", () => {
+describe("pre-bash", { timeout: 60_000 }, () => {
   it("bloquea la instalación de un paquete prohibido", () => {
     const r = hook("pre-bash.mjs", { tool_input: { command: "npm install ultralytics" } });
     expect(r.codigo).toBe(2);
@@ -74,7 +74,7 @@ describe("pre-bash", () => {
   });
 });
 
-describe("post-edit", () => {
+describe("post-edit", { timeout: 60_000 }, () => {
   it("bloquea un archivo de producto que persiste imágenes en el servidor", () => {
     const dir = join(RAIZ, "server", "app");
     mkdirSync(dir, { recursive: true });
@@ -94,7 +94,7 @@ describe("post-edit", () => {
   });
 });
 
-describe("stop y subagent-stop", () => {
+describe("stop y subagent-stop", { timeout: 60_000 }, () => {
   it("no insisten si ya bloquearon una vez (evita bucles)", () => {
     expect(hook("stop.mjs", { stop_hook_active: true }).codigo).toBe(0);
     expect(hook("subagent-stop.mjs", { stop_hook_active: true }).codigo).toBe(0);

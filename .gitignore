@@ -37,3 +37,4 @@ Thumbs.db
 test-results/
 reports/playwright/
 playwright-report/
+evals/reports/latest.json
