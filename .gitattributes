@@ -4,3 +4,4 @@
 *.jpg binary
 *.onnx binary
 *.wasm binary
+tools/divipol/fuentes/** -text

@@ -5,7 +5,7 @@
 export default {
   testRunner: "vitest",
   vitest: { configFile: "vitest.stryker.config.ts" },
-  mutate: ["packages/parsers/src/**/*.ts", "!packages/parsers/src/index.ts", "evals/runners/metricas.mjs"],
+  mutate: ["packages/parsers/src/**/*.ts", "!packages/parsers/src/index.ts", "!packages/parsers/src/**/*.generated.ts", "packages/fixtures/src/**/*.ts", "!packages/fixtures/src/index.ts", "evals/runners/metricas.mjs"],
   coverageAnalysis: "perTest",
   thresholds: { high: 95, low: 85, break: 85 },
   reporters: ["clear-text", "progress", "html"],

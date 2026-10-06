@@ -1,0 +1,21 @@
+[
+  {
+    "id": "eitol-localities",
+    "url": "https://raw.githubusercontent.com/Eitol/colombian-cedula-reader/d72a342deb7255ca49cafe16bb3f8c0b6e54869a/src/barcode/localities.py",
+    "sha256": "56f8f44122bca69d492d6353369d64febb836b0d31d91d5e1cd84de8a0f832a1",
+    "licencia": "MIT",
+    "atribucion": "Eitol/colombian-cedula-reader, src/barcode/localities.py. Copyright (c) Hector Oliveros. Licencia MIT.",
+    "archivo": "localities.py",
+    "repositorio": "Eitol/colombian-cedula-reader",
+    "commit": "d72a342deb7255ca49cafe16bb3f8c0b6e54869a",
+    "ruta": "src/barcode/localities.py"
+  },
+  {
+    "id": "dane-divipola",
+    "url": "https://www.datos.gov.co/api/views/gdxc-w37w/rows.csv?accessType=DOWNLOAD",
+    "sha256": "159b4b84595a11be5bf623fdf25c6fd5c9ac8c3ed898cf7928b2b3f321b9b492",
+    "licencia": "CC-BY-SA-4.0",
+    "atribucion": "DANE - DIVIPOLA Códigos municipios (datos.gov.co gdxc-w37w). Departamento Administrativo Nacional de Estadística. Licencia CC BY-SA 4.0.",
+    "archivo": "divipola-dane.csv"
+  }
+]
