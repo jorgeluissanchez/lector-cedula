@@ -86,7 +86,7 @@
    - `offsets.ts`: lector por offsets (PA-07).
    - `ensamblar.ts`: elección de modo, confianza, validaciones y warnings (PA-17 a PA-19), resolutor (PA-15).
    - `index.ts`: `parsearPdf417Amarilla`, validación de entrada y opciones (PA-01, PA-03, PA-04).
-   Cada lector devuelve `{ ok: true, valores, nombresPorH12 }` o `{ ok: false, error }` sin conocer al otro; `ensamblar.ts` compone.
+   Cada lector devuelve `{ ok: true, valores, nombresPorH15 }` o `{ ok: false, error }` sin conocer al otro; `ensamblar.ts` compone.
 
 3. **Decodificación Latin-1 sin `TextDecoder`** (PA-05). `new TextDecoder("latin1")` e `"iso-8859-1"` son etiquetas de windows-1252 en el estándar WHATWG: 0x80 se decodificaría como `€`. Se usa `String.fromCharCode(byte)` byte a byte, solo sobre los rangos de nombres ya delimitados. Letras: 0x41-0x5A, 0x61-0x7A, 0xC0-0xD6, 0xD8-0xF6, 0xF8-0xFF. Las minúsculas se aceptan y se devuelven tal cual (no se cambia la caja: `toUpperCase` depende de reglas Unicode que no aportan nada aquí). Un NFC explícito no hace falta: todo carácter Latin-1 ya es NFC.
 
@@ -97,11 +97,11 @@
 
 6. **Modo patrones** (PA-08 a PA-10, enfoque de fgardila/colombian-id-reader reimplementado con pruebas propias; el repo no declara licencia, así que no se copia código).
    - Normalizador 1:1: letras L, dígitos, `+`, `-`, `_` y 0x20 se conservan; el resto pasa a 0x20. Se conservan las posiciones, de modo que cada segmento sabe qué bytes crudos cubre. Diferencia deliberada con fgardila: su clase `[A-Za-z0-9+_-]` convierte la Ñ en espacio (error histórico "Ñ que rompe el parser").
-   - Localizador del NUIP (H03): primer run de 10 o más dígitos ASCII cuyo byte siguiente es una letra L y cuyo último dígito está antes de la posición 96; el NUIP son sus 10 últimos dígitos. Recorrido lineal, sin expresiones regulares con retroceso (la `^\d*?(\d{10})` de fgardila es correcta, pero no se necesita).
+   - Localizador del NUIP (H03): primer run de 10 o más dígitos ASCII cuyo byte siguiente es una letra L que no empieza el marcador (hay lectores que quitan los NUL de la cabecera y dejan el marcador pegado a los dígitos AFIS; evidencia de 2026-10-06) y cuyo último dígito está antes de la posición 96; el NUIP son sus 10 últimos dígitos. Recorrido lineal, sin expresiones regulares con retroceso (la `^\d*?(\d{10})` de fgardila es correcta, pero no se necesita).
    - Primer apellido: desde esa letra hasta la siguiente frontera (2 o más 0x20 normalizados).
    - Segmentos siguientes, como mucho 4, examinados en orden: si el segmento normalizado cumple `L+( L+)*` es un nombre y sus bytes crudos deben estar en L ∪ {0x20, 0x00} (si no, `caracteres-invalidos-en-nombre`: atrapa UTF-8 y bytes C1); si empieza en la posición 192 o después, o no es nombre ni bloque, `bloque-demografico-no-encontrado`; si es bloque, se detiene. Más de 3 nombres o 0 nombres: `nombres-no-reconocidos`. El fin de la entrada sin bloque: `bloque-demografico-no-encontrado`.
    - Bloques (al inicio del segmento, sin anclar el final porque la cola sigue sin separador): sexo primero `[0-9][MF][0-9]{8}[0-9]*(AB|A|B|O)[+-]` y fecha primero `[0-9]{2}[0-9]{8}[MF][0-9]*(AB|A|B|O)[+-]`; se implementan como autómatas de un solo paso (sin retroceso: el run de dígitos termina en la primera letra). Disjuntos por el segundo carácter. El signo es el último byte interpretado.
-   - Asignación H12 (decisión 11): 3 nombres en orden; 2 = segundo apellido + primer nombre; 1 = primer nombre.
+   - Asignación H15 (decisión 11): 3 nombres en orden; 2 = segundo apellido + primer nombre; 1 = primer nombre.
    - Límites 96 y 192: margen amplio sobre las posiciones conocidas (58 y 150 en la trama completa) para que una trama corrupta no haga leer como NUIP o como bloque bytes de la cola. No son hipótesis del formato sino una salvaguarda del principio III; si una variante real los supera, se revisan en otro cambio.
 
 7. **Bloque y DIVIPOL** (PA-11, PA-12, PA-15, H05, H06, H08). Sexo primero con exactamente 6 dígitos: departamento `[0,2)`, municipio `[2,5)`, sexto descartado (DIVIPOL, no la lectura 3+3 de Yeison07). Con otra cantidad: códigos `null`, `divipol-codigos` `fallida` con detalle `longitud-inesperada`. Fecha primero: códigos `null` y `divipol-codigos` `no-aplica` con `bloque-sin-divipol`, aunque el generador (G04) coloque ahí departamento y municipio: ninguna fuente pública dice que esos dígitos sean DIVIPOL (fgardila los ignora con `\d*`). Ver Open Questions.
@@ -112,7 +112,7 @@
    |---|---|
    | Trama completa, offsets y patrones con el mismo valor | 1 |
    | Un solo modo con resultado (variante no completa, o un modo falló) | 0.9 |
-   | Campo de nombre asignado por H12 en patrones | 0.6 |
+   | Campo de nombre asignado por H15 en patrones | 0.6 |
    | Offsets y patrones discrepan (se entrega offsets) | 0.5 |
    | Código DIVIPOL `null` | 0 |
 
@@ -131,7 +131,7 @@
 
 10. **Reutilización de `validarFormatoNuip`** (PA-09). Se importa de `../nuip-formato.js` y se llama con los 10 dígitos y sin opciones (cédula). No se duplica ninguna regla: ceros a la izquierda, 5 a 10 dígitos y ausencia de dígito de control quedan en `formato-nuip`. Si `formato-nuip` cambia, este parser hereda el cambio y las pruebas de PA-09 lo detectan.
 
-11. **Warnings** (PA-19, principio VI). Se calculan al final con un conjunto y se ordenan con comparación de código (`<`), no con `localeCompare`. Se emite `G01` junto con `H04` en modo offsets porque el lector usa exactamente la concreción de G01 (decisión 8 del cambio del generador: los parsers que dependen de una concreción `G` la emiten). No se emiten `G02` ni `G03`: el modo patrones no depende de dónde ni cuánto se trunca. No se emite `H01`: el parser no depende de la longitud total. Los IDs del resolutor se copian solo si son texto con la forma `^[A-Z][0-9]{2}$`.
+11. **Warnings** (PA-19, principio VI). Solo hipótesis **no confirmadas** del registro (`docs/decisiones/hipotesis-formato.md`, tabla "Actualización de estados (2026-10-06, evidencia pública)", que prevalece): `H02` en la variante truncada (el byte 24 de la completa está confirmado; la posición truncada depende del lector), `H07` sin marcador, `H08` con bloque fecha primero, `H15` si patrones asignó nombres por H15, y los IDs del resolutor. No se emiten H01, H03, H04, H05, H06, H09 ni H11 (confirmadas) ni IDs `G` (concreciones del generador; decisión del orquestador, pregunta 5). Se calculan al final con un conjunto y se ordenan con comparación de código (`<`), no con `localeCompare`. Los IDs del resolutor se copian solo si son texto con la forma `^[A-Z][0-9]{2}$`. Si el registro confirma o refuta otra hipótesis, esta lista y PA-19 se actualizan en un cambio OpenSpec.
 
 12. **Resolutor DIVIPOL inyectado, no importado** (PA-15). Alternativa considerada: importar `buscarDivipol` dentro del parser, como sugiere la decisión 3 del cambio `divipol-registraduria`. Se descarta por ahora porque (a) los dos cambios se implementan en paralelo y la importación bloquearía este; (b) quien solo quiere los campos no carga la tabla de 1.122 filas; (c) las pruebas usan espías sin tocar la tabla. La firma `(codigo: string) => unknown` acepta `buscarDivipol` tal cual (`{ divipol: buscarDivipol }`), y la respuesta se interpreta de forma defensiva (`encontrado === true`; `motivo` `desconocido` o `sin-dato`; cualquier otra cosa o excepción es `error-resolutor`). Tras aplicar ambos cambios, una tarea de integración prueba `buscarDivipol` real (PA-15, último escenario). Si el orquestador prefiere el resolutor por defecto, es un cambio pequeño posterior (Open Questions).
 
@@ -155,18 +155,18 @@ El orquestador decide y registra; ningún archivo de decisiones se toca aquí.
 
 | ID | Hipótesis propuesta | Fuente | Estado | Evidencia |
 |---|---|---|---|---|
-| H12 | En modo patrones, si entre el primer apellido y el bloque demográfico hay dos campos de texto, son el segundo apellido y el primer nombre (falta el segundo nombre); si hay uno, es el primer nombre. Una persona sin segundo apellido y con segundo nombre se lee mal sin offsets | Supuesto de este parser; los campos vacíos de la trama no dejan rastro cuando el lector altera los rellenos | pendiente | Sin payload real con segundo apellido vacío |
+| H15 | En modo patrones, si entre el primer apellido y el bloque demográfico hay dos campos de texto, son el segundo apellido y el primer nombre (falta el segundo nombre); si hay uno, es el primer nombre. Una persona sin segundo apellido y con segundo nombre se lee mal sin offsets | Supuesto de este parser; los campos vacíos de la trama no dejan rastro cuando el lector altera los rellenos | pendiente | Sin payload real con segundo apellido vacío |
 
 Enmiendas de texto propuestas (sin ID nuevo):
 - H04: añadir "en rangos semiabiertos [58,81), [81,104), [104,127), [127,150) de 23 bytes; ver G01".
 - H06: añadir "y corresponden al lugar de nacimiento" (el parser nombra los campos `codigo...Nacimiento`; ninguna fuente lo prueba con cédulas reales).
 - H08: anotar que el parser no extrae DIVIPOL de este bloque mientras G04 no se confirme.
 
-Si `H12` choca con otro ID añadido en paralelo, se renumera aquí, en la spec (PA-10, PA-17, PA-19) y en las pruebas antes del primer commit del grupo 3.
+Si `H15` choca con otro ID añadido en paralelo, se renumera aquí, en la spec (PA-10, PA-17, PA-19) y en las pruebas antes del primer commit del grupo 3.
 
 ## Risks / Trade-offs
 
-- [H12 lee mal a una persona sin segundo apellido y con segundo nombre en tramas no completas] → Confianza 0.6 y warning `H12`; en la trama completa offsets lo corrige y la discrepancia baja la confianza a 0.5. Escenario explícito en PA-10.
+- [H15 lee mal a una persona sin segundo apellido y con segundo nombre en tramas no completas] → Confianza 0.6 y warning `H15`; en la trama completa offsets lo corrige y la discrepancia baja la confianza a 0.5. Escenario explícito en PA-10.
 - [Un nombre real de 22 o 23 bytes hace discrepar a los modos y baja la confianza a 0.5 con el valor correcto] → Aceptable: la confianza informa, no rechaza. Propiedad de nombres largos en PA-21.
 - [Relleno con un solo 0x00 en tramas no completas une dos nombres como apellido compuesto] → No detectable sin offsets. Queda en `consistencia-modos` cuando la trama es completa; para las truncadas, Open Questions (offsets relativos).
 - [Los límites 96 y 192 rechazan una variante real desconocida más larga] → Error visible, no dato inventado; se ajustan en un cambio con evidencia.
@@ -182,7 +182,7 @@ Capacidad nueva, sin migración. Retirada: quitar el export de `index.ts`, `src/
 
 Ninguna cambia la spec ni las tareas de este cambio; todas pueden resolverse después.
 
-1. ¿Leer la trama truncada por offsets relativos al marcador (posición absoluta - 24 + posición del marcador)? Eliminaría H12 en las tramas de Windows si G02 se confirma. Sería un cambio posterior sobre PA-07 y PA-08.
+1. ¿Leer la trama truncada por offsets relativos al marcador (posición absoluta - 24 + posición del marcador)? Eliminaría H15 en las tramas de Windows si G02 se confirma. Sería un cambio posterior sobre PA-07 y PA-08.
 2. ¿Usar `buscarDivipol` como resolutor por defecto cuando no se inyecta ninguno, una vez integrado `divipol-registraduria`?
 3. ¿Extraer DIVIPOL del bloque fecha primero si G04 se confirma con un payload real?
 4. ¿El esquema normalizado definitivo (tarea `salida-json` y cambio `api-validaciones-contrato`) envuelve este resultado o lo reemplaza? Este cambio fija solo la salida del parser.
@@ -207,9 +207,9 @@ Reglas comunes: un `it` por escenario, nombrado `"<PA-xx> <escenario> (atrapa: <
 | PA-05 | Unitaria: 4 escenarios (Ñ y tildes, Ñ inicial, UTF-8, byte C1) | Vitest | V | 100 % literales; bytes de los escapes `Ñ`, `É`, `Á` comprobados con `node -e` sobre el archivo de prueba |
 | PA-06 | Unitaria: 3 escenarios | Vitest | V | 100 % literales |
 | PA-07 | Unitaria: 4 escenarios | Vitest | V | 100 % literales |
-| PA-08 | Unitaria: 3 escenarios | Vitest | V | 100 % literales |
+| PA-08 | Unitaria: 4 escenarios (incluida la trama sin NUL, H14) | Vitest | V | 100 % literales |
 | PA-08, PA-20 | Metamórfica: misma persona en `completa`, `windows-truncada` y `sin-pubdsk` da los mismos `campos` (`arbPersonaFicticia({ nuipCorto: true })`, misma semilla) | fast-check + generador | V | numRuns >= 1000; 100 % iguales; vacuidad: sin segundo nombre >= 8 %, Ñ >= 20 % |
-| PA-09 | Unitaria: 4 escenarios | Vitest | V | 100 % literales |
+| PA-09 | Unitaria: 6 escenarios (incluidos marcador pegado a la cabecera y tarjeta de 6 dígitos) | Vitest | V | 100 % literales |
 | PA-09 | Propiedad de oráculo: campo NUIP de `C(P1)` = `"0".repeat(k)` + dígitos, `k` de 0 a 10 | fast-check | V | numRuns >= 1000; `ok` si y solo si `validarFormatoNuip(d).valido`, con `numeroDocumento` igual a su `numero`; vacuidad: válidos >= 25 %, inválidos >= 10 % |
 | PA-10 | Unitaria: 5 escenarios | Vitest | V | 100 % literales |
 | PA-11 | Unitaria: 3 escenarios | Vitest | V | 100 % literales |
@@ -224,7 +224,7 @@ Reglas comunes: un `it` por escenario, nombrado `"<PA-xx> <escenario> (atrapa: <
 | PA-17 | Unitaria: 3 escenarios | Vitest | V | 100 % literales |
 | PA-18 | Unitaria: 3 escenarios | Vitest | V | 100 % literales |
 | PA-19 | Unitaria: 6 caminos | Vitest | V | 6 de 6 listas exactas |
-| PA-19 | Propiedad: `warnings` ordenada, sin duplicados, cada ID `^[A-Z][0-9]{2}$` y subconjunto de {G01, H02 a H09, H11, H12} sobre `arbFixturePdf417()` | fast-check + generador | V | numRuns >= 1000; 100 % |
+| PA-19 | Propiedad: `warnings` ordenada, sin duplicados, cada ID `^[A-Z][0-9]{2}$` y subconjunto de {H02, H07, H08, H15} sobre `arbFixturePdf417()` | fast-check + generador | V | numRuns >= 1000; 100 % |
 | PA-20 | Unitaria de errores conocidos: 10 escenarios, un `it` por error, nombre con "(atrapa: ...)" | Vitest | V | 10 de 10; cada uno visto fallar contra un mutante manual del error histórico (por ejemplo, RH con `slice(-2)`) |
 | PA-21 | Propiedad de ida y vuelta: 4 variantes y nombres largos | fast-check + generador | V | numRuns >= 1000 por variante; 100 % `ok` y `campos` iguales; vacuidad del escenario de PA-21 |
 | PA-01 a PA-21 | Cobertura de ramas de `src/pdf417-amarilla/` | Vitest v8 | C | ramas >= 95 %; líneas >= 95 % |
@@ -236,9 +236,10 @@ Reglas comunes: un `it` por escenario, nombrado `"<PA-xx> <escenario> (atrapa: <
 
 ## Decisiones del orquestador (2026-10-06, pendientes de ratificación humana)
 
-- Pregunta 1: se acepta la lectura con warning H12 y confianza 0.6 en tramas no completas; H12 se registra en `hipotesis-formato.md` en el commit del orquestador. La lectura por offsets relativos al marcador queda como mejora posterior si la evidencia la respalda.
+- Pregunta 1: se acepta la lectura con warning H15 y confianza 0.6 en tramas no completas; H15 se registra en `hipotesis-formato.md` en el commit del orquestador. La lectura por offsets relativos al marcador queda como mejora posterior si la evidencia la respalda.
 - Pregunta 2: el resolutor DIVIPOL se mantiene inyectable (sin importar la tabla por defecto), para no acoplar el parser al tamaño de la tabla.
 - Pregunta 3: en el bloque fecha-primero, departamento y municipio son `null` (principio V: sin evidencia no se afirma). El generador debe alinearse: su variante fecha-primero no debe declarar esos campos en `esperado` para el parser.
 - Pregunta 4: se acepta provisionalmente; la spec `salida-json` unificará.
-- Pregunta 5: NO. La salida de producción solo lleva IDs de hipótesis del formato (H, M, N, D). En modo offsets se emite `H04` en lugar de `G01`; ajusta la spec antes de codificar el grupo correspondiente.
+- Pregunta 5: NO. La salida de producción solo lleva IDs de hipótesis del formato (H, M, N, D). En modo offsets se emite `H04` en lugar de `G01`; ajusta la spec antes de codificar el grupo correspondiente. Aplicado antes del grupo 1: PA-02, PA-15, PA-19, decisión 11 y la fila PA-19 de `## Pruebas` ya no llevan `G01`.
 - Pregunta 6: se aceptan como convenciones documentadas, a revisar con el set de campo.
+- Evidencia pública del 2026-10-06 (`docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`), aplicada antes del grupo 1: la hipótesis de lectura de nombres sin offsets pasa de `H12` a `H15` (H12 era del investigador; se registró como H16); `C(p)` lleva `[32,40)` en 0x00 y `[40,48)` como campo numérico de 8 bytes (G01 corregida), sin el campo de 6 dígitos; `warnings` solo con hipótesis no confirmadas (decisión 11); el localizador del NUIP no toma como apellido el marcador pegado a la cabecera (PA-09) y una trama sin NUL (H14) da error, no nombres partidos (PA-08). Leer el nombre concatenado de H14 queda como mejora posterior.

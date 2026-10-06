@@ -4,7 +4,7 @@
 
 Interpretar de forma determinista, pura y sin E/S los bytes crudos (ISO-8859-1) del PDF417 de la cédula de ciudadanía amarilla y devolver campos normalizados con confianza, validaciones e hipótesis aplicadas, descartando siempre la biometría y los datos de control (AFIS, tarjeta decadactilar).
 
-Convenciones de los escenarios (todas las personas y tramas son sintéticas; los NUIP empiezan por `9999` tras quitar ceros). Las hipótesis `Hxx` son las de `docs/decisiones/hipotesis-formato.md`; `H12` es la hipótesis propuesta en `design.md` de este cambio.
+Convenciones de los escenarios (todas las personas y tramas son sintéticas; los NUIP empiezan por `9999` tras quitar ceros). Las hipótesis `Hxx` son las de `docs/decisiones/hipotesis-formato.md`; `H15` es la hipótesis propuesta en `design.md` de este cambio. Estados según la tabla "Actualización de estados (2026-10-06, evidencia pública)" de ese archivo: H01, H03, H04, H05, H06, H09 y H11 están confirmadas; H02 está confirmada solo para el byte 24 de la trama completa; H07, H08 y H15 siguen pendientes.
 
 Personas de referencia (campos de nombre en ISO-8859-1, un byte por carácter; `-` es campo vacío):
 
@@ -19,9 +19,9 @@ Personas de referencia (campos de nombre en ISO-8859-1, un byte por carácter; `
 | P7 | `9999000006` | `SMITH` | - | `JOHN` | `PAUL` | M | `19800505` | `16` | `001` | `B+` |
 | P8 | `9999000007` | `PEREZ` | `ABCDEFGHIJKLMNOPQRSTUVW` | `JUAN` | `CARLOS` | M | `20000229` | `16` | `001` | `A+` |
 
-Trama completa de referencia `C(p)`, 531 bytes, rangos semiabiertos (disposición de H04 y de la hipótesis G01 del cambio `generador-fixtures-sinteticos`): `[0,2)` `01`; `[2,10)` AFIS `99998888`; `[10,24)` 14 bytes 0x00; `[24,32)` marcador `PubDSK_1`; `[32]` 0x00; `[33,39)` `135790`; `[39]` 0x00; `[40,48)` tarjeta decadactilar `99997777`; `[48,58)` campo NUIP; `[58,81)`, `[81,104)`, `[104,127)` y `[127,150)` apellido 1, apellido 2, nombre 1 y nombre 2, cada uno seguido de relleno 0x00 hasta llenar su rango; desde 150 el bloque demográfico sexo primero `0` + sexo + fecha + depto + mpio + `0` + RH; el resto hasta 531 es la cola, con el byte de posición absoluta `i` igual a `(i * 73 + 41) mod 256`.
+Trama completa de referencia `C(p)`, 531 bytes, rangos semiabiertos (disposición de H04 y de la evidencia pública de `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`, que corrige G01 en `[32,48)`): `[0,2)` `01`; `[2,10)` AFIS `99998888`; `[10,24)` 14 bytes 0x00; `[24,32)` marcador `PubDSK_1`; `[32,40)` 8 bytes 0x00; `[40,48)` tarjeta decadactilar `99997777` (campo numérico de 8 bytes); `[48,58)` campo NUIP; `[58,81)`, `[81,104)`, `[104,127)` y `[127,150)` apellido 1, apellido 2, nombre 1 y nombre 2, cada uno seguido de relleno 0x00 hasta llenar su rango; desde 150 el bloque demográfico sexo primero `0` + sexo + fecha + depto + mpio + `0` + RH; el resto hasta 531 es la cola, con el byte de posición absoluta `i` igual a `(i * 73 + 41) mod 256`.
 
-Variantes, iguales a las del generador (G02, G03): `W(p)` (truncada, Windows) es `C(p)` sin los bytes `[13,24)` (marcador en el byte 13, 520 bytes); `S(p)` (sin `PubDSK`) es `C(p)[0,24)` seguido de 8 bytes 0x00 y de `C(p)[33,531)` (530 bytes). El sufijo `F` (`C_F(p)`, `W_F(p)`, `S_F(p)`) cambia el bloque por el de fecha primero: `02` + fecha + sexo + depto + mpio + `0` + RH. "Cola" es todo byte posterior al signo del RH.
+Variantes, iguales a las del generador (G02, G03): `W(p)` (truncada, Windows) es `C(p)` sin los bytes `[13,24)` (marcador en el byte 13, 520 bytes); `S(p)` (sin `PubDSK`) es `C(p)[0,24)` seguido de 9 bytes 0x00 y de `C(p)[32,530)` (531 bytes: todo campo desde el byte 32 se desplaza +1, como G03 corregida en el generador; se recorta el último byte de la cola). El sufijo `F` (`C_F(p)`, `W_F(p)`, `S_F(p)`) cambia el bloque por el de fecha primero: `02` + fecha + sexo + depto + mpio + `0` + RH. "Cola" es todo byte posterior al signo del RH.
 
 ## ADDED Requirements
 
@@ -49,7 +49,7 @@ Un resultado de éxito SHALL contener exactamente `ok` (`true`), `version` (`"cc
 
 #### Scenario: Resultado completo de la trama completa de referencia
 - **WHEN** se parsea `C(P1)` sin opciones
-- **THEN** el resultado es exactamente `{ "ok": true, "version": "cc-amarilla", "fuente": ["pdf417"], "trama": { "variante": "completa", "modo": "offsets", "bloqueDemografico": "sexo-primero" }, "campos": { "numeroDocumento": "9999123456", "primerApellido": "PEREZ", "segundoApellido": "GOMEZ", "primerNombre": "JUAN", "segundoNombre": "CARLOS", "sexo": "M", "fechaNacimiento": "2000-02-29", "rh": "O+", "codigoDepartamentoNacimiento": "16", "codigoMunicipioNacimiento": "001" }, "confianza": { "numeroDocumento": 1, "primerApellido": 1, "segundoApellido": 1, "primerNombre": 1, "segundoNombre": 1, "sexo": 1, "fechaNacimiento": 1, "rh": 1, "codigoDepartamentoNacimiento": 1, "codigoMunicipioNacimiento": 1 }, "validaciones": [ { "id": "formato-nuip", "estado": "ok", "campos": ["numeroDocumento"], "detalle": "nuip" }, { "id": "consistencia-modos", "estado": "ok", "campos": [], "detalle": null }, { "id": "divipol-codigos", "estado": "ok", "campos": ["codigoDepartamentoNacimiento", "codigoMunicipioNacimiento"], "detalle": null }, { "id": "divipol-existe", "estado": "no-aplica", "campos": ["codigoDepartamentoNacimiento", "codigoMunicipioNacimiento"], "detalle": "sin-resolutor" } ], "warnings": ["G01", "H02", "H03", "H04", "H05", "H06", "H09", "H11"] }`
+- **THEN** el resultado es exactamente `{ "ok": true, "version": "cc-amarilla", "fuente": ["pdf417"], "trama": { "variante": "completa", "modo": "offsets", "bloqueDemografico": "sexo-primero" }, "campos": { "numeroDocumento": "9999123456", "primerApellido": "PEREZ", "segundoApellido": "GOMEZ", "primerNombre": "JUAN", "segundoNombre": "CARLOS", "sexo": "M", "fechaNacimiento": "2000-02-29", "rh": "O+", "codigoDepartamentoNacimiento": "16", "codigoMunicipioNacimiento": "001" }, "confianza": { "numeroDocumento": 1, "primerApellido": 1, "segundoApellido": 1, "primerNombre": 1, "segundoNombre": 1, "sexo": 1, "fechaNacimiento": 1, "rh": 1, "codigoDepartamentoNacimiento": 1, "codigoMunicipioNacimiento": 1 }, "validaciones": [ { "id": "formato-nuip", "estado": "ok", "campos": ["numeroDocumento"], "detalle": "nuip" }, { "id": "consistencia-modos", "estado": "ok", "campos": [], "detalle": null }, { "id": "divipol-codigos", "estado": "ok", "campos": ["codigoDepartamentoNacimiento", "codigoMunicipioNacimiento"], "detalle": null }, { "id": "divipol-existe", "estado": "no-aplica", "campos": ["codigoDepartamentoNacimiento", "codigoMunicipioNacimiento"], "detalle": "sin-resolutor" } ], "warnings": [] }`
 
 #### Scenario: Solo datos planos
 - **WHEN** se parsea `C(P2)`
@@ -153,8 +153,12 @@ En modo patrones el parser SHALL normalizar byte a byte (1:1): letras de PA-05, 
 - **WHEN** se parsea `S(P1)`
 - **THEN** `trama` es `{ "variante": "sin-pubdsk", "modo": "patrones", "bloqueDemografico": "sexo-primero" }` y `campos` es igual al de `C(P1)`
 
+#### Scenario: Trama sin ningún NUL da error y no nombres partidos (H14)
+- **WHEN** se parsea `C(P1)` sin ninguno de los bytes 0x00 de `[0,168)` (los nombres quedan concatenados: `PEREZGOMEZJUANCARLOS` seguido del bloque sin separador; la cola se conserva)
+- **THEN** el resultado es exactamente `{ "ok": false, "error": "caracteres-invalidos-en-nombre" }`
+
 ### Requirement: PA-09 Número de documento
-El número SHALL tomarse de los 10 dígitos inmediatamente anteriores a la primera letra del primer apellido (H03): en modo patrones, los 10 últimos del primer run de 10 o más dígitos ASCII seguido sin separación por una letra de PA-05; los dígitos previos (tarjeta decadactilar) se descartan. MUST validarse con `formato-nuip` (cédula): si es válido, `numeroDocumento` es su `numero`; si no, error `nuip-invalido`.
+El número SHALL tomarse de los 10 dígitos inmediatamente anteriores a la primera letra del primer apellido (H03): en modo patrones, los 10 últimos del primer run de 10 o más dígitos ASCII seguido sin separación por una letra de PA-05 que no sea el inicio del marcador `PubDSK_1`; los dígitos previos (tarjeta decadactilar) se descartan. MUST validarse con `formato-nuip` (cédula): si es válido, `numeroDocumento` es su `numero`; si no, error `nuip-invalido`.
 
 #### Scenario: Cédula antigua con ceros a la izquierda
 - **WHEN** se parsean `C(P6)` y `W(P6)`
@@ -168,12 +172,20 @@ El número SHALL tomarse de los 10 dígitos inmediatamente anteriores a la prime
 - **WHEN** se parsea `W(P1)` (el run de dígitos antes del apellido es `999977779999123456`)
 - **THEN** `campos.numeroDocumento` es `"9999123456"`
 
+#### Scenario: Marcador pegado a la cabecera
+- **WHEN** se parsea `C(P1)` sin los bytes `[10,24)` (517 bytes; el marcador empieza en el byte 10, justo después de los dígitos `0199998888`, como en los lectores que quitan los NUL de la cabecera)
+- **THEN** `trama.variante` es `"truncada"`, `campos` es igual al de `C(P1)` y `warnings` es `["H02"]`
+
+#### Scenario: Tarjeta decadactilar de 6 dígitos con relleno
+- **WHEN** se parsea `C(P1)` con `[40,48)` igual a `999977` seguido de dos bytes 0x00
+- **THEN** `trama.modo` es `"offsets"`, `campos` es igual al de `C(P1)` y la validación `consistencia-modos` tiene `estado` `"ok"`
+
 #### Scenario: Sin corrección de confusiones OCR
 - **WHEN** se parsea `C(P1)` con el byte 56 igual a `O` (0x4F) en lugar de `5`
 - **THEN** el resultado es exactamente `{ "ok": false, "error": "caracteres-invalidos-en-nombre" }` y nunca un número con `O` corregida a `0`
 
 ### Requirement: PA-10 Nombres y apellidos
-El parser SHALL entregar `primerApellido`, `segundoApellido`, `primerNombre` y `segundoNombre` en ese orden de la trama, con `null` para un campo vacío. `primerApellido` y `primerNombre` MUST NOT ser vacíos. En modo patrones, con 3 campos entre el primer apellido y el bloque se asignan en orden; con 2, segundo apellido y primer nombre; con 1, primer nombre (H12). Con 0 o más de 3 MUST dar `nombres-no-reconocidos`.
+El parser SHALL entregar `primerApellido`, `segundoApellido`, `primerNombre` y `segundoNombre` en ese orden de la trama, con `null` para un campo vacío. `primerApellido` y `primerNombre` MUST NOT ser vacíos. En modo patrones, con 3 campos entre el primer apellido y el bloque se asignan en orden; con 2, segundo apellido y primer nombre; con 1, primer nombre (H15). Con 0 o más de 3 MUST dar `nombres-no-reconocidos`.
 
 #### Scenario: Orden de los apellidos verificado por posición
 - **WHEN** se parsean `C(P1)` y `C(P6)` (mismos apellidos en orden inverso)
@@ -181,7 +193,7 @@ El parser SHALL entregar `primerApellido`, `segundoApellido`, `primerNombre` y `
 
 #### Scenario: Segundo nombre ausente
 - **WHEN** se parsean `C(P3)` y `W(P3)`
-- **THEN** en ambos `campos` es `{ "numeroDocumento": "9999000002", "primerApellido": "MARTINEZ", "segundoApellido": "MEJIA", "primerNombre": "MARIA", "segundoNombre": null, "sexo": "F", "fechaNacimiento": "1970-01-01", "rh": "AB+", "codigoDepartamentoNacimiento": "31", "codigoMunicipioNacimiento": "019" }`, y solo `W(P3)` incluye `"H12"` en `warnings`
+- **THEN** en ambos `campos` es `{ "numeroDocumento": "9999000002", "primerApellido": "MARTINEZ", "segundoApellido": "MEJIA", "primerNombre": "MARIA", "segundoNombre": null, "sexo": "F", "fechaNacimiento": "1970-01-01", "rh": "AB+", "codigoDepartamentoNacimiento": "31", "codigoMunicipioNacimiento": "019" }`, y solo `W(P3)` incluye `"H15"` en `warnings`
 
 #### Scenario: Segundo apellido ausente en la trama completa
 - **WHEN** se parsea `C(P7)`
@@ -189,7 +201,7 @@ El parser SHALL entregar `primerApellido`, `segundoApellido`, `primerNombre` y `
 
 #### Scenario: Ambigüedad documentada sin offsets
 - **WHEN** se parsea `W(P7)`
-- **THEN** `campos.segundoApellido` es `"JOHN"`, `campos.primerNombre` es `"PAUL"`, `campos.segundoNombre` es `null`, `warnings` incluye `"H12"` y la confianza de esos tres campos es `0.6`
+- **THEN** `campos.segundoApellido` es `"JOHN"`, `campos.primerNombre` es `"PAUL"`, `campos.segundoNombre` es `null`, `warnings` incluye `"H15"` y la confianza de esos tres campos es `0.6`
 
 #### Scenario: Demasiados campos de nombre
 - **WHEN** se parsea `W(P1)` con el contenido del segundo nombre cambiado a `CARLOS` + `00 00` + `EXTRA` dentro de su rango de 23 bytes
@@ -208,14 +220,14 @@ El bloque sexo primero SHALL leerse como un dígito ignorado, sexo `M` o `F`, fe
 
 #### Scenario: Cantidad inesperada de dígitos
 - **WHEN** se parsean `C(P1)` con el bloque `0M2000022916001O+` (5 dígitos) y con el bloque `0M200002291600100O+` (7 dígitos)
-- **THEN** ambos tienen `ok` `true`, `trama.modo` `"patrones"`, los dos códigos en `null` con confianza `0`, la validación `divipol-codigos` con `estado` `"fallida"` y detalle `"longitud-inesperada"`, y `warnings` sin `"H06"`
+- **THEN** ambos tienen `ok` `true`, `trama.modo` `"patrones"`, los dos códigos en `null` con confianza `0`, la validación `divipol-codigos` con `estado` `"fallida"` y detalle `"longitud-inesperada"`, y `warnings` es `[]`
 
 ### Requirement: PA-12 Bloque demográfico fecha primero
 El parser SHALL reconocer en modo patrones el bloque fecha primero (H08): dos dígitos ignorados, fecha `YYYYMMDD`, sexo `M` o `F`, un run de dígitos y el RH. De este bloque MUST NOT extraer códigos DIVIPOL: ambos son `null` con confianza `0` y `trama.bloqueDemografico` es `"fecha-primero"`.
 
 #### Scenario: Fecha primero en trama completa
 - **WHEN** se parsea `C_F(P1)` (bloque `0220000229M160010O+`)
-- **THEN** `trama` es `{ "variante": "completa", "modo": "patrones", "bloqueDemografico": "fecha-primero" }`, `campos.sexo` es `"M"`, `campos.fechaNacimiento` es `"2000-02-29"`, `campos.rh` es `"O+"`, los dos códigos son `null` y `warnings` es `["H02", "H03", "H08", "H09"]`
+- **THEN** `trama` es `{ "variante": "completa", "modo": "patrones", "bloqueDemografico": "fecha-primero" }`, `campos.sexo` es `"M"`, `campos.fechaNacimiento` es `"2000-02-29"`, `campos.rh` es `"O+"`, los dos códigos son `null` y `warnings` es `["H08"]`
 
 #### Scenario: Fecha primero en trama truncada con RH AB
 - **WHEN** se parsea `W_F(P3)`
@@ -260,7 +272,7 @@ El RH SHALL ser uno de `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+` y `O-`, leído
 
 #### Scenario: Código desconocido con su hipótesis
 - **WHEN** se parsea `C(P1)` con un resolutor que devuelve `{ "encontrado": false, "codigo": "16001", "motivo": "desconocido", "warnings": ["D01"] }`
-- **THEN** la validación `divipol-existe` tiene `estado` `"fallida"` y `detalle` `"desconocido"`, y `warnings` es `["D01", "G01", "H02", "H03", "H04", "H05", "H06", "H09", "H11"]`
+- **THEN** la validación `divipol-existe` tiene `estado` `"fallida"` y `detalle` `"desconocido"`, y `warnings` es `["D01"]`
 
 #### Scenario: Código sin dato
 - **WHEN** se parsea `C(P5)` con un resolutor espía que devuelve `{ "encontrado": false, "codigo": "00000", "motivo": "sin-dato", "warnings": ["D04"] }`
@@ -272,7 +284,7 @@ El RH SHALL ser uno de `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+` y `O-`, leído
 
 #### Scenario: Solo se copian IDs de hipótesis bien formados
 - **WHEN** se parsea `C(P1)` con un resolutor que devuelve `{ "encontrado": true, "codigo": "16001", "warnings": ["D02", "<b>", 7, "d03", "D02", "D0001"] }`
-- **THEN** `warnings` es `["D02", "G01", "H02", "H03", "H04", "H05", "H06", "H09", "H11"]`
+- **THEN** `warnings` es `["D02"]`
 
 #### Scenario: Sin códigos no se consulta
 - **WHEN** se parsea `C_F(P1)` con un resolutor espía
@@ -283,7 +295,7 @@ El RH SHALL ser uno de `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-`, `O+` y `O-`, leído
 - **THEN** la validación `divipol-existe` tiene `estado` `"ok"` y `campos.codigoMunicipioNacimiento` sigue siendo `"019"`
 
 ### Requirement: PA-16 Descarte de biometría y datos de control
-El resultado MUST NOT depender de la cola (todo byte posterior al signo del RH, H09) ni contener el código AFIS, la tarjeta decadactilar, el campo de 6 dígitos que sigue al marcador ni el marcador. Para no leer biometría como datos, el parser MUST NOT aceptar un NUIP cuyo último dígito esté en la posición 96 o posterior ni un bloque demográfico que empiece en la posición 192 o posterior.
+El resultado MUST NOT depender de la cola (todo byte posterior al signo del RH, H09) ni contener el código AFIS, la tarjeta decadactilar ni el marcador. Para no leer biometría como datos, el parser MUST NOT aceptar un NUIP cuyo último dígito esté en la posición 96 o posterior ni un bloque demográfico que empiece en la posición 192 o posterior.
 
 #### Scenario: La cola no cambia el resultado
 - **WHEN** se parsean `C(P1)` y `C(P1)` con la cola sustituida por 363 bytes 0xFF, por 363 bytes 0x00, por nada (la trama termina en el `+` del RH) y por `0M19990101160010AB+PEREZ`
@@ -295,14 +307,14 @@ El resultado MUST NOT depender de la cola (todo byte posterior al signo del RH, 
 
 #### Scenario: Datos de control ausentes del resultado
 - **WHEN** se parsean `C(P1)`, `W(P1)` y `S(P1)` y se serializa cada resultado con `JSON.stringify`
-- **THEN** ningún texto serializado contiene `"99998888"`, `"99997777"`, `"135790"` ni `"PubDSK"`
+- **THEN** ningún texto serializado contiene `"99998888"`, `"99997777"` ni `"PubDSK"`
 
 #### Scenario: Límites de posición
 - **WHEN** se parsean `C(P1)` con 38 bytes 0x00 insertados en la posición 40, con 39 insertados en la posición 40, con 41 insertados en la posición 150 y con 42 insertados en la posición 150
 - **THEN** el primero y el tercero tienen `ok` `true` y los `campos` de `C(P1)`; el segundo es exactamente `{ "ok": false, "error": "nuip-no-encontrado" }` y el cuarto exactamente `{ "ok": false, "error": "bloque-demografico-no-encontrado" }`
 
 ### Requirement: PA-17 Confianza por campo
-`confianza` SHALL asignar a cada campo: `1` si los modos offsets y patrones dieron el mismo valor; `0.9` si solo hubo un modo con resultado y el campo no depende de H12; `0.6` para `segundoApellido`, `primerNombre` y `segundoNombre` asignados por H12; `0.5` si los dos modos discrepan (prevalece el valor de offsets); y `0` para un código DIVIPOL `null`.
+`confianza` SHALL asignar a cada campo: `1` si los modos offsets y patrones dieron el mismo valor; `0.9` si solo hubo un modo con resultado y el campo no depende de H15; `0.6` para `segundoApellido`, `primerNombre` y `segundoNombre` asignados por H15; `0.5` si los dos modos discrepan (prevalece el valor de offsets); y `0` para un código DIVIPOL `null`.
 
 #### Scenario: Un solo modo
 - **WHEN** se parsean `W(P1)` y `S(P1)`
@@ -332,11 +344,11 @@ El resultado MUST NOT depender de la cola (todo byte posterior al signo del RH, 
 - **THEN** `trama.modo` es `"offsets"`, `campos` es igual al de `C(P1)`, la segunda validación tiene `estado` `"no-aplica"` y `detalle` `"patrones-sin-resultado"`, y los diez valores de `confianza` son `0.9`
 
 ### Requirement: PA-19 Hipótesis aplicadas en warnings
-`warnings` SHALL ser la lista ordenada y sin duplicados de: `H02` si la variante es completa o truncada; `H03` y `H09` siempre; `G01` y `H04` en modo offsets; `H05` y `H11` con bloque sexo primero; `H06` si hay códigos DIVIPOL; `H07` sin marcador; `H08` con bloque fecha primero; `H12` si el modo patrones asignó nombres por H12; y los IDs que aporte el resolutor (PA-15). Un error MUST NOT incluir `warnings`.
+`warnings` SHALL ser la lista ordenada y sin duplicados de las hipótesis no confirmadas que aplicó el camino entregado: `H02` si la variante es truncada; `H07` sin marcador; `H08` con bloque fecha primero; `H15` si el modo patrones asignó nombres por H15; y los IDs que aporte el resolutor (PA-15). MUST NOT incluir hipótesis confirmadas (H01, H03 a H06, H09, H11) ni IDs `G` del generador. Un error MUST NOT incluir `warnings`.
 
 #### Scenario: Warnings por camino
 - **WHEN** se parsean `C(P1)`, `W(P1)`, `S(P1)`, `W(P3)`, `S_F(P1)` y `C(P1)` con el bloque `0M2000022916001O+`
-- **THEN** `warnings` es, en orden, `["G01", "H02", "H03", "H04", "H05", "H06", "H09", "H11"]`, `["H02", "H03", "H05", "H06", "H09", "H11"]`, `["H03", "H05", "H06", "H07", "H09", "H11"]`, `["H02", "H03", "H05", "H06", "H09", "H11", "H12"]`, `["H03", "H07", "H08", "H09"]` y `["H02", "H03", "H05", "H09", "H11"]`
+- **THEN** `warnings` es, en orden, `[]`, `["H02"]`, `["H07"]`, `["H02", "H15"]`, `["H07", "H08"]` y `[]`
 
 ### Requirement: PA-20 Regresión de errores conocidos
 El parser SHALL evitar cada error documentado de los repositorios antiguos (skill `formato-cedula`): RH `AB` cortado, sexo por contenido, `-` del RH perdido, Ñ y acentos, apellidos invertidos, fecha mal etiquetada, segundo nombre ausente, apellido compuesto partido, trama de Windows y la lectura P/A/R del primer carácter (H11). Cada uno MUST tener una prueba propia.

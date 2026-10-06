@@ -11,8 +11,8 @@ La fuente preferida de la cédula amarilla es su PDF417 (principio V), pero `pac
 - Bloques demográficos "sexo primero" (H05) y "fecha primero" (H08). RH con las ocho combinaciones, incluidas `AB+`, `AB-` y los negativos.
 - DIVIPOL solo como códigos: departamento (2) y municipio (3). La existencia del código se consulta, si el llamador lo inyecta, con un resolutor cuya interfaz define este cambio; la tabla la entrega el cambio paralelo `divipol-registraduria`.
 - Número de documento validado y normalizado con `validarFormatoNuip` (capacidad `formato-nuip`), sin duplicar reglas.
-- Descarte obligatorio del código AFIS, de la tarjeta decadactilar, del campo de 6 dígitos que sigue al marcador y de todo byte posterior al RH: el resultado no depende de ellos ni los contiene.
-- `warnings[]` con los IDs de las hipótesis pendientes aplicadas en cada camino. Dos hipótesis nuevas propuestas (H12 y H13) quedan en `design.md` para que el orquestador las registre.
+- Descarte obligatorio del código AFIS, de la tarjeta decadactilar y de todo byte posterior al RH: el resultado no depende de ellos ni los contiene.
+- `warnings[]` con los IDs de las hipótesis pendientes aplicadas en cada camino. Una hipótesis nueva propuesta (H15, lectura de nombres sin offsets) queda en `design.md` para que el orquestador la registre.
 - Registro del evaluador `pdf417-amarilla` en `evals/runners/registro.mjs`, adaptador de entrada hexadecimal y fixtures sintéticos en `evals/fixtures/sinteticos/pdf417-amarilla/`.
 
 Fuera de alcance: decodificar la imagen del PDF417 (Fase 2), tarjeta de identidad (H10, Fase 6), nombres de departamento y municipio (cambio `divipol-registraduria`), validadores de negocio como edad mínima (tarea `validadores` del PLAN), JSON Schema publicado del esquema de salida (tarea `salida-json` del PLAN), generar payloads o imágenes (cambio `generador-fixtures-sinteticos`) y editar `docs/decisiones/hipotesis-formato.md`.
