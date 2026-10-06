@@ -11,6 +11,7 @@
  *   --manifiesto <ruta>   manifiesto de fuentes (por defecto tools/divipol/fuentes.json)
  *   --fuentes <dir>       directorio de instantáneas (por defecto tools/divipol/fuentes)
  *   --salida <dir>        raíz de los archivos generados (por defecto packages/parsers/src)
+ *   --manuales <ruta>     tabla manual de equivalencias (por defecto tools/divipol/equivalencias-manuales.json)
  *
  * El manifiesto admite URLs `https:` y `file:`. Toda escritura va a archivos temporales que se renombran solo si
  * todo el proceso tuvo éxito. Sale con código 1 ante cualquier error, sin escribir archivos.
@@ -18,17 +19,27 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ErrorDivipol, parsearLocalities, serializarTabla, verificarFuente } from "./divipol-lib.mjs";
+import {
+  ErrorDivipol,
+  emparejar,
+  parsearDivipola,
+  parsearLocalities,
+  serializarEquivalencias,
+  serializarTabla,
+  verificarFuente,
+} from "./divipol-lib.mjs";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const POR_DEFECTO = {
   manifiesto: join(RAIZ, "tools", "divipol", "fuentes.json"),
   fuentes: join(RAIZ, "tools", "divipol", "fuentes"),
   salida: join(RAIZ, "packages", "parsers", "src"),
+  manuales: join(RAIZ, "tools", "divipol", "equivalencias-manuales.json"),
 };
-const OPCIONES_CON_VALOR = new Set(["--manifiesto", "--fuentes", "--salida"]);
+const OPCIONES_CON_VALOR = new Set(["--manifiesto", "--fuentes", "--salida", "--manuales"]);
 const MODOS = new Set(["--descargar", "--verificar"]);
 const ARCHIVO_TABLA = "divipol/tabla.generated.ts";
+const ARCHIVO_EQUIVALENCIAS = "divipola/equivalencias.generated.ts";
 
 function leerArgumentos(argv) {
   const opciones = { ...POR_DEFECTO, modo: "generar" };
@@ -153,17 +164,42 @@ function leerInstantanea(opciones, manifiesto, id) {
   return { fuente, texto };
 }
 
-/** Genera en memoria todos los archivos de salida: [{ nombre relativo a --salida, contenido }]. */
-function generarArchivos(opciones) {
-  const manifiesto = leerManifiesto(opciones.manifiesto);
-  const { fuente, texto } = leerInstantanea(opciones, manifiesto, "eitol-localities");
-  for (const campo of ["repositorio", "commit", "ruta"]) {
+function exigirCampos(fuente, campos) {
+  for (const campo of campos) {
     if (typeof fuente[campo] !== "string" || fuente[campo] === "") {
       throw new ErrorDivipol(`fuente ${fuente.id}: falta ${campo} en el manifiesto`);
     }
   }
-  const filas = parsearLocalities(texto);
-  return [{ nombre: ARCHIVO_TABLA, contenido: serializarTabla(filas, { ...fuente, sha256: fuente.sha256.toLowerCase() }) }];
+}
+
+/** Tabla manual de equivalencias (design.md, decisión 5): JSON con un arreglo de entradas. */
+function leerManuales(ruta) {
+  try {
+    return JSON.parse(readFileSync(ruta, "utf8"));
+  } catch (e) {
+    throw new ErrorDivipol(`no se pudo leer la tabla manual ${ruta}: ${e.message}`);
+  }
+}
+
+/** Genera en memoria todos los archivos de salida: [{ nombre relativo a --salida, contenido }]. */
+function generarArchivos(opciones) {
+  const manifiesto = leerManifiesto(opciones.manifiesto);
+  const localities = leerInstantanea(opciones, manifiesto, "eitol-localities");
+  exigirCampos(localities.fuente, ["repositorio", "commit", "ruta"]);
+  const filas = parsearLocalities(localities.texto);
+  const divipola = leerInstantanea(opciones, manifiesto, "dane-divipola");
+  exigirCampos(divipola.fuente, ["titulo", "licencia"]);
+  const equivalencias = emparejar(filas, parsearDivipola(divipola.texto), leerManuales(opciones.manuales));
+  const atribucion = {
+    fuente: divipola.fuente.titulo,
+    url: divipola.fuente.url,
+    licencia: divipola.fuente.licencia,
+    sha256: divipola.fuente.sha256.toLowerCase(),
+  };
+  return [
+    { nombre: ARCHIVO_TABLA, contenido: serializarTabla(filas, { ...localities.fuente, sha256: localities.fuente.sha256.toLowerCase() }) },
+    { nombre: ARCHIVO_EQUIVALENCIAS, contenido: serializarEquivalencias(equivalencias, atribucion) },
+  ];
 }
 
 function generar(opciones) {

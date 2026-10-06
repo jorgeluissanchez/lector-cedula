@@ -16,6 +16,7 @@
     "sha256": "159b4b84595a11be5bf623fdf25c6fd5c9ac8c3ed898cf7928b2b3f321b9b492",
     "licencia": "CC-BY-SA-4.0",
     "atribucion": "DANE - DIVIPOLA Códigos municipios (datos.gov.co gdxc-w37w). Departamento Administrativo Nacional de Estadística. Licencia CC BY-SA 4.0.",
-    "archivo": "divipola-dane.csv"
+    "archivo": "divipola-dane.csv",
+    "titulo": "DANE - DIVIPOLA Códigos municipios (datos.gov.co gdxc-w37w)"
   }
 ]
