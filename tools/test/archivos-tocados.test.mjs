@@ -41,6 +41,34 @@ describe("archivosTocados (hooks de Stop con agentes en paralelo)", () => {
     expect(archivosTocados(ruta, RAIZ)).toStrictEqual(["packages/parsers/test/x.test.ts", "evals/runners/m.mjs"]);
   });
 
+  it("no cuenta rutas de comandos que solo leen o versionan (atrapa: el orquestador bloqueado por la fase roja de otro agente tras un grep o git add)", () => {
+    const ruta = transcripcion([
+      uso("Bash", { command: "grep -n x packages/parsers/src/nuip-formato.ts && git add packages/parsers/test/a.test.ts" }),
+      uso("Bash", { command: "cat evals/runners/m.mjs | head" }),
+    ]);
+    expect(archivosTocados(ruta, RAIZ)).toStrictEqual([]);
+  });
+
+  it("cuenta el destino de una redirección y los archivos de tee, cp y mv", () => {
+    const ruta = transcripcion([
+      uso("Bash", { command: "echo x > tools/test/r.test.mjs" }),
+      uso("Bash", { command: "cp a.txt packages/parsers/src/c.ts" }),
+    ]);
+    expect(archivosTocados(ruta, RAIZ)).toStrictEqual(["tools/test/r.test.mjs", "packages/parsers/src/c.ts"]);
+  });
+
+  it("con soloUltimoTurno ignora lo editado antes del último mensaje del usuario (atrapa: orquestador bloqueado por archivos que tocó hace horas y hoy edita otro agente)", () => {
+    const ruta = transcripcion([
+      uso("Write", { file_path: "C:\\repo\\packages\\parsers\\src\\index.ts" }),
+      { type: "user", message: { role: "user", content: "continua" } },
+      uso("Edit", { file_path: "C:\\repo\\tools\\test\\b.test.mjs" }),
+      { type: "user", message: { role: "user", content: [{ type: "tool_result", content: "ok" }] } },
+      uso("Edit", { file_path: "C:\\repo\\tools\\c.mjs" }),
+    ]);
+    expect(archivosTocados(ruta, RAIZ, { soloUltimoTurno: true })).toStrictEqual(["tools/test/b.test.mjs", "tools/c.mjs"]);
+    expect(archivosTocados(ruta, RAIZ)).toHaveLength(3);
+  });
+
   it("ignora rutas fuera del repositorio y líneas que no son JSON (atrapa: transcripción parcial que rompe el hook)", () => {
     dir = mkdtempSync(join(tmpdir(), "transcripcion-"));
     const ruta = join(dir, "t.jsonl");

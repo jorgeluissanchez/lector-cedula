@@ -56,18 +56,56 @@ export function quitarHeredocs(comando) {
 const HERRAMIENTAS_EDICION = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
 const RUTA_EN_COMANDO = /(?:^|[\s"'=(])((?:packages|apps|tools|evals|server)\/[\w./@-]+\.(?:m?[jt]sx?|py))/g;
 
+const COMANDO_QUE_ESCRIBE = /^\s*(?:sed\s+(?:-[a-zA-Z]*i|--in-place)|perl\s+-[a-zA-Z]*i|tee\b|cp\b|mv\b|install\b)/;
+
+/**
+ * Rutas de código que un comando de shell escribe: destinos de redirección (`>`, `>>`) en cualquier
+ * segmento, y todas las rutas de segmentos que empiezan por sed -i, perl -i, tee, cp, mv o install.
+ * Leer (grep, cat) o versionar (git add) no cuenta como tocar.
+ */
+export function rutasEscritasPorComando(comando) {
+  const rutas = [];
+  for (const segmento of String(comando).split(/&&|\|\||;|\||\n/)) {
+    for (const m of segmento.matchAll(/>{1,2}\s*["']?((?:packages|apps|tools|evals|server)\/[\w./@-]+)/g)) rutas.push(m[1]);
+    if (COMANDO_QUE_ESCRIBE.test(segmento)) {
+      for (const m of segmento.matchAll(RUTA_EN_COMANDO)) rutas.push(m[1]);
+    }
+  }
+  return rutas;
+}
+
 /**
  * Archivos del repositorio que un agente tocó, según su transcripción (JSONL): rutas de Edit/Write/
  * MultiEdit y rutas de código citadas en comandos de shell (ediciones hechas con scripts).
  * Con agentes en paralelo, los hooks de Stop deben comprobar solo lo propio, no la fase roja de otro.
  * Devuelve rutas relativas con "/", sin duplicados, en orden de aparición.
  */
-export function archivosTocados(rutaTranscripcion, raiz = RAIZ) {
+/** Un mensaje escrito por el usuario (texto), no un tool_result que la transcripción guarda con rol user. */
+function esMensajeDeUsuario(entrada) {
+  if (entrada?.type !== "user" && entrada?.message?.role !== "user") return false;
+  const c = entrada?.message?.content;
+  if (typeof c === "string") return true;
+  return Array.isArray(c) && c.some((p) => p?.type === "text");
+}
+
+export function archivosTocados(rutaTranscripcion, raiz = RAIZ, { soloUltimoTurno = false } = {}) {
   let texto;
   try {
     texto = readFileSync(rutaTranscripcion, "utf8");
   } catch {
     return [];
+  }
+  if (soloUltimoTurno) {
+    const lineas = texto.split("\n");
+    let inicio = 0;
+    lineas.forEach((l, i) => {
+      try {
+        if (esMensajeDeUsuario(JSON.parse(l))) inicio = i + 1;
+      } catch {
+        /* línea no JSON */
+      }
+    });
+    texto = lineas.slice(inicio).join("\n");
   }
   const base = resolve(raiz);
   const vistos = new Set();
@@ -89,7 +127,7 @@ export function archivosTocados(rutaTranscripcion, raiz = RAIZ) {
       if (HERRAMIENTAS_EDICION.has(parte.name) && typeof parte.input?.file_path === "string") {
         anadir(parte.input.file_path);
       } else if (typeof parte.input?.command === "string") {
-        for (const m of parte.input.command.matchAll(RUTA_EN_COMANDO)) anadir(m[1]);
+        for (const ruta of rutasEscritasPorComando(parte.input.command)) anadir(ruta);
       }
     }
   }

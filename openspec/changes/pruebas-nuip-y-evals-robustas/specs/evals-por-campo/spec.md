@@ -48,7 +48,7 @@ Si un fixture declara `"clavesExactas": true`, el corredor SHALL añadir a ese c
 ## ADDED Requirements
 
 ### Requirement: EV-03 Caída del número de casos
-El corredor SHALL tratar como regresión que el `n` de un campo de un tipo sea menor que el `n` de ese campo en el baseline, con un mensaje que nombre `tipo.campo` y los dos valores de `n`. Un `n` igual o mayor MUST NOT ser regresión por sí solo. Si hay alguna regresión, el corredor MUST salir con código 1.
+El corredor SHALL tratar como regresión que el `n` de un campo de un tipo sea menor que el `n` de ese campo en el baseline, con un mensaje que nombre `tipo.campo` y los dos valores de `n`. Un `n` igual o mayor MUST NOT ser regresión por sí solo. La comparación de `n` SHALL aplicarse solo si el baseline no registra `modo` o si su `modo` coincide con el de la ejecución (`quick` o `completo`); `exact_match` y `cer` se comparan siempre. Si hay alguna regresión, el corredor MUST salir con código 1.
 
 #### Scenario: Caída de n
 - **WHEN** se comparan las métricas actuales `{ "tipo-x": { "a": { "n": 39, "exact_match": 1, "cer": 0 } } }` con el baseline `{ "tipo-x": { "a": { "n": 40, "exact_match": 1, "cer": 0 } } }`
@@ -66,12 +66,20 @@ El corredor SHALL tratar como regresión que el `n` de un campo de un tipo sea m
 - **WHEN** el corredor se ejecuta con `--quick`, `--reportes` apuntando a un directorio temporal cuyo `baseline.json` es `{ "metricas": { "nuip-formato": { "valido": { "n": 3, "exact_match": 1, "cer": 0 } } } }` y `--fixtures` apuntando a un directorio temporal con dos fixtures sintéticos de tipo `"nuip-formato"` con `entrada` `"9999123456"` y `esperado` `{ "valido": true }`
 - **THEN** el corredor sale con código 1 y su salida de error contiene `"nuip-formato.valido"`, `"3"` y `"2"`
 
+#### Scenario: Un baseline de otro modo no compara n
+- **WHEN** el corredor se ejecuta como en el escenario anterior pero el `baseline.json` temporal es `{ "modo": "completo", "metricas": { "nuip-formato": { "valido": { "n": 3, "exact_match": 1, "cer": 0 } } } }`
+- **THEN** el corredor sale con código 0
+
+#### Scenario: Un baseline del mismo modo sí compara n
+- **WHEN** el corredor se ejecuta como en "El corredor falla si se pierden fixtures" pero el `baseline.json` temporal incluye `"modo": "quick"`
+- **THEN** el corredor sale con código 1 y su salida de error contiene `"n bajó de 3 a 2"`
+
 ### Requirement: EV-04 Directorios de fixtures y reportes configurables
 El corredor SHALL aceptar `--fixtures <dir>` y `--reportes <dir>`; sin ellas usa `evals/fixtures` y `evals/reports`. Con `--fixtures` MUST leer fixtures solo de ese directorio y sus subdirectorios; con `--reportes` MUST leer `baseline.json` y escribir `latest.json` (y el baseline con `--guardar-baseline`) solo en ese directorio. Un directorio de fixtures inexistente MUST hacer salir al corredor con código 1 y un mensaje que contenga esa ruta.
 
 #### Scenario: Ejecución aislada en directorios temporales
 - **WHEN** el corredor se ejecuta con `--quick`, `--fixtures` apuntando a un directorio temporal con un fixture sintético válido de tipo `"nuip-formato"` y `--reportes` apuntando a otro directorio temporal vacío
-- **THEN** el corredor sale con código 0, existe `latest.json` en el directorio temporal de reportes con `casos` igual a `1`, y los bytes de `evals/reports/latest.json` y `evals/reports/baseline.json` son idénticos antes y después de la ejecución
+- **THEN** el corredor sale con código 0, existe `latest.json` en el directorio temporal de reportes con `casos` igual a `1`, y los bytes de `evals/reports/baseline.json` son idénticos antes y después de la ejecución (`evals/reports/latest.json` es efímero y no versionado: otras ejecuciones concurrentes pueden reescribirlo, por lo que la prueba solo protege el baseline)
 
 #### Scenario: Directorio de fixtures inexistente
 - **WHEN** el corredor se ejecuta con `--fixtures` apuntando a una ruta temporal que no existe y `--reportes` apuntando a un directorio temporal vacío

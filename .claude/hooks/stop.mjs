@@ -6,7 +6,7 @@ import { archivosTocados, bloquear, cola, correr, leerEvento } from "./lib.mjs";
 const evento = await leerEvento();
 if (evento.stop_hook_active) process.exit(0); // evita bucles: solo se insiste una vez
 
-const propios = archivosTocados(evento.transcript_path ?? "").filter((r) => /\.(m?[jt]sx?)$/.test(r));
+const propios = archivosTocados(evento.transcript_path ?? "", undefined, { soloUltimoTurno: true }).filter((r) => /\.(m?[jt]sx?)$/.test(r));
 if (propios.length === 0) process.exit(0);
 
 const lista = propios.map((r) => `"${r}"`).join(" ");
