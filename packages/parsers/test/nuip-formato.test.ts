@@ -127,6 +127,10 @@ const G_sinGuion = fc
 /** ¿Contiene la cadena algún guion de NF-03? */
 const tieneGuion = (s: string) => GUIONES_ADMITIDOS.some((h) => s.includes(h));
 
+/** ¿Contiene la cadena algún code point (o surrogate aislado) que no es dígito ASCII ni separador de NF-03? */
+const tieneNoAdmitido = (s: string) =>
+  [...s].some((c) => !DIGITOS_ASCII.includes(c) && !SEPARADORES_ADMITIDOS.includes(c));
+
 /**
  * Contadores de cobertura de una propiedad (salvaguarda contra vacuidad; design.md de
  * pruebas-nuip-y-evals-robustas, decisión 2). El predicado llama a `caso` una vez por ejecución con las
@@ -145,6 +149,9 @@ function crearContadores() {
     },
     get total(): number {
       return total;
+    },
+    veces(categoria: string): number {
+      return cuentas.get(categoria) ?? 0;
     },
     proporcion(categoria: string): number {
       return total === 0 ? 0 : (cuentas.get(categoria) ?? 0) / total;
@@ -185,15 +192,23 @@ describe("validarFormatoNuip", () => {
   });
 
   describe("NF-02 Función pura y total", () => {
-    it("Nunca lanza con valores arbitrarios como entrada", () => {
+    it("NF-02 / NF-11 Nunca lanza con valores arbitrarios como entrada (atrapa: excepción, forma distinta de NF-01 o motivo distinto de entrada-no-texto con no texto sin opciones)", () => {
+      // Cubre también el escenario de NF-11 "Propiedad sobre valores arbitrarios que no son texto" cuando no se pasan opciones
+      // (design.md de pruebas-nuip-y-evals-robustas, decisión 9). fc.anything() da cadenas en torno al 9 % de
+      // los casos: con 1500 ejecuciones se exigen al menos 1000 valores que no son texto (unos 1365 esperados).
+      const cuenta = crearContadores();
       fc.assert(
         fc.property(fc.anything(), (v) => {
           const r = validarFormatoNuip(v);
           expect(cumpleFormaNf01(r)).toBe(true);
           if (typeof v !== "string") expect(r).toStrictEqual(NO_TEXTO);
+          cuenta.caso({ noTexto: typeof v !== "string", texto: typeof v === "string" });
         }),
-        { numRuns: 1000 },
+        { numRuns: 1500 },
       );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1500);
+      expect(cuenta.veces("noTexto")).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("texto")).toBeGreaterThanOrEqual(0.03);
     });
 
     it("NF-02 Nunca lanza con opciones arbitrarias (atrapa: excepción o resultado distinto de los dos objetos del escenario)", () => {
@@ -938,7 +953,6 @@ describe("validarFormatoNuip", () => {
     });
 
     it("Objetos", () => {
-       
       const envoltorio = new String("9999123456");
       for (const entrada of [{}, ["9999123456"], envoltorio, { toString: () => "9999123456" }]) {
         expect(validarFormatoNuip(entrada)).toStrictEqual(NO_TEXTO);
@@ -947,15 +961,6 @@ describe("validarFormatoNuip", () => {
 
     it("Prioridad sobre el tipo de documento inválido", () => {
       expect(validarFormatoNuip(9999123456, { tipoDocumento: "xx" })).toStrictEqual(NO_TEXTO);
-    });
-
-    it("Propiedad sobre valores arbitrarios que no son texto (sin opciones)", () => {
-      fc.assert(
-        fc.property(noTexto, (v) => {
-          expect(validarFormatoNuip(v)).toStrictEqual(NO_TEXTO);
-        }),
-        { numRuns: 1000 },
-      );
     });
 
     it("Propiedad sobre valores arbitrarios que no son texto (con tipo de documento ti)", () => {
@@ -1074,6 +1079,57 @@ describe("validarFormatoNuip", () => {
 
     it("Vacío prevalece sobre la cantidad de dígitos", () => {
       expect(validarFormatoNuip(" .-. ")).toStrictEqual({ valido: false, motivo: "vacio" });
+    });
+
+    it("NF-13 Propiedad: el tipo inválido prevalece sobre cualquier cadena, binario (atrapa: caracteres-invalidos o vacio evaluados antes que el tipo de documento)", () => {
+      // Vacuidad: sin el tipo inválido, los casos con un carácter no admitido darían caracteres-invalidos
+      // (en torno al 90 %) y la cadena vacía daría vacio (en torno al 9 %).
+      const cuenta = crearContadores();
+      fc.assert(
+        fc.property(fc.string({ unit: "binary" }), (s) => {
+          expect(validarFormatoNuip(s, { tipoDocumento: "xx" })).toStrictEqual(TIPO_INVALIDO);
+          cuenta.caso({ noAdmitido: tieneNoAdmitido(s), vacia: s === "" });
+        }),
+        { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("noAdmitido")).toBeGreaterThanOrEqual(0.5);
+      expect(cuenta.proporcion("vacia")).toBeGreaterThanOrEqual(0.03);
+    });
+
+    it("NF-13 Propiedad: el tipo inválido prevalece sobre cualquier cadena, binario de 65 o más (atrapa: entrada-demasiado-larga evaluada antes que el tipo de documento)", () => {
+      const cuenta = crearContadores();
+      fc.assert(
+        fc.property(fc.string({ unit: "binary", minLength: 65 }), (s) => {
+          expect(validarFormatoNuip(s, { tipoDocumento: "xx" })).toStrictEqual(TIPO_INVALIDO);
+          cuenta.caso({ larga: s.length > 64 });
+        }),
+        { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("larga")).toBe(1);
+    });
+
+    it("NF-13 Propiedad: la entrada no texto prevalece sobre cualquier opción (atrapa: tipo de documento evaluado antes que la entrada)", () => {
+      // Vacuidad: las opciones que, con una entrada válida, dan tipo-documento-invalido son las que atrapan el
+      // orden invertido; las que no, comprueban que el motivo no depende de las opciones. Se exige al menos un
+      // 10 % de cada partición (misma medida que "NF-02 Nunca lanza con opciones arbitrarias").
+      const cuenta = crearContadores();
+      fc.assert(
+        fc.property(
+          fc.anything().filter((v) => typeof v !== "string"),
+          fc.anything(),
+          (v, opciones) => {
+            expect(validarFormatoNuip(v, opciones)).toStrictEqual(NO_TEXTO);
+            const conEntradaValida = validarFormatoNuip("9999123456", opciones);
+            cuenta.caso({ opcionesInvalidas: !conEntradaValida.valido, opcionesValidas: conEntradaValida.valido });
+          },
+        ),
+        { numRuns: 1000 },
+      );
+      expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("opcionesInvalidas")).toBeGreaterThanOrEqual(0.1);
+      expect(cuenta.proporcion("opcionesValidas")).toBeGreaterThanOrEqual(0.1);
     });
   });
 
