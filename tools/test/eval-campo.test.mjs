@@ -145,6 +145,26 @@ describe("eval-campo.mjs (integración con directorios temporales)", () => {
   );
 
   it(
+    "EV-03 Un baseline con modo null compara n (atrapa: tratar modo null como un modo distinto y saltarse n)",
+    () => {
+      const fixtures = directorioTemporal("fix");
+      const reportes = directorioTemporal("rep");
+      writeFileSync(
+        join(reportes, "baseline.json"),
+        JSON.stringify({ modo: null, metricas: { "nuip-formato": { valido: { n: 3, exact_match: 1, cer: 0 } } } }),
+      );
+      escribirFixture(fixtures, "uno.json", fixtureValido({ esperado: { valido: true } }));
+      escribirFixture(fixtures, "dos.json", fixtureValido({ esperado: { valido: true } }));
+
+      const r = correr(fixtures, reportes);
+
+      expect(r.status, r.stderr).toBe(1);
+      expect(r.stderr).toMatch(/n bajó de 3 a 2/);
+    },
+    LIMITE_MS,
+  );
+
+  it(
     "EV-04 Ejecución aislada en directorios temporales (atrapa: rutas fijas a evals/fixtures o evals/reports)",
     () => {
       const fixtures = directorioTemporal("fix");

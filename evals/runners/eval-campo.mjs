@@ -14,7 +14,7 @@
  *
  * Regresión (código 1): un campo que desaparece, una caída de exact match, una subida de CER o una caída
  * de n frente al baseline (EV-03, se perdieron fixtures). La caída de n solo se compara si el baseline se
- * guardó en el mismo modo (quick o completo) o no registra modo.
+ * guardó en el mismo modo (quick o completo) o no registra modo (falta o es null).
  *
  * Formato de fixture (JSON): {"sintetico": true, "tipo": "<evaluador>", "entrada": ..., "opciones"?: {...}, "esperado": {...},
  *   "clavesExactas"?: true}

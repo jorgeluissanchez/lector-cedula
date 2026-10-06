@@ -846,15 +846,21 @@ describe("validarFormatoNuip", () => {
       // El generador se restringe (design.md, decisión 4c); el esperado es literal.
       const sinLetrasDeCcNiTi = (t: string) => !/[cCtTiI]/.test(t);
       for (const generador of [fc.string(), fc.string({ unit: "binary" })]) {
+        // Salvaguarda de vacuidad: el filtro cuenta cada valor generado y cuántos acepta.
         const cuenta = crearContadores();
+        const filtro = (t: string) => {
+          const util = sinLetrasDeCcNiTi(t);
+          cuenta.caso({ aceptado: util });
+          return util;
+        };
         fc.assert(
-          fc.property(generador.filter(sinLetrasDeCcNiTi), (tipoDocumento) => {
+          fc.property(generador.filter(filtro), (tipoDocumento) => {
             expect(validarFormatoNuip("9999123456", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
-            cuenta.caso({});
           }),
           { numRuns: 1000 },
         );
-        expect(cuenta.total).toBeGreaterThanOrEqual(1000);
+        expect(cuenta.veces("aceptado")).toBeGreaterThanOrEqual(1000);
+        expect(cuenta.proporcion("aceptado")).toBeGreaterThan(0.5);
       }
     });
 
@@ -950,8 +956,6 @@ describe("validarFormatoNuip", () => {
   });
 
   describe("NF-11 Entrada que no es texto", () => {
-    const noTexto = fc.anything().filter((v) => typeof v !== "string");
-
     it("Números y otros primitivos", () => {
       for (const entrada of [9999123456, 9999123456n, true, null, undefined, Symbol("x")]) {
         expect(validarFormatoNuip(entrada)).toStrictEqual(NO_TEXTO);
@@ -970,12 +974,21 @@ describe("validarFormatoNuip", () => {
     });
 
     it("Propiedad sobre valores arbitrarios que no son texto (con tipo de documento ti)", () => {
+      // Salvaguarda de vacuidad: el filtro cuenta cada valor generado y cuántos acepta.
+      const cuenta = crearContadores();
+      const noTexto = (v: unknown) => {
+        const util = typeof v !== "string";
+        cuenta.caso({ aceptado: util });
+        return util;
+      };
       fc.assert(
-        fc.property(noTexto, (v) => {
+        fc.property(fc.anything().filter(noTexto), (v) => {
           expect(validarFormatoNuip(v, { tipoDocumento: "ti" })).toStrictEqual(NO_TEXTO);
         }),
         { numRuns: 1000 },
       );
+      expect(cuenta.veces("aceptado")).toBeGreaterThanOrEqual(1000);
+      expect(cuenta.proporcion("aceptado")).toBeGreaterThan(0.5);
     });
   });
 
@@ -1121,9 +1134,16 @@ describe("validarFormatoNuip", () => {
       // orden invertido; las que no, comprueban que el motivo no depende de las opciones. Se exige al menos un
       // 10 % de cada partición (misma medida que "NF-02 Nunca lanza con opciones arbitrarias").
       const cuenta = crearContadores();
+      // Salvaguarda de vacuidad del filtro: cuenta cada valor generado y cuántos acepta.
+      const filtrados = crearContadores();
+      const noTexto = (v: unknown) => {
+        const util = typeof v !== "string";
+        filtrados.caso({ aceptado: util });
+        return util;
+      };
       fc.assert(
         fc.property(
-          fc.anything().filter((v) => typeof v !== "string"),
+          fc.anything().filter(noTexto),
           fc.anything(),
           (v, opciones) => {
             expect(validarFormatoNuip(v, opciones)).toStrictEqual(NO_TEXTO);
@@ -1136,6 +1156,8 @@ describe("validarFormatoNuip", () => {
       expect(cuenta.total).toBeGreaterThanOrEqual(1000);
       expect(cuenta.proporcion("opcionesInvalidas")).toBeGreaterThanOrEqual(0.1);
       expect(cuenta.proporcion("opcionesValidas")).toBeGreaterThanOrEqual(0.1);
+      expect(filtrados.veces("aceptado")).toBeGreaterThanOrEqual(1000);
+      expect(filtrados.proporcion("aceptado")).toBeGreaterThan(0.5);
     });
   });
 

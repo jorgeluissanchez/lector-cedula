@@ -74,6 +74,10 @@ El corredor SHALL tratar como regresión que el `n` de un campo de un tipo sea m
 - **WHEN** el corredor se ejecuta como en "El corredor falla si se pierden fixtures" pero el `baseline.json` temporal incluye `"modo": "quick"`
 - **THEN** el corredor sale con código 1 y su salida de error contiene `"n bajó de 3 a 2"`
 
+#### Scenario: Un baseline con modo null compara n
+- **WHEN** el corredor se ejecuta como en "El corredor falla si se pierden fixtures" pero el `baseline.json` temporal es `{ "modo": null, "metricas": { "nuip-formato": { "valido": { "n": 3, "exact_match": 1, "cer": 0 } } } }` (un `modo` `null` cuenta como baseline que no registra modo) y `--fixtures` contiene los mismos dos fixtures
+- **THEN** el corredor sale con código 1 y su salida de error contiene `"n bajó de 3 a 2"`
+
 ### Requirement: EV-04 Directorios de fixtures y reportes configurables
 El corredor SHALL aceptar `--fixtures <dir>` y `--reportes <dir>`; sin ellas usa `evals/fixtures` y `evals/reports`. Con `--fixtures` MUST leer fixtures solo de ese directorio y sus subdirectorios; con `--reportes` MUST leer `baseline.json` y escribir `latest.json` (y el baseline con `--guardar-baseline`) solo en ese directorio. Un directorio de fixtures inexistente MUST hacer salir al corredor con código 1 y un mensaje que contenga esa ruta.
 

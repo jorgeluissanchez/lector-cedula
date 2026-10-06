@@ -143,10 +143,10 @@ export function construirCasos(fixtures, evaluar) {
 
 /**
  * Decide si la caída de `n` se evalúa (EV-03): solo entre ejecuciones del mismo modo (`quick` o
- * `completo`). Un baseline sin modo, guardado antes de registrar el modo, se compara siempre.
+ * `completo`). Un baseline sin modo (falta o es `null`), guardado antes de registrar el modo, se compara siempre.
  */
 export function mismoModo(modoBaseline, modoActual) {
-  return modoBaseline === undefined || modoBaseline === modoActual;
+  return modoBaseline == null || modoBaseline === modoActual;
 }
 
 /**

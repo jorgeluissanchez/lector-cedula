@@ -37,7 +37,7 @@ Salida: `evals/reports/latest.json` y una tabla por tipo y campo. Código 1 si h
 - `exact_match`: fracción de casos con el valor idéntico. Meta de producto: 95 % o más en amarilla y digital.
 - `cer`: ediciones por carácter de referencia. Meta: 2 % o menos por campo.
 - Un campo que desaparece del reporte cuenta como regresión.
-- Una caída de `n` de un campo frente al baseline cuenta como regresión (EV-03: se perdieron fixtures). Un `n` igual o mayor no lo es. Solo se compara si el baseline se guardó en el mismo modo (`quick` o `completo`) o si no registra modo (baselines anteriores).
+- Una caída de `n` de un campo frente al baseline cuenta como regresión (EV-03: se perdieron fixtures). Un `n` igual o mayor no lo es. Solo se compara si el baseline se guardó en el mismo modo (`quick` o `completo`) o si no registra modo (baselines anteriores, o `"modo": null`).
 - `__claves` aparece solo para fixtures con `"clavesExactas": true` (el booleano; `"true"` o `1` no cuentan).
 
 ## Nunca

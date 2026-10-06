@@ -77,6 +77,11 @@ describe("EV-03 Caída del número de casos", () => {
     expect(mismoModo("completo", "quick")).toBe(false);
     expect(mismoModo("quick", "completo")).toBe(false);
   });
+
+  it("EV-03 mismoModo: un baseline con modo null cuenta como sin modo y compara n (atrapa: null tratado como modo distinto)", () => {
+    expect(mismoModo(null, "quick")).toBe(true);
+    expect(mismoModo(null, "completo")).toBe(true);
+  });
 });
 
 describe("EV-01 Comparación exacta del conjunto de claves", () => {
