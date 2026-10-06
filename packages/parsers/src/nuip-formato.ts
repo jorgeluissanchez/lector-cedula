@@ -10,6 +10,7 @@
 export type MotivoFormatoInvalido =
   | "entrada-no-texto"
   | "tipo-documento-invalido"
+  | "entrada-demasiado-larga"
   | "caracteres-invalidos"
   | "posible-digito-verificacion"
   | "vacio"
@@ -43,6 +44,9 @@ const SOLO_ADMITIDOS = /^[0-9.\-\s]*$/;
 const PATRON_NIT = /-[0-9]\s*$/;
 const SEPARADORES = /[.\-\s]/g;
 const CEROS_IZQUIERDA = /^0+/;
+
+/** Longitud máxima de la entrada original, en unidades de código UTF-16 (NF-12; design.md, decisión 5). */
+const MAX_UNIDADES_ENTRADA = 64;
 
 /** Longitudes aceptadas para cédula de ciudadanía (NF-07, decisión 5 de design.md). */
 const MIN_CC = 5;
@@ -111,6 +115,8 @@ export function validarFormatoNuip(entrada: unknown, opciones?: unknown): Result
   // (b) NF-10: el tipo de documento se resuelve antes de examinar la entrada (NF-13).
   const tipoDocumento = leerTipoDocumento(opciones);
   if (tipoDocumento === undefined) return invalido("tipo-documento-invalido");
+  // (c) NF-12: O(1), antes de cualquier expresión regular sobre la entrada.
+  if (entrada.length > MAX_UNIDADES_ENTRADA) return invalido("entrada-demasiado-larga");
 
   if (!SOLO_ADMITIDOS.test(entrada)) return invalido("caracteres-invalidos");
   if (PATRON_NIT.test(entrada)) return invalido("posible-digito-verificacion");

@@ -40,7 +40,7 @@ Pruebas del validador en `packages/parsers/test/nuip-formato.test.ts`; del corre
 
 ## 4. Longitud máxima de la entrada
 
-- [ ] 4.1 Escribir las pruebas de todos los escenarios de NF-12, de NF-01 "Motivos nuevos..." (parte de `entrada-demasiado-larga`) y de los dos escenarios de NF-13. Añadir `entrada-demasiado-larga` a `MOTIVOS`. Verlas fallar. Luego ampliar `MotivoFormatoInvalido` con `"entrada-demasiado-larga"` e implementar el paso (c) de la decisión 1 de design.md. Cubre NF-01, NF-12, NF-13. Tipos de prueba:
+- [x] 4.1 Escribir las pruebas de todos los escenarios de NF-12, de NF-01 "Motivos nuevos..." (parte de `entrada-demasiado-larga`) y de los dos escenarios de NF-13. Añadir `entrada-demasiado-larga` a `MOTIVOS`. Verlas fallar. Luego ampliar `MotivoFormatoInvalido` con `"entrada-demasiado-larga"` e implementar el paso (c) de la decisión 1 de design.md. Cubre NF-01, NF-12, NF-13. Tipos de prueba:
   - **unitaria**: límites 64/65, unidades UTF-16, 1 000 000 de caracteres, cadena de prioridades.
   - **fuzz de entrada**: `fc.string({ unit: "binary", minLength: 65 })`, con y sin `"ti"`. numRuns >= 1000.
   - **mutación**: el mutante `> 64` -> `>= 64` debe morir con el escenario del límite exacto.

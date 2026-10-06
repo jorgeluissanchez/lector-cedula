@@ -7,6 +7,7 @@ import type { ResultadoFormatoNuip } from "../src/index.js";
 const MOTIVOS = [
   "entrada-no-texto",
   "tipo-documento-invalido",
+  "entrada-demasiado-larga",
   "caracteres-invalidos",
   "posible-digito-verificacion",
   "vacio",
@@ -35,6 +36,7 @@ const NBSP = " ";
 
 const NO_TEXTO = { valido: false, motivo: "entrada-no-texto" };
 const TIPO_INVALIDO = { valido: false, motivo: "tipo-documento-invalido" };
+const DEMASIADO_LARGA = { valido: false, motivo: "entrada-demasiado-larga" };
 const NUIP_VALIDO = { valido: true, numero: "9999123456", tipoProbable: "nuip", digitos: 10, warnings: [] };
 const TI_ANTIGUA = { valido: true, numero: "99991234567", tipoProbable: "ti-antigua", digitos: 11, warnings: ["N01"] };
 
@@ -68,6 +70,10 @@ describe("validarFormatoNuip", () => {
         valido: false,
         motivo: "tipo-documento-invalido",
       });
+    });
+
+    it("Motivos nuevos con solo valido y motivo (entrada-demasiado-larga)", () => {
+      expect(validarFormatoNuip("9".repeat(65))).toStrictEqual({ valido: false, motivo: "entrada-demasiado-larga" });
     });
   });
 
@@ -514,6 +520,115 @@ describe("validarFormatoNuip", () => {
         }),
         { numRuns: 1000 },
       );
+    });
+  });
+
+  describe("NF-12 Longitud máxima de la entrada", () => {
+    it("Límite exacto con separadores", () => {
+      const de64 = "9999123456" + " ".repeat(54);
+      const de65 = "9999123456" + " ".repeat(55);
+      expect(de64.length).toBe(64);
+      expect(de65.length).toBe(65);
+      expect(validarFormatoNuip(de64)).toStrictEqual({
+        valido: true,
+        numero: "9999123456",
+        tipoProbable: "nuip",
+        digitos: 10,
+        warnings: [],
+      });
+      expect(validarFormatoNuip(de65)).toStrictEqual({ valido: false, motivo: "entrada-demasiado-larga" });
+    });
+
+    it("Límite exacto con ceros a la izquierda", () => {
+      const entrada = "0".repeat(54) + "9999123456";
+      expect(entrada.length).toBe(64);
+      expect(validarFormatoNuip(entrada)).toStrictEqual({
+        valido: true,
+        numero: "9999123456",
+        tipoProbable: "nuip",
+        digitos: 10,
+        warnings: [],
+      });
+    });
+
+    it("El contenido de una entrada larga no se examina", () => {
+      expect(validarFormatoNuip("A".repeat(65))).toStrictEqual({ valido: false, motivo: "entrada-demasiado-larga" });
+      expect(validarFormatoNuip("A".repeat(64))).toStrictEqual({ valido: false, motivo: "caracteres-invalidos" });
+    });
+
+    it("Solo separadores por encima del límite", () => {
+      expect(validarFormatoNuip(" ".repeat(65))).toStrictEqual({ valido: false, motivo: "entrada-demasiado-larga" });
+      expect(validarFormatoNuip(" ".repeat(64))).toStrictEqual({ valido: false, motivo: "vacio" });
+    });
+
+    it("Patrón NIT por encima del límite", () => {
+      const de64 = " ".repeat(60) + "99-6";
+      const de65 = " ".repeat(61) + "99-6";
+      expect(de64.length).toBe(64);
+      expect(de65.length).toBe(65);
+      expect(validarFormatoNuip(de64)).toStrictEqual({ valido: false, motivo: "posible-digito-verificacion" });
+      expect(validarFormatoNuip(de65)).toStrictEqual({ valido: false, motivo: "entrada-demasiado-larga" });
+    });
+
+    it("Se cuentan unidades UTF-16", () => {
+      const de64 = "\u{1D7FF}".repeat(32);
+      const de66 = "\u{1D7FF}".repeat(33);
+      expect(de64.length).toBe(64);
+      expect(de66.length).toBe(66);
+      expect(validarFormatoNuip(de64)).toStrictEqual({ valido: false, motivo: "caracteres-invalidos" });
+      expect(validarFormatoNuip(de66)).toStrictEqual({ valido: false, motivo: "entrada-demasiado-larga" });
+    });
+
+    it("Entrada muy larga", () => {
+      expect(validarFormatoNuip("9".repeat(1000000))).toStrictEqual({
+        valido: false,
+        motivo: "entrada-demasiado-larga",
+      });
+    });
+
+    it("Propiedad sobre cadenas largas (sin tipo de documento)", () => {
+      fc.assert(
+        fc.property(fc.string({ unit: "binary", minLength: 65 }), (s) => {
+          expect(validarFormatoNuip(s)).toStrictEqual(DEMASIADO_LARGA);
+        }),
+        { numRuns: 1000 },
+      );
+    });
+
+    it("Propiedad sobre cadenas largas (con tipo de documento ti)", () => {
+      fc.assert(
+        fc.property(fc.string({ unit: "binary", minLength: 65 }), (s) => {
+          expect(validarFormatoNuip(s, { tipoDocumento: "ti" })).toStrictEqual(DEMASIADO_LARGA);
+        }),
+        { numRuns: 1000 },
+      );
+    });
+  });
+
+  describe("NF-13 Prioridad de motivos", () => {
+    it("Cadena de prioridades", () => {
+      const motivos = [
+        validarFormatoNuip(9999123456, { tipoDocumento: "xx" }),
+        validarFormatoNuip("A".repeat(65), { tipoDocumento: "xx" }),
+        validarFormatoNuip("A".repeat(65)),
+        validarFormatoNuip("999A12345-6"),
+        validarFormatoNuip("99-6"),
+        validarFormatoNuip(""),
+        validarFormatoNuip("9999"),
+      ].map((r) => (r.valido ? undefined : r.motivo));
+      expect(motivos).toStrictEqual([
+        "entrada-no-texto",
+        "tipo-documento-invalido",
+        "entrada-demasiado-larga",
+        "caracteres-invalidos",
+        "posible-digito-verificacion",
+        "vacio",
+        "longitud-invalida",
+      ]);
+    });
+
+    it("Vacío prevalece sobre la cantidad de dígitos", () => {
+      expect(validarFormatoNuip(" .-. ")).toStrictEqual({ valido: false, motivo: "vacio" });
     });
   });
 });
