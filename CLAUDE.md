@@ -8,6 +8,7 @@ Lector autoalojado de la cédula colombiana (PDF417 amarilla, MRZ digital, OCR),
 |---|---|
 | `npm run check` | Puerta completa: tipos, lint, pruebas, licencias, privacidad, evals rápidas |
 | `npm test` | Vitest (paquetes, herramientas y hooks) |
+| `npm run test:e2e` | Playwright con cámara simulada (Chromium escritorio y Pixel 7) |
 | `npm run eval:quick` / `npm run eval` | Evals por campo contra el baseline |
 | `npm run check:licencias` / `npm run check:privacidad` | Controles de los principios IV y III |
 | `openspec list` | Cambios OpenSpec en curso |
@@ -26,6 +27,7 @@ Lector autoalojado de la cédula colombiana (PDF417 amarilla, MRZ digital, OCR),
 
 ## Flujo de trabajo
 
+0. Toda spec y toda tarea declaran sus pruebas con la skill `estrategia-pruebas` (tipo, herramienta, comando, umbral). E2E con los agentes `playwright-test-planner`, `-generator` y `-healer`.
 1. Nada se implementa sin spec: `/speckit-specify` para capacidades nuevas, `/opsx:propose` para cambios.
 2. El orquestador delega cada tarea a un subagente `implementador` y la cierra un `verificador` distinto.
 3. Cambios que tocan captura, servidor o datos: `revisor-privacidad`. Dependencias o modelos: `revisor-licencias`.

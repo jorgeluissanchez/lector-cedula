@@ -11,6 +11,7 @@ Antes de escribir:
 1. Lee `.specify/memory/constitution.md` y `CLAUDE.md`.
 2. Si la capacidad toca el formato del documento, invoca la skill `formato-cedula`.
 3. Si compite con un servicio comercial, invoca la skill `benchmark-comercial` para fijar la meta.
+4. SIEMPRE invoca la skill `estrategia-pruebas`: la spec MUST incluir la sección `## Pruebas` (tipo, herramienta, comando y umbral por requisito, según la matriz del componente) y cada tarea de `tasks.md` MUST nombrar los tipos de prueba que entrega.
 
 Reglas:
 - Capacidad nueva: sigue la skill `speckit-specify` y deja la spec en `specs/NNN-nombre/`.

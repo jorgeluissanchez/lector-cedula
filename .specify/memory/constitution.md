@@ -21,6 +21,13 @@ Razón: el trabajo lo ejecutan agentes; la spec es el único contrato estable en
 - Una tarea solo se marca completa con evidencia: salida de pruebas en verde y, cuando aplique,
   reporte de evals sin regresión frente a `evals/reports/baseline.json`.
 - "Funciona en mi celular" o "lo probé a mano" no es evidencia.
+- Toda spec MUST incluir una sección `## Pruebas` que, por requisito, declare tipo de prueba,
+  herramienta, comando y umbral según la matriz de `.claude/skills/estrategia-pruebas/SKILL.md`.
+  No basta con pruebas unitarias: cada componente exige los tipos de su fila de la matriz
+  (propiedades, mutación, E2E con Playwright, contrato, accesibilidad, metamórficas, evals,
+  seguridad, según corresponda).
+- Los agentes MUST usar las herramientas y recetas de esa skill (por ejemplo, los agentes de
+  Playwright y la cámara simulada para E2E) en lugar de improvisar pruebas, esperas o mocks.
 
 Razón: los agentes declaran éxito con facilidad; el harness debe impedir cierres sin prueba.
 
@@ -115,4 +122,8 @@ Razón: minimiza duplicación y permite que los agentes razonen sobre un solo le
 - `CLAUDE.md` es la guía operativa en tiempo de ejecución y MUST mantenerse coherente con esta
   constitución.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-06
+**Version**: 1.1.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-06
+
+<!-- 1.1.0 (MINOR): principio II ampliado con la estrategia de pruebas obligatoria por spec,
+     a pedido del usuario el 2026-10-06. Ver docs/decisiones/2026-10-06-estrategia-pruebas.md. -->
+

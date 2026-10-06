@@ -5,6 +5,15 @@ context: |
   All artifacts must be written in es.
   Keep OpenSpec structural headings and SHALL/MUST keywords in English.
 
+rules:
+  design:
+    - Incluir una sección "## Pruebas" con una tabla por requisito (tipo de prueba, herramienta, comando, umbral) según la skill .claude/skills/estrategia-pruebas/SKILL.md.
+  tasks:
+    - Cada tarea nombra los tipos de prueba que entrega (unitaria, propiedad, mutación, E2E, contrato, accesibilidad, metamórfica, eval, seguridad) y el comando exacto que la verifica.
+    - Todas las tareas siguen TDD; la prueba se ve fallar antes de implementar.
+  specs:
+    - Escenarios WHEN/THEN con valores literales y sintéticos; ninguno con datos de personas reales.
+
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
 # Example:

@@ -32,3 +32,8 @@ models/*.bin
 .DS_Store
 Thumbs.db
 .claude/settings.local.json
+
+# Playwright
+test-results/
+reports/playwright/
+playwright-report/

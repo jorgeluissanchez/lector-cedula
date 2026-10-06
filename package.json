@@ -20,7 +20,8 @@
     "eval:quick": "node evals/runners/eval-campo.mjs --quick",
     "check:licencias": "node tools/licencia-check.mjs",
     "check:privacidad": "node tools/privacidad-check.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:licencias && npm run check:privacidad && npm run eval:quick"
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:licencias && npm run check:privacidad && npm run eval:quick",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
