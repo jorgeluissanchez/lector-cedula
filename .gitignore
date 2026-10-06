@@ -1,0 +1,34 @@
+# Dependencias y builds
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.stryker-tmp/
+reports/mutation/
+
+# Datos sensibles: NUNCA al repositorio (principio 3 de la constitución)
+evals/datasets/*/
+!evals/datasets/*.md
+!evals/datasets/*.sh
+!evals/datasets/*.ts
+evals/real/
+**/campo/
+*.env
+.env*
+!.env.example
+secrets/
+
+# Modelos pesados (se descargan con scripts)
+models/*.onnx
+models/*.bin
+
+# Sistema
+.DS_Store
+Thumbs.db
+.claude/settings.local.json
