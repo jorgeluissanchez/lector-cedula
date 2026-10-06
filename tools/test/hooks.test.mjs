@@ -43,6 +43,15 @@ describe("paquetes", () => {
     const cmd = "cat > a.txt <<EOF\nhola\nEOF\nnpm i mrz";
     expect(paquetes(quitarHeredocs(cmd), NPM)).toEqual(["mrz"]);
   });
+  it("detecta npm i en la misma línea que abre el heredoc", () => {
+    expect(paquetes(quitarHeredocs("cat <<EOF && npm i ultralytics\nhola\nEOF"), NPM)).toEqual(["ultralytics"]);
+  });
+  it("un here-string <<< no es heredoc y no oculta las líneas siguientes", () => {
+    expect(paquetes(quitarHeredocs('cat <<< "x"\nnpm i ultralytics'), NPM)).toEqual(["ultralytics"]);
+  });
+  it("un heredoc sin cerrar no oculta instalaciones posteriores", () => {
+    expect(paquetes(quitarHeredocs("cat <<EOF\nnunca cierra\nnpm i ultralytics"), NPM)).toEqual(["ultralytics"]);
+  });
   it("no detecta npm install sin paquetes", () => {
     expect(paquetes("npm install", NPM)).toEqual([]);
   });

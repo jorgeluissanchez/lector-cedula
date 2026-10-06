@@ -1,39 +1,39 @@
 {
-  "fecha": "2026-10-06T18:16:52.291Z",
+  "fecha": "2026-10-06T19:29:45.726Z",
   "metricas": {
     "nuip-formato": {
       "__claves": {
-        "n": 18,
+        "n": 40,
         "exact_match": 1,
         "cer": 0
       },
       "valido": {
-        "n": 18,
-        "exact_match": 1,
-        "cer": 0
-      },
-      "numero": {
-        "n": 9,
-        "exact_match": 1,
-        "cer": 0
-      },
-      "tipoProbable": {
-        "n": 9,
-        "exact_match": 1,
-        "cer": 0
-      },
-      "digitos": {
-        "n": 9,
-        "exact_match": 1,
-        "cer": 0
-      },
-      "warnings": {
-        "n": 9,
+        "n": 40,
         "exact_match": 1,
         "cer": 0
       },
       "motivo": {
-        "n": 9,
+        "n": 26,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "numero": {
+        "n": 14,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "tipoProbable": {
+        "n": 14,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "digitos": {
+        "n": 14,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "warnings": {
+        "n": 14,
         "exact_match": 1,
         "cer": 0
       }

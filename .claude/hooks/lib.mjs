@@ -24,21 +24,32 @@ export function correr(comando, { timeoutMs = 240_000 } = {}) {
 /**
  * Elimina el cuerpo de los heredocs (<<EOF ... EOF, <<'EOF', <<-EOF) para que el texto que se escribe
  * a un archivo no se confunda con comandos (falsos positivos de "npm install" dentro de documentación).
+ *
+ * Seguridad (el hook no debe poder evadirse):
+ * - La línea que abre el heredoc se conserva entera: lo que va después del delimitador se ejecuta.
+ * - `<<<` es un here-string, no un heredoc: no oculta nada.
+ * - Si el heredoc no se cierra, las líneas "tragadas" se devuelven, porque no hay garantía de que sean texto.
  */
 export function quitarHeredocs(comando) {
   const lineas = String(comando).split("\n");
   const salida = [];
   let fin = null;
+  let tragadas = [];
   for (const linea of lineas) {
     if (fin !== null) {
-      if (linea.trim() === fin) fin = null;
+      if (linea.trim() === fin) {
+        fin = null;
+        tragadas = [];
+      } else {
+        tragadas.push(linea);
+      }
       continue;
     }
-    const m = /<<-?\s*(["']?)([A-Za-z_][\w-]*)\1/.exec(linea);
-    salida.push(m ? linea.slice(0, m.index) : linea);
+    salida.push(linea);
+    const m = /(?<!<)<<-?(?!<)\s*(["']?)([A-Za-z_][\w-]*)\1/.exec(linea);
     if (m) fin = m[2];
   }
-  return salida.join("\n");
+  return [...salida, ...tragadas].join("\n");
 }
 
 /** Ejecuta un script de Node con argumentos, sin pasar por la shell (evita que cmd.exe interprete nada). */
