@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-05: el BOM U+FEFF no es un separador admitido",
+  "entrada": "\ufeff9999123456",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "caracteres-invalidos"
+  }
+}

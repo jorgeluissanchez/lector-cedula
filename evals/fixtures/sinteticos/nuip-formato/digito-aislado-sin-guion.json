@@ -1,0 +1,14 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-08: dígito final aislado por espacio sin guion no activa la regla",
+  "entrada": "9999-123-45 6",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": true,
+    "numero": "9999123456",
+    "tipoProbable": "nuip",
+    "digitos": 10,
+    "warnings": []
+  }
+}

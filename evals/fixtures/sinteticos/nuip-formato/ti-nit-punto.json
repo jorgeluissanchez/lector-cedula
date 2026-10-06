@@ -1,0 +1,14 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-09 y NF-08: patrón NIT con punto final en tarjeta de identidad",
+  "entrada": "9999123456-7.",
+  "opciones": {
+    "tipoDocumento": "ti"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "posible-digito-verificacion"
+  }
+}

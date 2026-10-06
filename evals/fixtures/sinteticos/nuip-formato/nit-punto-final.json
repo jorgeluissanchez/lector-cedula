@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-08: separador punto después del dígito de verificación se rechaza",
+  "entrada": "999.912.345-6.",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "posible-digito-verificacion"
+  }
+}

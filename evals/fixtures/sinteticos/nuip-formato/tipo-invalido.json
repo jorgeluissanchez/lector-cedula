@@ -1,0 +1,14 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-10: tipo de documento de texto desconocido se rechaza",
+  "entrada": "9999123456",
+  "opciones": {
+    "tipoDocumento": "xx"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "tipo-documento-invalido"
+  }
+}

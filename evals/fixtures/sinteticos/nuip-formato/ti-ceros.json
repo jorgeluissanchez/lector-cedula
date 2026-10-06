@@ -1,0 +1,17 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-09: tarjeta de identidad con cero a la izquierda queda en 10 dígitos",
+  "entrada": "09999123456",
+  "opciones": {
+    "tipoDocumento": "ti"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "valido": true,
+    "numero": "9999123456",
+    "tipoProbable": "nuip",
+    "digitos": 10,
+    "warnings": []
+  }
+}

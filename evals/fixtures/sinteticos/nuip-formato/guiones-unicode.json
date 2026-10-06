@@ -1,0 +1,14 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-03: el signo menos U+2212 se admite como guion separador",
+  "entrada": "9999\u2212123\u2212456",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": true,
+    "numero": "9999123456",
+    "tipoProbable": "nuip",
+    "digitos": 10,
+    "warnings": []
+  }
+}

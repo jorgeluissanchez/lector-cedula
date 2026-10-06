@@ -72,7 +72,7 @@ Pruebas del validador en `packages/parsers/test/nuip-formato.test.ts`; del corre
 
 ## 7. Evals de los casos nuevos
 
-- [ ] 7.1 Crear en `evals/fixtures/sinteticos/nuip-formato/` un JSON por caso. Cada fixture lleva:
+- [x] 7.1 Crear en `evals/fixtures/sinteticos/nuip-formato/` un JSON por caso. Cada fixture lleva:
   - `"sintetico": true`, `"tipo": "nuip-formato"`, `"descripcion"` con el ID del requisito y `"entrada"`.
   - `"esperado"` exacto de la spec. Válidos: `valido`, `numero`, `tipoProbable`, `digitos`, `warnings`. Inválidos: `valido`, `motivo`.
   - `"clavesExactas": true` y, cuando aplique, `"opciones"`.
@@ -104,7 +104,7 @@ Pruebas del validador en `packages/parsers/test/nuip-formato.test.ts`; del corre
 
 ## 8. Integración
 
-- [ ] 8.1 Actualizar el comentario de cabecera de `packages/parsers/src/nuip-formato.ts` para citar los dos cambios (`validador-formato-nuip` y `nuip-endurecer-entradas`) y NF-01 a NF-13, y correr la puerta completa. Cubre la trazabilidad de NF-01 a NF-13 y de EV-01 y EV-02 (todas las filas de `## Pruebas` de design.md). Tipos de prueba: integración de todos los anteriores (unitaria, propiedad, fuzz de entrada, mutación, cobertura, eval de campo). Verificación: `npm run check:completo` en verde (incluye `npm run check` y `npm run test:mutacion` >= 85 %), `npx vitest run packages/parsers --coverage` con ramas >= 95 % en `nuip-formato.ts`, y `openspec validate nuip-endurecer-entradas --strict` sin errores.
+- [x] 8.1 Actualizar el comentario de cabecera de `packages/parsers/src/nuip-formato.ts` para citar los dos cambios (`validador-formato-nuip` y `nuip-endurecer-entradas`) y NF-01 a NF-13, y correr la puerta completa. Cubre la trazabilidad de NF-01 a NF-13 y de EV-01 y EV-02 (todas las filas de `## Pruebas` de design.md). Tipos de prueba: integración de todos los anteriores (unitaria, propiedad, fuzz de entrada, mutación, cobertura, eval de campo). Verificación: `npm run check:completo` en verde (incluye `npm run check` y `npm run test:mutacion` >= 85 %), `npx vitest run packages/parsers --coverage` con ramas >= 95 % en `nuip-formato.ts`, y `openspec validate nuip-endurecer-entradas --strict` sin errores.
 
 ## Workflow follow-up
 

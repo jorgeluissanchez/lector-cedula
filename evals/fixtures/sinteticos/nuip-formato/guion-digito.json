@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-08: guion y un solo dígito sin número delante se rechaza",
+  "entrada": "-6",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "posible-digito-verificacion"
+  }
+}

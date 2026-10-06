@@ -1,0 +1,14 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-09 y NF-08: patrón NIT con espacio duro U+00A0 tras el guion en tarjeta de identidad",
+  "entrada": "9999123456-\u00a07",
+  "opciones": {
+    "tipoDocumento": "ti"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "posible-digito-verificacion"
+  }
+}

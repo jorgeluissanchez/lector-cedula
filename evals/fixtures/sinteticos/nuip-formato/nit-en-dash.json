@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-08 y NF-03: la raya U+2013 cuenta como guion y activa la regla NIT",
+  "entrada": "999.912.345\u20136",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "posible-digito-verificacion"
+  }
+}

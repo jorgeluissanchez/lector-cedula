@@ -1,0 +1,19 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-10: el tipo de documento TI en mayúsculas se normaliza a ti",
+  "entrada": "99991234567",
+  "opciones": {
+    "tipoDocumento": "TI"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "valido": true,
+    "numero": "99991234567",
+    "tipoProbable": "ti-antigua",
+    "digitos": 11,
+    "warnings": [
+      "N01"
+    ]
+  }
+}

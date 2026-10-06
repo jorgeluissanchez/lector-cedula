@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-05: el espacio ideográfico U+3000 no es un separador admitido",
+  "entrada": "9999\u3000123456",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "caracteres-invalidos"
+  }
+}

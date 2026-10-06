@@ -1,0 +1,14 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-03: el espacio estrecho sin corte U+202F se admite como separador",
+  "entrada": "9\u202f999\u202f123\u202f456",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": true,
+    "numero": "9999123456",
+    "tipoProbable": "nuip",
+    "digitos": 10,
+    "warnings": []
+  }
+}

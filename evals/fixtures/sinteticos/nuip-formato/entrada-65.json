@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-12: 65 caracteres A se rechazan por longitud sin examinar el contenido",
+  "entrada": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "entrada-demasiado-larga"
+  }
+}

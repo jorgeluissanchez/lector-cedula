@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-06: un guion solo es entrada vacía",
+  "entrada": "-",
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "vacio"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-11: un número JSON como entrada no es texto",
+  "entrada": 9999123456,
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "entrada-no-texto"
+  }
+}

@@ -1,7 +1,10 @@
 /**
  * Validador de formato del número de identificación colombiano.
  *
- * Contrato: openspec/changes/validador-formato-nuip/specs/formato-nuip/spec.md (NF-01 a NF-09).
+ * Contrato: openspec/specs/formato-nuip/spec.md (NF-01 a NF-13), construido por dos cambios:
+ * - validador-formato-nuip (archivado en openspec/changes/archive/2026-10-06-validador-formato-nuip/): NF-01 a NF-09.
+ * - nuip-endurecer-entradas (openspec/changes/nuip-endurecer-entradas/): modifica NF-01, NF-02, NF-03, NF-05,
+ *   NF-06, NF-08 y NF-09, y añade NF-10 a NF-13.
  * Decide solo el formato; nunca afirma que el número exista ni a quién pertenece.
  * Función pura y total: sin E/S, sin estado, nunca lanza.
  */

@@ -1,0 +1,11 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-11: null como entrada no es texto",
+  "entrada": null,
+  "clavesExactas": true,
+  "esperado": {
+    "valido": false,
+    "motivo": "entrada-no-texto"
+  }
+}
