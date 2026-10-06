@@ -34,6 +34,9 @@ function cumpleFormaNf01(r: ResultadoFormatoNuip): boolean {
 const NBSP = " ";
 
 const NO_TEXTO = { valido: false, motivo: "entrada-no-texto" };
+const TIPO_INVALIDO = { valido: false, motivo: "tipo-documento-invalido" };
+const NUIP_VALIDO = { valido: true, numero: "9999123456", tipoProbable: "nuip", digitos: 10, warnings: [] };
+const TI_ANTIGUA = { valido: true, numero: "99991234567", tipoProbable: "ti-antigua", digitos: 11, warnings: ["N01"] };
 
 /** Cadenas formadas solo por dígitos y separadores admitidos: producen resultados válidos con frecuencia. */
 const capturaPlausible = fc
@@ -59,6 +62,13 @@ describe("validarFormatoNuip", () => {
     it("Motivos nuevos con solo valido y motivo (entrada-no-texto)", () => {
       expect(validarFormatoNuip(9999123456)).toStrictEqual({ valido: false, motivo: "entrada-no-texto" });
     });
+
+    it("Motivos nuevos con solo valido y motivo (tipo-documento-invalido)", () => {
+      expect(validarFormatoNuip("9999123456", { tipoDocumento: "xx" })).toStrictEqual({
+        valido: false,
+        motivo: "tipo-documento-invalido",
+      });
+    });
   });
 
   describe("NF-02 Función pura y total", () => {
@@ -68,6 +78,18 @@ describe("validarFormatoNuip", () => {
           const r = validarFormatoNuip(v);
           expect(cumpleFormaNf01(r)).toBe(true);
           if (typeof v !== "string") expect(r).toStrictEqual(NO_TEXTO);
+        }),
+        { numRuns: 1000 },
+      );
+    });
+
+    it("Nunca lanza con opciones arbitrarias", () => {
+      fc.assert(
+        fc.property(fc.anything(), (opciones) => {
+          const r = validarFormatoNuip("9999123456", opciones);
+          const esperado =
+            opciones === undefined || opciones === null || typeof opciones === "object" ? NUIP_VALIDO : TIPO_INVALIDO;
+          expect(r).toStrictEqual(esperado);
         }),
         { numRuns: 1000 },
       );
@@ -325,6 +347,130 @@ describe("validarFormatoNuip", () => {
           expect(cumpleFormaNf01(primero)).toBe(true);
           if (!primero.valido) return;
           expect(validarFormatoNuip(primero.numero, ti)).toStrictEqual(primero);
+        }),
+        { numRuns: 1000 },
+      );
+    });
+  });
+
+  describe("NF-10 Normalización y rechazo del tipo de documento", () => {
+    const longitudInvalida = { valido: false, motivo: "longitud-invalida" };
+
+    it("Mayúsculas se normalizan", () => {
+      expect(validarFormatoNuip("99991234567", { tipoDocumento: "TI" })).toStrictEqual({
+        valido: true,
+        numero: "99991234567",
+        tipoProbable: "ti-antigua",
+        digitos: 11,
+        warnings: ["N01"],
+      });
+      expect(validarFormatoNuip("9999123456", { tipoDocumento: "Ti" })).toStrictEqual({
+        valido: true,
+        numero: "9999123456",
+        tipoProbable: "nuip",
+        digitos: 10,
+        warnings: [],
+      });
+    });
+
+    it("Espacio en blanco alrededor del tipo", () => {
+      expect(validarFormatoNuip("99991234567", { tipoDocumento: " ti\n" })).toStrictEqual({
+        valido: true,
+        numero: "99991234567",
+        tipoProbable: "ti-antigua",
+        digitos: 11,
+        warnings: ["N01"],
+      });
+    });
+
+    it("CC en mayúsculas se trata como cédula", () => {
+      expect(validarFormatoNuip("99991234567", { tipoDocumento: "CC" })).toStrictEqual(longitudInvalida);
+    });
+
+    it("Texto de tipo desconocido", () => {
+      for (const tipoDocumento of ["xx", "", "   ", "t i", "nuip", "ce"]) {
+        expect(validarFormatoNuip("9999123456", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
+      }
+    });
+
+    it("Tipo de documento que no es texto", () => {
+      for (const opciones of [
+        { tipoDocumento: 1 },
+        { tipoDocumento: true },
+        { tipoDocumento: null },
+        { tipoDocumento: {} },
+        { tipoDocumento: ["ti"] },
+      ]) {
+        expect(validarFormatoNuip("9999123456", opciones)).toStrictEqual(TIPO_INVALIDO);
+      }
+    });
+
+    it("Opciones primitivas", () => {
+      for (const opciones of ["ti", 0, true]) {
+        expect(validarFormatoNuip("9999123456", opciones)).toStrictEqual(TIPO_INVALIDO);
+      }
+    });
+
+    it("Opciones ausentes o vacías equivalen a cédula", () => {
+      for (const opciones of [undefined, null, {}]) {
+        expect(validarFormatoNuip("99991234567", opciones)).toStrictEqual(longitudInvalida);
+      }
+    });
+
+    it("Opciones función se leen como objeto (design.md, decisión 3)", () => {
+      const conTipo = Object.assign(() => undefined, { tipoDocumento: "ti" });
+      const sinTipo = () => undefined;
+      expect(validarFormatoNuip("99991234567", conTipo)).toStrictEqual(TI_ANTIGUA);
+      expect(validarFormatoNuip("99991234567", sinTipo)).toStrictEqual(longitudInvalida);
+    });
+
+    it("Prioridad del tipo inválido sobre los motivos de la entrada", () => {
+      for (const entrada of ["9999I23456", "", "99-6", "9".repeat(65)]) {
+        expect(validarFormatoNuip(entrada, { tipoDocumento: "xx" })).toStrictEqual(TIPO_INVALIDO);
+      }
+    });
+
+    it("Propiedad: todo texto que no normaliza a cc ni ti da tipo-documento-invalido", () => {
+      fc.assert(
+        fc.property(
+          fc.string().filter((t) => !["cc", "ti"].includes(t.trim().toLowerCase())),
+          (tipoDocumento) => {
+            expect(validarFormatoNuip("9999123456", { tipoDocumento })).toStrictEqual(TIPO_INVALIDO);
+          },
+        ),
+        { numRuns: 1000 },
+      );
+    });
+
+    it("Propiedad: cc y ti con cualquier mayúscula y espacio en blanco alrededor equivalen al tipo canónico", () => {
+      const blanco = fc.string({ unit: fc.constantFrom(" ", "\t", "\n", "\r", NBSP, "　", "﻿") });
+      const variante = (canonico: string) =>
+        fc
+          .tuple(fc.array(fc.boolean(), { minLength: 2, maxLength: 2 }), blanco, blanco)
+          .map(([mayus, antes, despues]) => {
+            const cuerpo = [...canonico].map((c, i) => (mayus[i] ? c.toUpperCase() : c)).join("");
+            return { canonico, tipoDocumento: antes + cuerpo + despues };
+          });
+      fc.assert(
+        fc.property(fc.oneof(variante("cc"), variante("ti")), ({ canonico, tipoDocumento }) => {
+          for (const entrada of ["9999123456", "99991234567", "99991"]) {
+            expect(validarFormatoNuip(entrada, { tipoDocumento })).toStrictEqual(
+              validarFormatoNuip(entrada, { tipoDocumento: canonico }),
+            );
+          }
+        }),
+        { numRuns: 1000 },
+      );
+    });
+
+    it("Fuzz: cualquier valor como tipoDocumento da cédula, tarjeta de identidad o tipo-documento-invalido", () => {
+      fc.assert(
+        fc.property(fc.anything(), (tipoDocumento) => {
+          const r = validarFormatoNuip("99991234567", { tipoDocumento });
+          const normalizado = typeof tipoDocumento === "string" ? tipoDocumento.trim().toLowerCase() : undefined;
+          if (tipoDocumento === undefined || normalizado === "cc") expect(r).toStrictEqual(longitudInvalida);
+          else if (normalizado === "ti") expect(r).toStrictEqual(TI_ANTIGUA);
+          else expect(r).toStrictEqual(TIPO_INVALIDO);
         }),
         { numRuns: 1000 },
       );

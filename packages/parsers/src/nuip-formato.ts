@@ -79,9 +79,25 @@ function clasificarTi(numero: string): ResultadoFormatoNuip {
   return invalido("longitud-invalida");
 }
 
-/** Comportamiento previo a NF-10 (solo `"ti"` exacto activa la tarjeta de identidad); lo sustituye la tarea 3.2. */
-function esTarjetaIdentidad(opciones: unknown): boolean {
-  return (opciones as OpcionesFormatoNuip | null | undefined)?.tipoDocumento === "ti";
+/** Tabla de longitudes por tipo de documento (NF-07, NF-09). */
+const CLASIFICADORES: Record<TipoDocumento, (numero: string) => ResultadoFormatoNuip> = {
+  cc: clasificarCc,
+  ti: clasificarTi,
+};
+
+/**
+ * Lee el tipo de documento de `opciones` (NF-10; design.md, decisiones 3 y 13 del orquestador).
+ * Devuelve `undefined` si el tipo no es válido. `tipoDocumento` se lee una sola vez y se normaliza
+ * con `trim()` y `toLowerCase()` (sin `toLocaleLowerCase`, para no depender del entorno, NF-02).
+ */
+function leerTipoDocumento(opciones: unknown): TipoDocumento | undefined {
+  if (opciones === undefined || opciones === null) return "cc";
+  if (typeof opciones !== "object" && typeof opciones !== "function") return undefined;
+  const tipo: unknown = (opciones as { tipoDocumento?: unknown }).tipoDocumento;
+  if (tipo === undefined) return "cc";
+  if (typeof tipo !== "string") return undefined;
+  const normalizado = tipo.trim().toLowerCase();
+  return normalizado === "cc" || normalizado === "ti" ? normalizado : undefined;
 }
 
 /**
@@ -92,6 +108,9 @@ function esTarjetaIdentidad(opciones: unknown): boolean {
 export function validarFormatoNuip(entrada: unknown, opciones?: unknown): ResultadoFormatoNuip {
   // (a) NF-11: sin convertir la entrada a texto.
   if (typeof entrada !== "string") return invalido("entrada-no-texto");
+  // (b) NF-10: el tipo de documento se resuelve antes de examinar la entrada (NF-13).
+  const tipoDocumento = leerTipoDocumento(opciones);
+  if (tipoDocumento === undefined) return invalido("tipo-documento-invalido");
 
   if (!SOLO_ADMITIDOS.test(entrada)) return invalido("caracteres-invalidos");
   if (PATRON_NIT.test(entrada)) return invalido("posible-digito-verificacion");
@@ -100,5 +119,5 @@ export function validarFormatoNuip(entrada: unknown, opciones?: unknown): Result
   if (sinSeparadores === "") return invalido("vacio");
 
   const numero = sinSeparadores.replace(CEROS_IZQUIERDA, "");
-  return esTarjetaIdentidad(opciones) ? clasificarTi(numero) : clasificarCc(numero);
+  return CLASIFICADORES[tipoDocumento](numero);
 }
