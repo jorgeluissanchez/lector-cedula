@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import { validarFormatoNuip } from "../src/index.js";
 import type { ResultadoFormatoNuip } from "../src/index.js";
 
-const MOTIVOS = ["caracteres-invalidos", "posible-digito-verificacion", "vacio", "longitud-invalida"];
+const MOTIVOS = [
+  "entrada-no-texto",
+  "tipo-documento-invalido",
+  "caracteres-invalidos",
+  "posible-digito-verificacion",
+  "vacio",
+  "longitud-invalida",
+];
 const TIPOS = ["nuip", "cedula-antigua", "ti-antigua"];
 
 /** Comprueba la forma exacta exigida por NF-01. */
@@ -26,6 +33,8 @@ function cumpleFormaNf01(r: ResultadoFormatoNuip): boolean {
 
 const NBSP = " ";
 
+const NO_TEXTO = { valido: false, motivo: "entrada-no-texto" };
+
 /** Cadenas formadas solo por dígitos y separadores admitidos: producen resultados válidos con frecuencia. */
 const capturaPlausible = fc
   .array(fc.constantFrom(..."00123456789999.- \t\n".split(""), NBSP), { maxLength: 16 })
@@ -46,9 +55,24 @@ describe("validarFormatoNuip", () => {
     it("Resultado inválido con solo valido y motivo", () => {
       expect(validarFormatoNuip("9999")).toStrictEqual({ valido: false, motivo: "longitud-invalida" });
     });
+
+    it("Motivos nuevos con solo valido y motivo (entrada-no-texto)", () => {
+      expect(validarFormatoNuip(9999123456)).toStrictEqual({ valido: false, motivo: "entrada-no-texto" });
+    });
   });
 
   describe("NF-02 Función pura y total", () => {
+    it("Nunca lanza con valores arbitrarios como entrada", () => {
+      fc.assert(
+        fc.property(fc.anything(), (v) => {
+          const r = validarFormatoNuip(v);
+          expect(cumpleFormaNf01(r)).toBe(true);
+          if (typeof v !== "string") expect(r).toStrictEqual(NO_TEXTO);
+        }),
+        { numRuns: 1000 },
+      );
+    });
+
     it("Nunca lanza con fc.string({ unit: 'binary' }) y cumple NF-01", () => {
       fc.assert(
         fc.property(fc.string({ unit: "binary" }), (s) => cumpleFormaNf01(validarFormatoNuip(s))),
@@ -301,6 +325,46 @@ describe("validarFormatoNuip", () => {
           expect(cumpleFormaNf01(primero)).toBe(true);
           if (!primero.valido) return;
           expect(validarFormatoNuip(primero.numero, ti)).toStrictEqual(primero);
+        }),
+        { numRuns: 1000 },
+      );
+    });
+  });
+
+  describe("NF-11 Entrada que no es texto", () => {
+    const noTexto = fc.anything().filter((v) => typeof v !== "string");
+
+    it("Números y otros primitivos", () => {
+      for (const entrada of [9999123456, 9999123456n, true, null, undefined, Symbol("x")]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NO_TEXTO);
+      }
+    });
+
+    it("Objetos", () => {
+       
+      const envoltorio = new String("9999123456");
+      for (const entrada of [{}, ["9999123456"], envoltorio, { toString: () => "9999123456" }]) {
+        expect(validarFormatoNuip(entrada)).toStrictEqual(NO_TEXTO);
+      }
+    });
+
+    it("Prioridad sobre el tipo de documento inválido", () => {
+      expect(validarFormatoNuip(9999123456, { tipoDocumento: "xx" })).toStrictEqual(NO_TEXTO);
+    });
+
+    it("Propiedad sobre valores arbitrarios que no son texto (sin opciones)", () => {
+      fc.assert(
+        fc.property(noTexto, (v) => {
+          expect(validarFormatoNuip(v)).toStrictEqual(NO_TEXTO);
+        }),
+        { numRuns: 1000 },
+      );
+    });
+
+    it("Propiedad sobre valores arbitrarios que no son texto (con tipo de documento ti)", () => {
+      fc.assert(
+        fc.property(noTexto, (v) => {
+          expect(validarFormatoNuip(v, { tipoDocumento: "ti" })).toStrictEqual(NO_TEXTO);
         }),
         { numRuns: 1000 },
       );

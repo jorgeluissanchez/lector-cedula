@@ -1,8 +1,8 @@
 // PreToolUse (Bash|PowerShell): puertas antes de commits e instalaciones.
-import { bloquear, cola, correr, correrNode, leerEvento, paquetes } from "./lib.mjs";
+import { bloquear, cola, correr, correrNode, leerEvento, paquetes, quitarHeredocs } from "./lib.mjs";
 
 const evento = await leerEvento();
-const comando = String(evento.tool_input?.command ?? "");
+const comando = quitarHeredocs(String(evento.tool_input?.command ?? ""));
 
 // 1. Instalaciones npm: revisar licencia antes de instalar (principio IV).
 const npm = paquetes(comando, /\bnpm\s+(?:i|install|add)\s+([^;&|\n]+)/);

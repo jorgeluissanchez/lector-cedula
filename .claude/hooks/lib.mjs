@@ -21,6 +21,26 @@ export function correr(comando, { timeoutMs = 240_000 } = {}) {
   return { ok: r.status === 0, salida };
 }
 
+/**
+ * Elimina el cuerpo de los heredocs (<<EOF ... EOF, <<'EOF', <<-EOF) para que el texto que se escribe
+ * a un archivo no se confunda con comandos (falsos positivos de "npm install" dentro de documentación).
+ */
+export function quitarHeredocs(comando) {
+  const lineas = String(comando).split("\n");
+  const salida = [];
+  let fin = null;
+  for (const linea of lineas) {
+    if (fin !== null) {
+      if (linea.trim() === fin) fin = null;
+      continue;
+    }
+    const m = /<<-?\s*(["']?)([A-Za-z_][\w-]*)\1/.exec(linea);
+    salida.push(m ? linea.slice(0, m.index) : linea);
+    if (m) fin = m[2];
+  }
+  return salida.join("\n");
+}
+
 /** Ejecuta un script de Node con argumentos, sin pasar por la shell (evita que cmd.exe interprete nada). */
 export function correrNode(args, { timeoutMs = 120_000 } = {}) {
   const r = spawnSync(process.execPath, args, { cwd: RAIZ, encoding: "utf8", timeout: timeoutMs });

@@ -38,7 +38,7 @@ Y cada tarea de `tasks.md` MUST nombrar los tipos de prueba que entrega y el com
 
 | Uso | Herramienta | Licencia | Nota |
 |---|---|---|---|
-| Workers y WASM en navegador | `@vitest/browser-playwright` | MIT | Vitest 5.0.3 es la versión actual; subir de 3.2 requiere revisar la migración. Stryker no soporta browser mode. |
+| Workers y WASM en navegador | `@vitest/browser@3.2.7` con `browser: { enabled: true, provider: 'playwright', instances: [{ browser: 'chromium' }] }` | MIT | Sirve con la Vitest 3.2 instalada. `@vitest/browser-playwright` solo existe desde Vitest 4; migrar a Vitest 5 merece su propia spec. Stryker no soporta browser mode. |
 | Modelos ONNX en pruebas | `onnxruntime-node` 1.30 | MIT | Misma versión que onnxruntime-web. |
 | Fuzzing guiado por cobertura | `@jazzer.js/core` 4.0 | Apache-2.0 | CLI independiente (no se integra con Vitest). |
 | Contrato de API | Schemathesis 4.29 (Docker `schemathesis/schemathesis`) | MIT | En Docker Desktop usar `host.docker.internal`. Dredd está archivado: no usar. |
@@ -46,7 +46,7 @@ Y cada tarea de `tasks.md` MUST nombrar los tipos de prueba que entrega y el com
 | Carga | Artillery 2.0 (MPL-2.0) o Locust 2.46 (MIT, Docker) | | k6 es AGPL: solo como herramienta interna si se justifica. |
 | Regresión visual | `toHaveScreenshot` de Playwright, siempre en `mcr.microsoft.com/playwright:v1.63.0-noble` | Apache-2.0 | Lost Pixel está archivado; BackstopJS sin releases. |
 | Rendimiento web | Lighthouse CI 0.15 | Apache-2.0 | Presupuestos de tamaño de WASM y LCP. |
-| Seguridad | gitleaks, osv-scanner, OWASP ZAP, Trivy (Docker) | MIT / Apache-2.0 | **Trivy tuvo un compromiso de cadena de suministro en marzo de 2026 (CVE-2026-33634): fijar imagen por digest y Actions por SHA.** Semgrep CE es LGPL y sus reglas solo para uso interno, con `--metrics=off`. ruff con reglas S en lugar de Bandit. |
+| Seguridad | gitleaks, osv-scanner, OWASP ZAP, Trivy (Docker) | MIT / Apache-2.0 | **Trivy tuvo un compromiso de cadena de suministro en marzo de 2026 (CVE-2026-33634): fijar imagen por digest y Actions por SHA.** Semgrep CE es LGPL y sus reglas solo para uso interno, con `--metrics=off`. ruff con reglas S en lugar de Bandit. gitleaks: usar el subcomando `git` o `dir` (`detect` está obsoleto). Comandos exactos en `docs/investigacion/04-testing-herramientas-y-skills.md`. |
 | Distorsiones de imagen | augraphy (MIT), torchvision v2 (BSD-3), kornia (Apache-2.0) en Docker | | **AlbumentationsX es AGPL**; albumentations está archivado. Deepchecks es AGPL. |
 | PII en fixtures y logs | Presidio 2.2 (`ghcr.io/data-privacy-stack/presidio-analyzer`, MIT) | | Ya no está en mcr.microsoft.com. No trae reconocedor de cédula colombiana: hay que escribirlo. |
 | Móvil | Appium 3.8 + uiautomator2 / xcuitest + WebdriverIO 10 | Apache-2.0 / MIT | Contexto `WEBVIEW_<pkg>`. Detox no sirve para Capacitor. |

@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { paquetes } from "../../.claude/hooks/lib.mjs";
+import { paquetes, quitarHeredocs } from "../../.claude/hooks/lib.mjs";
 
 const RAIZ = resolve(import.meta.dirname, "..", "..");
 
@@ -34,6 +34,14 @@ describe("paquetes", () => {
   it("ignora redirecciones de la shell", () => {
     expect(paquetes("npm install -D @playwright/test@latest 2>&1 | tail -1", NPM)).toEqual(["@playwright/test@latest"]);
     expect(paquetes("npm i mrz >log.txt", NPM)).toEqual(["mrz"]);
+  });
+  it("ignora el texto dentro de un heredoc", () => {
+    const cmd = "cat > notas.md <<'EOF'\nUsa npm install ultralytics para nada\nEOF\necho listo";
+    expect(paquetes(quitarHeredocs(cmd), NPM)).toEqual([]);
+  });
+  it("sigue detectando una instalación después de un heredoc", () => {
+    const cmd = "cat > a.txt <<EOF\nhola\nEOF\nnpm i mrz";
+    expect(paquetes(quitarHeredocs(cmd), NPM)).toEqual(["mrz"]);
   });
   it("no detecta npm install sin paquetes", () => {
     expect(paquetes("npm install", NPM)).toEqual([]);
