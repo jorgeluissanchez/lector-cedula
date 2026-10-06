@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Leer de forma determinista y sin E/S la MRZ TD1 de la cédula digital colombiana a partir de las tres líneas de texto que entrega un OCR, validar sus cuatro dígitos de control ICAO 9303 y devolver campos normalizados, declarando como hipótesis (M01 a M03, `docs/decisiones/hipotesis-formato.md`) cada parte del mapeo colombiano que aún no está confirmada.
+Leer de forma determinista y sin E/S la MRZ TD1 de la cédula digital colombiana a partir de las tres líneas de texto que entrega un OCR, validar sus cuatro dígitos de control ICAO 9303 y devolver campos normalizados, declarando como hipótesis (`docs/decisiones/hipotesis-formato.md`) cada parte del mapeo colombiano que aún no está confirmada. Según la evidencia de `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`, M01 está confirmada, M02 confirmada con corrección (campo de 11 caracteres con un NUIP de 10 cifras y relleno) y M03 sigue pendiente (codificación DIVIPOL, pero sin saber si el lugar es de expedición o de nacimiento, y puede venir vacío).
 
-Convenciones de los escenarios. Todos los datos son sintéticos (NUIP que empiezan por `9999`, nombres inventados) salvo el ejemplo sintético público de Eitol (MZ-20). Las líneas se numeran 1, 2 y 3 y las columnas desde 0. Base sintética B:
+Convenciones de los escenarios. Todos los datos son sintéticos (NUIP que empiezan por `9999`, nombres inventados) salvo la MRZ del espécimen ficticio anterior de la Registraduría que publica Eitol (MZ-20, persona ficticia, caso negativo). Las líneas se numeran 1, 2 y 3 y las columnas desde 0. Base sintética B:
 
 - `B1` = `"ICCOL999900123816001<<<<<<<<<<"`
 - `B2` = `"9007150F3407150COL9999123456<5"`
@@ -20,7 +20,7 @@ El parser SHALL devolver un objeto discriminado por `ok`. Con `ok: false` MUST c
 
 #### Scenario: Cédula sintética válida completa (R1)
 - **WHEN** se parsea B
-- **THEN** el resultado es exactamente `{ "ok": true, "valido": true, "campos": { "serial": "999900123", "divipolExpedicion": { "departamento": "16", "municipio": "001" }, "fechaNacimiento": "1990-07-15", "sexo": "F", "fechaVencimiento": "2034-07-15", "nacionalidad": "COL", "nuip": "9999123456", "nuipTipoProbable": "nuip", "apellidos": "FICTICIO EJEMPLO", "nombres": "ANA MARIA", "nombresPosiblementeTruncados": false }, "digitosControl": { "serial": { "estado": "valido", "leido": "8", "calculado": 8 }, "nacimiento": { "estado": "valido", "leido": "0", "calculado": 0 }, "vencimiento": { "estado": "valido", "leido": "0", "calculado": 0 }, "compuesto": { "estado": "valido", "leido": "5", "calculado": 5 } }, "correcciones": [], "errores": [], "warnings": ["M01", "M02", "M03"], "lineasCorregidas": ["ICCOL999900123816001<<<<<<<<<<", "9007150F3407150COL9999123456<5", "FICTICIO<EJEMPLO<<ANA<MARIA<<<"] }`
+- **THEN** el resultado es exactamente `{ "ok": true, "valido": true, "campos": { "serial": "999900123", "codigoLugarMrz": "16001", "fechaNacimiento": "1990-07-15", "sexo": "F", "fechaVencimiento": "2034-07-15", "nacionalidad": "COL", "nuip": "9999123456", "nuipTipoProbable": "nuip", "apellidos": "FICTICIO EJEMPLO", "nombres": "ANA MARIA", "nombresPosiblementeTruncados": false }, "digitosControl": { "serial": { "estado": "valido", "leido": "8", "calculado": 8 }, "nacimiento": { "estado": "valido", "leido": "0", "calculado": 0 }, "vencimiento": { "estado": "valido", "leido": "0", "calculado": 0 }, "compuesto": { "estado": "valido", "leido": "5", "calculado": 5 } }, "correcciones": [], "errores": [], "warnings": ["M03"], "lineasCorregidas": ["ICCOL999900123816001<<<<<<<<<<", "9007150F3407150COL9999123456<5", "FICTICIO<EJEMPLO<<ANA<MARIA<<<"] }`
 
 #### Scenario: Rechazo de una línea concreta
 - **WHEN** se parsea B con L3 = `"FICTICIO<EJEMPLO<<ANA<MARIA<<"` (29 caracteres)
@@ -215,7 +215,7 @@ El paquete SHALL exportar el cálculo del dígito de control ICAO 9303: `0`-`9` 
 - **THEN** para cada uno de los 4 dígitos, `estado === "valido"` coincide con `valid` del campo correspondiente de `mrz` (`documentNumberCheckDigit`, `birthDateCheckDigit`, `expirationDateCheckDigit`, `compositeCheckDigit`)
 
 ### Requirement: MZ-10 Serial del documento
-El parser SHALL devolver en `campos.serial` las columnas 5 a 13 corregidas de la línea 1, conservando los ceros a la izquierda, si son 9 cifras; si no, `null` y el error `serial-invalido`. Si la columna 14 es `<`, el dígito del serial MUST tener estado `ausente`, `leido` `"<"` y `calculado` el valor ICAO de las columnas 5 a 13. Aplica la hipótesis M01.
+El parser SHALL devolver en `campos.serial` las columnas 5 a 13 corregidas de la línea 1, conservando los ceros a la izquierda, si son 9 cifras; si no, `null` y el error `serial-invalido`. Si la columna 14 es `<`, el dígito del serial MUST tener estado `ausente`, `leido` `"<"` y `calculado` el valor ICAO de las columnas 5 a 13. Sigue M01 (confirmada).
 
 #### Scenario: Serial con ceros a la izquierda
 - **WHEN** se parsea `["ICCOL000000012516001<<<<<<<<<<", "9007150F3407150COL9999123456<1", B3]` con `REF`
@@ -225,39 +225,39 @@ El parser SHALL devolver en `campos.serial` las columnas 5 a 13 corregidas de la
 - **WHEN** se parsea `["ICCOL999900123<16001<<<<<<<<<<", "9007150F3407150COL9999123456<9", B3]` con `REF`
 - **THEN** `digitosControl.serial` es `["ausente", "<", 8]`, `digitosControl.compuesto` es `["valido", "9", 9]`, `campos.serial` es `"999900123"` y `valido` es `true`
 
-### Requirement: MZ-11 DIVIPOL de expedición en el opcional de la línea 1
-Si las columnas 15 a 19 de la línea 1, tras la corrección OCR-B, son 5 cifras y las columnas 20 a 29 son todas `<`, el parser SHALL devolver `campos.divipolExpedicion` = `{ departamento, municipio }` con las 2 primeras y las 3 últimas cifras, conservar esas correcciones y emitir `M03`. En otro caso MUST devolver `null`, MUST NOT corregir las columnas 15 a 19, MUST NOT emitir `M03` y MUST NOT añadir un error.
+### Requirement: MZ-11 Código de lugar en el opcional de la línea 1
+Si las columnas 15 a 19 de la línea 1, tras la corrección OCR-B, son 5 cifras y las columnas 20 a 29 son todas `<`, el parser SHALL devolver `campos.codigoLugarMrz` = las 5 cifras crudas, sin traducirlas (DIVIPOL; expedición o nacimiento sin decidir, M03), conservar esas correcciones y emitir `M03`. En otro caso MUST devolver `null`, MUST NOT corregir las columnas 15 a 19, MUST NOT emitir `M03` y MUST NOT añadir un error.
 
-#### Scenario: DIVIPOL presente
+#### Scenario: Código de lugar presente
 - **WHEN** se parsea B
-- **THEN** `campos.divipolExpedicion` es `{ "departamento": "16", "municipio": "001" }` y `warnings` contiene `"M03"`
+- **THEN** `campos.codigoLugarMrz` es `"16001"` y `warnings` contiene `"M03"`
 
 #### Scenario: Opcional vacío
 - **WHEN** se parsea B con L1 = `"ICCOL9999001238<<<<<<<<<<<<<<<"`
-- **THEN** `campos.divipolExpedicion` es `null`, `warnings` es `["M01", "M02"]` y `valido` es `true`
+- **THEN** `campos.codigoLugarMrz` es `null`, `warnings` es `[]` y `valido` es `true`
 
 #### Scenario: Opcional con letra no corregible
 - **WHEN** se parsea `["ICCOL9999001238I6A01<<<<<<<<<<", "9007150F3407150COL9999123456<6", B3]` con `REF`
-- **THEN** `campos.divipolExpedicion` es `null`, `correcciones` es `[]`, `lineasCorregidas[0]` es `"ICCOL9999001238I6A01<<<<<<<<<<"`, `warnings` es `["M01", "M02"]` y `valido` es `true`
+- **THEN** `campos.codigoLugarMrz` es `null`, `correcciones` es `[]`, `lineasCorregidas[0]` es `"ICCOL9999001238I6A01<<<<<<<<<<"`, `warnings` es `[]` y `valido` es `true`
 
 #### Scenario: Opcional corregible
 - **WHEN** se parsea B con L1 = `"ICCOL9999001238I600I<<<<<<<<<<"`
-- **THEN** `campos.divipolExpedicion` es `{ "departamento": "16", "municipio": "001" }`, `correcciones` es exactamente `[{ "linea": 1, "columna": 15, "original": "I", "corregido": "1" }, { "linea": 1, "columna": 19, "original": "I", "corregido": "1" }]`, `lineasCorregidas[0]` es `B1` y `valido` es `true`
+- **THEN** `campos.codigoLugarMrz` es `"16001"`, `correcciones` es exactamente `[{ "linea": 1, "columna": 15, "original": "I", "corregido": "1" }, { "linea": 1, "columna": 19, "original": "I", "corregido": "1" }]`, `lineasCorregidas[0]` es `B1` y `valido` es `true`
 
 #### Scenario: Resto del opcional no vacío
 - **WHEN** se parsea `["ICCOL999900123816001<<<<<<<<<X", "9007150F3407150COL9999123456<6", B3]` con `REF`
-- **THEN** `campos.divipolExpedicion` es `null`, `warnings` es `["M01", "M02"]` y `valido` es `true`
+- **THEN** `campos.codigoLugarMrz` es `null`, `warnings` es `[]` y `valido` es `true`
 
 ### Requirement: MZ-12 NUIP en el opcional de la línea 2
-El parser SHALL tomar como NUIP (hipótesis M02) la serie inicial sin `<` de las columnas 18 a 28 corregidas de la línea 2, que MUST ir seguida solo de `<`. Si es de cifras y `validarFormatoNuip` la acepta con tipo `cc` o, si no, con tipo `ti`, `campos.nuip` y `campos.nuipTipoProbable` MUST ser su `numero` y su `tipoProbable`; si no, ambos `null` y el error `nuip-invalido`.
+El parser SHALL tomar como NUIP (M02, confirmada con corrección) la serie inicial sin `<` de las columnas 18 a 28 corregidas de la línea 2, que MUST ir seguida solo de `<`. Si `validarFormatoNuip` la acepta con tipo `cc`, `campos.nuip` y `campos.nuipTipoProbable` MUST ser su `numero` y su `tipoProbable`; si no, ambos `null` y el error `nuip-invalido`. MUST NOT validarla con tipo `ti`: ninguna fuente muestra un número de 11 cifras en una MRZ.
 
 #### Scenario: NUIP de 10 cifras
 - **WHEN** se parsea B
 - **THEN** `campos.nuip` es `"9999123456"` y `campos.nuipTipoProbable` es `"nuip"`
 
-#### Scenario: NUIP de 11 cifras
+#### Scenario: Número de 11 cifras rechazado
 - **WHEN** se parsea B con L2 = `"9007150F3407150COL999912345676"`
-- **THEN** `campos.nuip` es `"99991234567"`, `campos.nuipTipoProbable` es `"ti-antigua"`, `warnings` es `["M01", "M02", "M03", "N01"]` y `valido` es `true`
+- **THEN** `campos.nuip` y `campos.nuipTipoProbable` son `null`, `errores` es `["nuip-invalido"]`, `digitosControl.compuesto` es `["valido", "6", 6]`, `warnings` es `["M03"]` y `valido` es `false`
 
 #### Scenario: Cero a la izquierda
 - **WHEN** se parsea B con L2 = `"9007150F3407150COL099991234565"`
@@ -347,11 +347,11 @@ El parser SHALL leer la línea 3 sin corrección OCR: quitar los `<` finales, pa
 - **THEN** `errores` es exactamente `["fecha-nacimiento-invalida", "sexo-invalido", "nacionalidad-invalida", "nuip-invalido", "nombre-no-alfabetico"]`, los cuatro dígitos de control tienen estado `valido` y `valido` es `false`
 
 ### Requirement: MZ-18 Warnings de hipótesis
-Con `ok: true`, `warnings` SHALL contener, ordenados y sin repetir, `M01` y `M02` siempre, `M03` si `divipolExpedicion` no es `null` y `N01` si `nuipTipoProbable` es `"ti-antigua"`. MUST NOT contener `M04` ni ningún otro ID.
+Con `ok: true`, `warnings` SHALL ser `["M03"]` si `codigoLugarMrz` no es `null` y `[]` en otro caso. MUST NOT contener ningún otro ID (M01 y M02 están confirmadas; M04, M05 y D05 no afectan a la lectura; N01 no aplica porque MZ-12 no admite 11 cifras).
 
 #### Scenario: Warnings por caso
 - **WHEN** se parsean B, B con L1 = `"ICCOL9999001238<<<<<<<<<<<<<<<"` y B con L2 = `"9007150F3407150COL999912345676"`
-- **THEN** `warnings` es `["M01", "M02", "M03"]`, `["M01", "M02"]` y `["M01", "M02", "M03", "N01"]`
+- **THEN** `warnings` es `["M03"]`, `[]` y `["M03"]`
 
 ### Requirement: MZ-19 Sin RH ni QR
 El resultado MUST NOT contener RH ni ningún dato del QR o del chip, y el paquete MUST NOT exportar ninguna función que decodifique el QR de la cédula digital (principio V: está cifrado por la Registraduría).
@@ -365,22 +365,22 @@ El resultado MUST NOT contener RH ni ningún dato del QR o del chip, y el paquet
 - **THEN** ninguno contiene `qr` sin distinguir mayúsculas
 
 ### Requirement: MZ-20 Casos de referencia públicos como negativos
-El parser SHALL extraer los campos del ejemplo sintético publicado por Eitol y de una MRZ con la forma del espécimen `back-ccd.png` (hipótesis M04: compuesto calculado 9, impreso 8), y en ambos `valido` MUST ser `false` por sus dígitos de control. Ninguno MUST usarse como fixture positivo.
+El parser SHALL extraer los campos de la MRZ del espécimen ficticio anterior publicada por Eitol y de una MRZ sintética con la forma del espécimen actual `back-ccd.png` (M04 confirmada con corrección: dígito del serial `<`, opcional de la línea 1 vacío, NUIP de 10 cifras y relleno, compuesto impreso 9 y calculado 8), y en ambos `valido` MUST ser `false` por sus dígitos de control. Ninguno MUST usarse como fixture positivo.
 
-#### Scenario: Ejemplo sintético de Eitol
+#### Scenario: Espécimen anterior publicado por Eitol
 - **WHEN** se parsea `["ICCOL000000012305001<<<<<<<<<<", "0403151F3203190C0L1234567890<0", "WALTEROS<<LAURA<<<<<<<<<<<<<<<"]` con `REF`
-- **THEN** `campos` es exactamente `{ "serial": "000000012", "divipolExpedicion": { "departamento": "05", "municipio": "001" }, "fechaNacimiento": "2004-03-15", "sexo": "F", "fechaVencimiento": "2032-03-19", "nacionalidad": "COL", "nuip": "1234567890", "nuipTipoProbable": "nuip", "apellidos": "WALTEROS", "nombres": "LAURA", "nombresPosiblementeTruncados": false }`, `digitosControl` es `{ serial: ["invalido", "3", 5], nacimiento: ["valido", "1", 1], vencimiento: ["valido", "0", 0], compuesto: ["invalido", "0", 5] }`, `correcciones` es `[{ "linea": 2, "columna": 16, "original": "0", "corregido": "O" }]`, `errores` es `[]` y `valido` es `false`
+- **THEN** `campos` es exactamente `{ "serial": "000000012", "codigoLugarMrz": "05001", "fechaNacimiento": "2004-03-15", "sexo": "F", "fechaVencimiento": "2032-03-19", "nacionalidad": "COL", "nuip": "1234567890", "nuipTipoProbable": "nuip", "apellidos": "WALTEROS", "nombres": "LAURA", "nombresPosiblementeTruncados": false }`, `digitosControl` es `{ serial: ["invalido", "3", 5], nacimiento: ["valido", "1", 1], vencimiento: ["valido", "0", 0], compuesto: ["invalido", "0", 5] }`, `correcciones` es `[{ "linea": 2, "columna": 16, "original": "0", "corregido": "O" }]`, `errores` es `[]` y `valido` es `false`
 
 #### Scenario: Compuesto con la forma del espécimen back-ccd.png
-- **WHEN** se parsea B con L2 = `"9007150F3407150COL9999123458<8"`
-- **THEN** `digitosControl.compuesto` es `["invalido", "8", 9]`, los otros tres dígitos tienen estado `valido`, `campos.nuip` es `"9999123458"` y `valido` es `false`
+- **WHEN** se parsea `["ICCOL999900123<<<<<<<<<<<<<<<<", "9007150F3407150COL9999123453<9", B3]` con `REF`
+- **THEN** `digitosControl` es `{ serial: ["ausente", "<", 8], nacimiento: ["valido", "0", 0], vencimiento: ["valido", "0", 0], compuesto: ["invalido", "9", 8] }`, `campos.codigoLugarMrz` es `null`, `campos.nuip` es `"9999123453"`, `errores` es `[]`, `warnings` es `[]` y `valido` es `false`
 
 ### Requirement: MZ-21 Ida y vuelta con el generador sintético
 Para toda MRZ que `generarMrzTd1` de `@lector-cedula/fixtures` (cambio `generador-fixtures-sinteticos`, contrato `VERSION_CONTRATO` 1.x) produce con variante `"valida"` a partir de una persona ficticia, parseada con `REF`, el parser SHALL devolver `ok: true`, `valido: true`, `correcciones` y `errores` vacíos y `campos` igual a la traducción de `esperado` del generador según la tabla de la decisión 11 de design.md.
 
 #### Scenario: Persona base del generador
 - **WHEN** se parsea `generarMrzTd1(PERSONA_BASE).lineas`, es decir `["ICCOL999912345516001<<<<<<<<<<", "8503149F3503144COL9999123456<5", "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"]`, con `REF`
-- **THEN** `campos` es exactamente `{ "serial": "999912345", "divipolExpedicion": { "departamento": "16", "municipio": "001" }, "fechaNacimiento": "1985-03-14", "sexo": "F", "fechaVencimiento": "2035-03-14", "nacionalidad": "COL", "nuip": "9999123456", "nuipTipoProbable": "nuip", "apellidos": "PRUEBA EJEMPLO", "nombres": "FICTICIA LUZ", "nombresPosiblementeTruncados": false }` y `valido` es `true`
+- **THEN** `campos` es exactamente `{ "serial": "999912345", "codigoLugarMrz": "16001", "fechaNacimiento": "1985-03-14", "sexo": "F", "fechaVencimiento": "2035-03-14", "nacionalidad": "COL", "nuip": "9999123456", "nuipTipoProbable": "nuip", "apellidos": "PRUEBA EJEMPLO", "nombres": "FICTICIA LUZ", "nombresPosiblementeTruncados": false }` y `valido` es `true`
 
 #### Scenario: Propiedad de ida y vuelta
 - **WHEN** se toman al menos 1000 personas de `arbPersonaFicticia()` con `fechaNacimiento` sustituida por una fecha entre `1926-10-07` y `2026-10-06` y `fechaVencimiento` por una entre `2000-01-01` y `2099-12-31`, se generan con `generarMrzTd1(persona, { variante: "valida" })`, descartando solo las rechazadas con `nombre-excede-mrz`, y se parsean con `REF`

@@ -2,21 +2,21 @@
 
 ## Why
 
-La cédula digital colombiana (desde diciembre de 2020) no tiene PDF417: su único código legible por máquina descifrable es la MRZ TD1 del reverso, y el principio V la hace fuente preferida frente al OCR. Hoy `packages/parsers` no puede leerla, y es la tarea 2 de la Fase 1 de `PLAN.md` (meta: 98 % de campos MRZ con checksum válido). Las líneas llegan de un OCR, con confusiones OCR-B típicas, y el mapeo colombiano (serial, NUIP en el opcional, DIVIPOL de expedición) es ingeniería inversa sin especificación oficial (hipótesis M01 a M04).
+La cédula digital colombiana (desde diciembre de 2020) no tiene PDF417: su único código legible por máquina descifrable es la MRZ TD1 del reverso, y el principio V la hace fuente preferida frente al OCR. Hoy `packages/parsers` no puede leerla, y es la tarea 2 de la Fase 1 de `PLAN.md` (meta: 98 % de campos MRZ con checksum válido). Las líneas llegan de un OCR, con confusiones OCR-B típicas, y el mapeo colombiano (serial, NUIP en el opcional, código de lugar) es ingeniería inversa sin especificación oficial (hipótesis M01 a M04).
 
 ## What Changes
 
 - Nueva función pura en `packages/parsers` que recibe las 3 líneas de la MRZ TD1 (texto posiblemente con errores de OCR) y una fecha de referencia, y devuelve:
   - rechazo estructural con motivo enumerado (no son 3 líneas de 30 caracteres del alfabeto MRZ, o no es una cédula `IC` de `COL`); o
-  - campos normalizados (serial, DIVIPOL de expedición, fechas ISO, sexo, nacionalidad, NUIP, apellidos, nombres), el estado de los 4 dígitos de control ICAO 9303 (serial, nacimiento, vencimiento, compuesto), las correcciones OCR aplicadas, los errores de campo, los IDs de hipótesis aplicadas y un indicador global `valido`.
+  - campos normalizados (serial, código de lugar DIVIPOL crudo sin afirmar si es de expedición o de nacimiento, fechas ISO, sexo, nacionalidad, NUIP, apellidos, nombres), el estado de los 4 dígitos de control ICAO 9303 (serial, nacimiento, vencimiento, compuesto), las correcciones OCR aplicadas, los errores de campo, los IDs de hipótesis aplicadas y un indicador global `valido`.
 - Correcciones OCR-B (O y Q a 0, I a 1, Z a 2, S a 5, G a 6, B a 8) solo en zonas numéricas; la única corrección alfabética es `C0L` a `COL` en los campos de país, cuyo único valor admitido es `COL`.
-- NUIP del opcional de la línea 2 validado con `validarFormatoNuip` (capacidad `formato-nuip`, sin cambiarla).
+- NUIP del opcional de la línea 2 validado con `validarFormatoNuip` con tipo `cc` (capacidad `formato-nuip`, sin cambiarla; M02 confirmada con corrección: NUIP de 10 cifras y relleno).
 - Regla de siglo explícita para fechas YYMMDD: nacimiento en 19YY o 20YY según la fecha de referencia que pasa quien llama; vencimiento siempre 20YY.
 - Exportación pública del cálculo del dígito de control ICAO 9303.
 - Evaluador `mrz-cedula-digital` registrado en `evals/runners/registro.mjs` y fixtures sintéticos en `evals/fixtures/sinteticos/mrz-cedula-digital/`.
 - `mrz` 5.0.2 (cheminfo, MIT) entra solo como `devDependency` y oráculo diferencial de las pruebas; el producto no depende de ella (ver `design.md`, decisión 1).
 
-Fuera de alcance: decodificar el QR de la cédula digital (principio V: está cifrado), leer el chip NFC, el RH (la MRZ no lo trae), extraer las líneas de una imagen (OCR, Fase 2 y 3), traducir el código DIVIPOL a nombre de municipio (cambio `divipol-registraduria`), decidir si el documento está vencido o si la persona es mayor de edad (validadores de la Fase 1), la MRZ de la cédula de extranjería y la tarjeta de identidad digital.
+Fuera de alcance: decodificar el QR de la cédula digital (principio V: está cifrado), leer el chip NFC, el RH (la MRZ no lo trae), extraer las líneas de una imagen (OCR, Fase 2 y 3), traducir el código de lugar a nombre de municipio (cambio `divipol-registraduria`; es DIVIPOL, pero no se sabe si es de expedición o de nacimiento, M03), decidir si el documento está vencido o si la persona es mayor de edad (validadores de la Fase 1), la MRZ de la cédula de extranjería y la tarjeta de identidad digital.
 
 ## Capabilities
 

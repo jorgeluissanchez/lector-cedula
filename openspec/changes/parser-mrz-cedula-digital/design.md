@@ -65,7 +65,7 @@ export type CodigoErrorCampoMrz =
   | "nacionalidad-invalida" | "nuip-invalido" | "nombre-no-alfabetico";
 export interface CamposMrzCedulaDigital {
   serial: string | null;
-  divipolExpedicion: { departamento: string; municipio: string } | null;
+  codigoLugarMrz: string | null;              // 5 cifras DIVIPOL crudas; expedición o nacimiento sin decidir (M03)
   fechaNacimiento: string | null;
   sexo: "M" | "F" | "X" | null;
   fechaVencimiento: string | null;
@@ -113,11 +113,11 @@ Las dos excepciones fuera de las zonas numéricas son los campos de país (`COL`
 
 Las columnas 15 a 19 son "opcional" en ICAO y M03 es pendiente. Si se corrigieran siempre y el campo resultara ser alfanumérico, el compuesto de un documento auténtico fallaría. Por eso (MZ-11) solo se corrigen si el resultado son 5 cifras y el resto del opcional es relleno; en otro caso se dejan crudas, sin error. El compuesto cubre estas columnas, así que una corrección indebida se detecta.
 
-El nombre `divipolExpedicion` sigue el texto de M03, pero el ejemplo de Eitol usa `05001`, que es el código DIVIPOLA (DANE) de Medellín; en DIVIPOL Antioquia es `01`. El parser devuelve los dígitos sin traducirlos, de modo que renombrar el campo si M03 resulta ser DIVIPOLA sería un cambio de nombre, no de lógica (ver preguntas abiertas).
+El ejemplo de Eitol usa `05001`, que es el código DIVIPOLA (DANE) de Medellín; en DIVIPOL Antioquia es `01`. Por decisión del orquestador (pregunta 3), el campo se llama `codigoLugarMrz`, un nombre neutral que no afirma el sistema, y vale las 5 cifras crudas como string (`"16001"`), sin partirlas en departamento y municipio ni traducirlas. El parser no consulta la tabla DIVIPOL y por eso no emite `D05` (la emite solo quien resuelva el código con DIVIPOL, decisión de `divipol-registraduria`).
 
 ### 7. NUIP con el validador existente
 
-La serie inicial sin `<` del opcional de la línea 2 se valida con `validarFormatoNuip(serie, { tipoDocumento: "cc" })` y, si falla, con `"ti"` (que solo añade el caso de 11 cifras, `ti-antigua`, con `warnings: ["N01"]`). Una sola regla de formato para todas las fuentes (PDF417, MRZ, OCR, captura manual). Cubre: NUIP de 10 cifras (Eitol), 11 cifras (fgardila admite hasta 11 en su `MrzFixtureBuilder`, aunque sus fixtures usan 10), cédulas antiguas de 5 a 9 cifras que conservan su número en la digital, y cero a la izquierda de relleno. Los `warnings` del validador se unen a los del parser (MZ-18).
+**Revisada tras la evidencia del 2026-10-06 (ver al final): solo `cc`; 11 cifras dan `nuip-invalido` y el parser ya no emite N01.** Texto original: la serie inicial sin `<` del opcional de la línea 2 se valida con `validarFormatoNuip(serie, { tipoDocumento: "cc" })` y, si falla, con `"ti"` (que solo añade el caso de 11 cifras, `ti-antigua`, con `warnings: ["N01"]`). Una sola regla de formato para todas las fuentes (PDF417, MRZ, OCR, captura manual). Cubre: NUIP de 10 cifras (Eitol), 11 cifras (fgardila admite hasta 11 en su `MrzFixtureBuilder`, aunque sus fixtures usan 10), cédulas antiguas de 5 a 9 cifras que conservan su número en la digital, y cero a la izquierda de relleno. Los `warnings` del validador se unen a los del parser (MZ-18).
 
 Alternativas descartadas: rechazar 11 cifras (contradice la lectura de fgardila en M02); aceptarlas como `nuip` (sin evidencia).
 
@@ -142,7 +142,7 @@ Traducción de `esperado` (FX-15) a `campos` (MZ-21):
 | `esperado` del generador | `campos` del parser |
 |---|---|
 | `serialDocumento` | `serial` |
-| `lugarExpedicion` (`"16001"`) | `divipolExpedicion` = `{ departamento: "16", municipio: "001" }` |
+| `lugarExpedicion` (`"16001"`) | `codigoLugarMrz` = `"16001"` (mismo valor) |
 | `fechaNacimiento`, `sexo`, `fechaVencimiento`, `nacionalidad`, `nuip` | mismo nombre y valor |
 | (constante: la MRZ del generador solo admite 10 cifras) | `nuipTipoProbable` = `"nuip"` |
 | `primerApellido` + `" "` + `segundoApellido` | `apellidos` |
@@ -167,7 +167,7 @@ Registro en `evals/runners/registro.mjs`:
 "mrz-cedula-digital": { modulo: "packages/parsers/dist/index.js", exportar: "parsearMrzCedulaDigital", adaptar: aplanarMrz },
 ```
 
-`aplanarMrz` (exportada y probada en `tools/test/`): con `ok: false` devuelve `{ ok, motivo, linea }` (`linea` `null` si no aplica); con `ok: true` devuelve `ok`, `valido`, las 11 claves de `campos` con `divipolExpedicion` partido en `divipolDepartamento` y `divipolMunicipio`, `cdSerial`, `cdNacimiento`, `cdVencimiento`, `cdCompuesto` (estados), `correcciones` (número de correcciones), `errores` y `warnings` (unidos con `,`). Fixtures en `evals/fixtures/sinteticos/mrz-cedula-digital/<caso>.json` con `"sintetico": true`, `entrada` = array de 3 líneas, `opciones` = `{ "fechaReferencia": "2026-10-06" }` y `esperado` con las claves aplanadas relevantes de cada escenario. El caso de Eitol se marca en `descripcion` como "ejemplo sintético público de Eitol, caso negativo".
+`aplanarMrz` (exportada y probada en `tools/test/`): con `ok: false` devuelve `{ ok, motivo, linea }` (`linea` `null` si no aplica); con `ok: true` devuelve `ok`, `valido`, las 11 claves de `campos` (`codigoLugarMrz` tal cual, ya es un string), `cdSerial`, `cdNacimiento`, `cdVencimiento`, `cdCompuesto` (estados), `correcciones` (número de correcciones), `errores` y `warnings` (unidos con `,`). Fixtures en `evals/fixtures/sinteticos/mrz-cedula-digital/<caso>.json` con `"sintetico": true`, `entrada` = array de 3 líneas, `opciones` = `{ "fechaReferencia": "2026-10-06" }` y `esperado` con las claves aplanadas relevantes de cada escenario. El caso de Eitol se marca en `descripcion` como "ejemplo sintético público de Eitol, caso negativo".
 
 ### 13. Límite de longitud antes de cualquier expresión regular
 
@@ -187,7 +187,7 @@ Para que un humano las aplique o las rechace:
 
 ## Risks / Trade-offs
 
-- [M03 falso o en DIVIPOLA] -> El parser no traduce el código; la condición de MZ-11 evita corregir un opcional alfanumérico; renombrar el campo sería un cambio OpenSpec pequeño.
+- [M03 falso o en DIVIPOLA] -> El parser no traduce el código y su nombre (`codigoLugarMrz`) no afirma el sistema; la condición de MZ-11 evita corregir un opcional alfanumérico.
 - [Serial `ausente` acepta `valido: true` con un dígito menos de protección] -> El compuesto cubre el serial; si un humano prefiere exigir el dígito, basta cambiar MZ-10 y MZ-17 (pregunta abierta 2).
 - [Personas nacidas hace 100 años o más se leen en el siglo equivocado (1925 se lee 2025 con `REF` 2026)] -> Es un límite de la MRZ (dos cifras). Los validadores de edad de la Fase 1 marcarán una cédula de ciudadanía de un menor; el cruce con el OCR del anverso (Fase 3) lo resuelve.
 - [Un OCR que inserta o pierde caracteres produce una línea de 29 o 31] -> Rechazo `longitud-linea-invalida` y nueva captura. Realinear es un cambio futuro con su propia spec.
@@ -248,7 +248,7 @@ Decisiones tomadas en este diseño que requieren ratificación humana; ninguna b
 
 1. Desviación de `PLAN.md`: implementación propia en lugar de envolver `mrz` (decisión 1).
 2. Dígito del serial `<` como `ausente` compatible con `valido: true` (decisión 8), o exigirlo.
-3. Nombre y sistema del código de expedición: `divipolExpedicion` (DIVIPOL) frente a DIVIPOLA, a la luz del `05001` de Eitol (decisión 6).
+3. Nombre y sistema del código de expedición: DIVIPOL frente a DIVIPOLA, a la luz del `05001` de Eitol (decisión 6). Resuelta abajo: `codigoLugarMrz`, nombre neutral.
 4. Sexo `X` y `<` como `"X"` sin error (decisión 9).
 5. NUIP de 11 cifras aceptado como `ti-antigua` con N01 en una cédula de ciudadanía (decisión 7).
 6. Aplicar las propuestas de la decisión 14 a `docs/decisiones/hipotesis-formato.md`, incluida la nueva M05.
@@ -258,7 +258,18 @@ Decisiones tomadas en este diseño que requieren ratificación humana; ninguna b
 
 - Pregunta 1: se acepta el cálculo ICAO propio con `mrz@5.0.2` solo como oráculo diferencial de prueba (desviación justificada de PLAN.md: `mrz` no corrige los opcionales, corrige números a letras en nombres y quedaría fuera de la mutación).
 - Pregunta 2: se mantiene: serial con dígito `<` marcado `ausente`, válido si el compuesto cuadra.
-- Pregunta 3: el opcional de L1 se expone con un nombre neutral, `codigoLugarExpedicion`, sin afirmar el sistema; M03 queda como "sistema de codificación desconocido (DIVIPOL o DIVIPOLA)" y no se resuelve con la tabla DIVIPOL hasta confirmarlo con evidencia. Ajustar la spec por la tarea correspondiente antes de codificar.
+- Pregunta 3: el opcional de L1 se expone con un nombre neutral, `codigoLugarMrz`, sin afirmar el sistema; M03 queda como "sistema de codificación desconocido (DIVIPOL o DIVIPOLA)" y no se resuelve con la tabla DIVIPOL hasta confirmarlo con evidencia. Ajustar la spec por la tarea correspondiente antes de codificar.
 - Preguntas 4 y 5: se aceptan como propuestas, con warning.
 - Pregunta 6: las propuestas de la decisión 14 se integran en `hipotesis-formato.md` en el commit del orquestador cuando termine el investigador de hipótesis.
 - Pregunta 7: se usa solo el análogo sintético hasta confirmar fuente y licencia del espécimen.
+
+## Decisiones tras la evidencia del 2026-10-06 (`docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`)
+
+Comunicadas por el orquestador durante la implementación; prevalecen sobre las decisiones 6, 7 y 14 y sobre las preguntas 3 y 5 donde las contradigan.
+
+- **M01 confirmada (posiciones).** El parser deja de emitir `M01`. El serial `<` sigue como `ausente` (decisión 8).
+- **M02 confirmada con corrección.** El opcional de la línea 2 mide 11 caracteres y trae un NUIP de 10 cifras seguido de `<`; el "11" de fgardila es el ancho del campo. El NUIP se valida solo con `validarFormatoNuip(serie, { tipoDocumento: "cc" })` (5 a 10 cifras; se conservan las cédulas antiguas que mantienen su número); 11 cifras dan `nuip-invalido`. El parser deja de emitir `M02` y `N01` (N01 está confirmada por norma, pero ninguna fuente muestra un número de 11 cifras en una MRZ, y la MRZ solo existe en cédulas de policarbonato).
+- **M03 sigue pendiente, con codificación DIVIPOL confirmada (D05).** No se sabe si el código es de expedición o de nacimiento, y puede venir vacío (espécimen actual). El campo se llama `codigoLugarMrz`, neutral respecto a expedición o nacimiento, y vale las 5 cifras crudas como string; traducirlo con la tabla DIVIPOL queda fuera de este cambio (consumidores y cambio `divipol-registraduria`). `warnings` contiene `M03` solo si el código está presente; nunca `D05`.
+- **M04 confirmada con corrección.** El espécimen actual `back-ccd.png` tiene impreso 9 y calculado 8, con L1 `ICCOL000000012<<<<<<<<<<<<<<<<` (dígito del serial `<` y opcional vacío). El análogo sintético de MZ-20 reproduce esa forma: `["ICCOL999900123<<<<<<<<<<<<<<<<", "9007150F3407150COL9999123453<9", B3]`, compuesto impreso 9 y calculado 8 (comprobado con un cálculo ICAO independiente, que también da 8 para las líneas transcritas del espécimen).
+- **M05 (nueva, confirmada): los especímenes públicos no son autoconsistentes.** La MRZ que publica Eitol (`WALTEROS<<LAURA`) es la del espécimen anterior de la Registraduría, persona ficticia; sigue como caso negativo de MZ-20 con los mismos literales. Ninguno de los dos es fixture positivo.
+- La tabla de propuestas de la decisión 14 queda sustituida por la tabla final de `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`, que aplica el orquestador.
