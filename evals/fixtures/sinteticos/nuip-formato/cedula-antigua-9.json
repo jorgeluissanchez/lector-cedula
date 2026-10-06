@@ -1,0 +1,13 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-07: cédula antigua de 9 dígitos con puntos",
+  "entrada": "999.912.345",
+  "esperado": {
+    "valido": true,
+    "numero": "999912345",
+    "tipoProbable": "cedula-antigua",
+    "digitos": 9,
+    "warnings": []
+  }
+}

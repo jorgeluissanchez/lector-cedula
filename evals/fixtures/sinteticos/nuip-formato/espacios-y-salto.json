@@ -1,0 +1,13 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-03: espacios y salto de línea alrededor de la captura",
+  "entrada": "  9999123456\n",
+  "esperado": {
+    "valido": true,
+    "numero": "9999123456",
+    "tipoProbable": "nuip",
+    "digitos": 10,
+    "warnings": []
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-07: once dígitos en cédula de ciudadanía es longitud inválida",
+  "entrada": "99991234567",
+  "esperado": {
+    "valido": false,
+    "motivo": "longitud-invalida"
+  }
+}

@@ -1,5 +1,5 @@
 // PreToolUse (Bash|PowerShell): puertas antes de commits e instalaciones.
-import { bloquear, cola, correr, leerEvento, paquetes } from "./lib.mjs";
+import { bloquear, cola, correr, correrNode, leerEvento, paquetes } from "./lib.mjs";
 
 const evento = await leerEvento();
 const comando = String(evento.tool_input?.command ?? "");
@@ -7,14 +7,14 @@ const comando = String(evento.tool_input?.command ?? "");
 // 1. Instalaciones npm: revisar licencia antes de instalar (principio IV).
 const npm = paquetes(comando, /\bnpm\s+(?:i|install|add)\s+([^;&|\n]+)/);
 if (npm.length > 0) {
-  const r = correr(`node tools/licencia-check.mjs --package ${npm.join(" ")}`, { timeoutMs: 90_000 });
+  const r = correrNode(["tools/licencia-check.mjs", "--package", ...npm], { timeoutMs: 90_000 });
   if (!r.ok) bloquear(`Instalación bloqueada por licencia-check:\n${cola(r.salida)}`);
 }
 
 // 2. Instalaciones Python.
 const pip = paquetes(comando, /\b(?:pip3?\s+install|uv\s+add|uv\s+pip\s+install)\s+([^;&|\n]+)/);
 if (pip.length > 0) {
-  const r = correr(`node tools/licencia-check.mjs --pip ${pip.join(" ")}`, { timeoutMs: 30_000 });
+  const r = correrNode(["tools/licencia-check.mjs", "--pip", ...pip], { timeoutMs: 30_000 });
   if (!r.ok) bloquear(`Instalación bloqueada por licencia-check:\n${cola(r.salida)}`);
 }
 

@@ -31,6 +31,10 @@ describe("paquetes", () => {
   it("corta en operadores de la shell", () => {
     expect(paquetes("npm i mrz && npm test", NPM)).toEqual(["mrz"]);
   });
+  it("ignora redirecciones de la shell", () => {
+    expect(paquetes("npm install -D @playwright/test@latest 2>&1 | tail -1", NPM)).toEqual(["@playwright/test@latest"]);
+    expect(paquetes("npm i mrz >log.txt", NPM)).toEqual(["mrz"]);
+  });
   it("no detecta npm install sin paquetes", () => {
     expect(paquetes("npm install", NPM)).toEqual([]);
   });

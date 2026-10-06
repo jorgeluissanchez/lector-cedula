@@ -1,0 +1,13 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-07: límite inferior aceptado (5 dígitos)",
+  "entrada": "99991",
+  "esperado": {
+    "valido": true,
+    "numero": "99991",
+    "tipoProbable": "cedula-antigua",
+    "digitos": 5,
+    "warnings": []
+  }
+}

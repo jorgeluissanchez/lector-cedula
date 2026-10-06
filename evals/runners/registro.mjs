@@ -8,4 +8,6 @@
  *
  * Al añadir un parser nuevo, regístralo aquí y añade fixtures en evals/fixtures/<tipo>/.
  */
-export const EVALUADORES = {};
+export const EVALUADORES = {
+  "nuip-formato": { modulo: "packages/parsers/dist/index.js", exportar: "validarFormatoNuip" },
+};

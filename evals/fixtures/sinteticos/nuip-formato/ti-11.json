@@ -1,0 +1,18 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-09: tarjeta de identidad de 11 dígitos marca la hipótesis N01",
+  "entrada": "99991234567",
+  "opciones": {
+    "tipoDocumento": "ti"
+  },
+  "esperado": {
+    "valido": true,
+    "numero": "99991234567",
+    "tipoProbable": "ti-antigua",
+    "digitos": 11,
+    "warnings": [
+      "N01"
+    ]
+  }
+}

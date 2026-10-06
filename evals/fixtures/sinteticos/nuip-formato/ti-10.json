@@ -1,0 +1,16 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-09: tarjeta de identidad de 10 dígitos es NUIP",
+  "entrada": "9999123456",
+  "opciones": {
+    "tipoDocumento": "ti"
+  },
+  "esperado": {
+    "valido": true,
+    "numero": "9999123456",
+    "tipoProbable": "nuip",
+    "digitos": 10,
+    "warnings": []
+  }
+}

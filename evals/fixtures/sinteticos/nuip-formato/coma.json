@@ -1,0 +1,10 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-05: coma no es separador admitido",
+  "entrada": "9,999,123,456",
+  "esperado": {
+    "valido": false,
+    "motivo": "caracteres-invalidos"
+  }
+}

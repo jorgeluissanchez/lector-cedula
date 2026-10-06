@@ -21,6 +21,12 @@ export function correr(comando, { timeoutMs = 240_000 } = {}) {
   return { ok: r.status === 0, salida };
 }
 
+/** Ejecuta un script de Node con argumentos, sin pasar por la shell (evita que cmd.exe interprete nada). */
+export function correrNode(args, { timeoutMs = 120_000 } = {}) {
+  const r = spawnSync(process.execPath, args, { cwd: RAIZ, encoding: "utf8", timeout: timeoutMs });
+  return { ok: r.status === 0, salida: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+}
+
 export function rutaRelativa(ruta) {
   return relative(RAIZ, resolve(RAIZ, ruta)).split("\\").join("/");
 }
@@ -53,6 +59,7 @@ export function paquetes(texto, regex) {
     .map((s) => s.replace(/^["']|["']$/g, ""))
     .filter((s) => s.length > 0)
     .filter((s) => !s.startsWith("-"))
+    .filter((s) => !/[<>&|;$`()]/.test(s)) // redirecciones y operadores de la shell, no paquetes
     .filter((s) => !/^(\.|\/|[a-z]:|file:|git\+|https?:)/i.test(s))
     .filter((s) => !s.includes("/") || /^@[\w.-]+\/[\w.-]+/.test(s));
 }

@@ -1,0 +1,13 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-09: tarjeta de identidad de 9 dígitos es longitud inválida",
+  "entrada": "999912345",
+  "opciones": {
+    "tipoDocumento": "ti"
+  },
+  "esperado": {
+    "valido": false,
+    "motivo": "longitud-invalida"
+  }
+}

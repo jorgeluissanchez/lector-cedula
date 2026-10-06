@@ -1,0 +1,10 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-04: solo ceros es longitud inválida",
+  "entrada": "0.000.000",
+  "esperado": {
+    "valido": false,
+    "motivo": "longitud-invalida"
+  }
+}

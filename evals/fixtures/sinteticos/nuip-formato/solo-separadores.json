@@ -1,0 +1,10 @@
+{
+  "sintetico": true,
+  "tipo": "nuip-formato",
+  "descripcion": "NF-06: solo separadores admitidos",
+  "entrada": " .-. ",
+  "esperado": {
+    "valido": false,
+    "motivo": "vacio"
+  }
+}
