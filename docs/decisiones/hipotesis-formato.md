@@ -46,3 +46,24 @@ Las aplica el cambio OpenSpec `divipol-registraduria` (`buscarDivipol`, DV-04 a 
 | D03 | La numeración de consulados (departamento 88) cambió entre versiones de DIVIPOL; el país de un código 88 puede no corresponder al de una cédula reciente | Comparación Eitol frente a `DIVIPOL.TXT` 2026 | pendiente | IRLANDA `88480` frente a `88470`; HUNGRIA `88450` frente a `88445` |
 | D04 | El código `00000` (departamento 00, municipio 000) en el bloque demográfico significa lugar no registrado | Bloque público `<valor real omitido por privacidad>` (fgardila) | pendiente | Un solo ejemplo público |
 | D05 | El opcional de la línea 1 de la MRZ (M03), si es un lugar, usa códigos DIVIPOL y no DIVIPOLA | Ninguna fuente lo afirma | pendiente | El ejemplo sintético de Eitol `05001` es CARTAGENA en DIVIPOL y MEDELLÍN en DIVIPOLA; la emite el parser MRZ, no la búsqueda |
+
+## Generador sintético (refinamientos que asume `@lector-cedula/fixtures`)
+
+Concreciones que el generador del cambio OpenSpec `generador-fixtures-sinteticos` necesita para producir bytes exactos y que H01 a H11 y M01 a M04 no fijan. Cada fixture las declara en `hipotesis[]` (requisito FX-14). Si una se refuta, se corrige el generador y se sube el MAJOR de `VERSION_CONTRATO`.
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| G01 | Disposición exacta de la trama completa: `[0,2)` 2 dígitos, `[2,10)` AFIS, `[10,24)` NUL, `[24,32)` `PubDSK_1`, `[32]` NUL, `[33,39)` 6 dígitos, `[39]` NUL, `[40,48)` 8 dígitos de significado desconocido, `[48,58)` NUIP rellenado con `0` a la izquierda, nombres en `[58,81)`, `[81,104)`, `[104,127)`, `[127,150)` (23 bytes, relleno NUL a la derecha; concreta H04 como intervalos semiabiertos), bloque demográfico desde 150 | Eitol (offsets), fgardila (token numérico antes del apellido) | pendiente | Coherente con H02, H03 y H04; los 8 dígitos de `[40,48)` podrían ser NUL en cédulas reales |
+| G02 | La trama "Windows truncada" solo pierde los 11 NUL de `[13,24)` de la cabecera; los NUL de relleno de los nombres y separadores se conservan | H02 (Eitol: marcador en el byte 13) | pendiente | Se desconoce si el lector trunca también otros runs de NUL |
+| G03 | En la variante sin `PubDSK` el marcador se sustituye por NUL y desaparece un byte antes de los 6 dígitos, de modo que los campos posteriores empiezan una posición antes (desplazamiento −1) | H07 (fgardila 2020, pmogollons, Yeison07) | pendiente | La dirección del desplazamiento no está documentada con payloads |
+| G04 | En la variante fecha-primero, tras `02` + fecha + sexo siguen departamento (2), municipio (3), 1 dígito y RH, como en H05 | H08 (fgardila 2026 lee `\d*` entre sexo y RH) | pendiente | Solo fixtures sintéticos de fgardila |
+| G05 | Línea 3 de la MRZ: `APELLIDO1<APELLIDO2<<NOMBRE1<NOMBRE2`, espacios internos como `<`, Ñ transliterada a `N` (ICAO 9303 parte 3), relleno con `<`; el generador no trunca nombres largos | `docs/investigacion/01-formato-cedula-y-repos.md` sección 2, ICAO 9303 | pendiente | Ejemplo sintético de Eitol; sin espécimen con Ñ ni con apellido compuesto |
+
+## Dimensiones físicas (captura)
+
+Las aplica el cambio OpenSpec `captura-calidad-pwa`: C01 fija la proporción de la guía de encuadre (CAM-08) y C02 justifica la resolución mínima pedida a la cámara (CAM-04). No hay `warnings[]` porque no son salida de un parser; si se refutan, se abre un cambio OpenSpec sobre `captura-camara`.
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| C01 | La cédula amarilla y la digital tienen formato ID-1 de ISO/IEC 7810 (85,60 x 53,98 mm, proporción 1,5858) | ICAO 9303 (TD1 implica ID-1) para la digital; conocimiento general para la amarilla | pendiente | La digital usa MRZ TD1 (doc 01, sección 2); ninguna medición publicada de la amarilla |
+| C02 | El PDF417 del reverso de la amarilla ocupa al menos el 75 % del ancho de la tarjeta, de modo que con la guía de 1541 px de CAM-08 sobre un frame de 1920x1080 el código mide unos 1156 px o más (2 px por módulo) | Skill `captura-movil` (1156 px), estimación sin medir | pendiente | Sin medición sobre espécimen ni cédula real; si el código es más estrecho, 1920x1080 no basta y habrá que pedir 4K o acercar más |
