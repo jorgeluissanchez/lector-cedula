@@ -46,3 +46,5 @@ reports/lighthouse/
 .stryker-tmp*/
 stryker-*.tmp.config.mjs
 scratchpad/
+vitest.stryker-*.tmp.config.*
+*.tmp.config.*
