@@ -1,10 +1,15 @@
 // Decodificación del PDF417 de la cédula amarilla desde una imagen (spec lectura-pdf417-imagen, LPI-01 a LPI-08).
 // Devuelve los bytes crudos del símbolo, nunca el texto. No escribe en consola ni a disco; la imagen vive en memoria.
+import { parsearPdf417Amarilla } from "@lector-cedula/parsers";
+import { aGris, cajaBanda, recortar, TAMANOS_VENTANA, ventanas } from "./localizar.js";
 import { decodificarPixeles, esPixeles, girar, type DecodificadorPixeles, type Pixeles, reescalar } from "./pixeles.js";
 
 export type { DecodificadorPixeles, Pixeles } from "./pixeles.js";
 
-export type IntentoPdf417 = "original" | "escala-0.75" | "escala-0.5" | "giro+2" | "giro-2";
+export type IntentoBase = "original" | "escala-0.75" | "escala-0.5" | "giro+2" | "giro-2";
+/** Intentos de localización (LPI-14). */
+export type IntentoBanda = `banda${"" | "-global"}${"" | "-giro+2" | "-giro-2"}`;
+export type IntentoPdf417 = IntentoBase | IntentoBanda | `ventana-${(typeof TAMANOS_VENTANA)[number]}`;
 export type ErrorPdf417Imagen = "entrada-invalida" | "imagen-ilegible" | "pdf417-no-encontrado";
 export type ResultadoPdf417Imagen = { ok: true; bytes: Uint8Array; intento: IntentoPdf417 } | { ok: false; error: ErrorPdf417Imagen };
 
@@ -14,6 +19,9 @@ export interface OpcionesLector {
   readonly tryHarder: true;
   readonly tryRotate: true;
   readonly maxNumberOfSymbols: 1;
+  /** Solo en los intentos de localización (LPI-14). */
+  readonly tryDownscale?: true;
+  readonly binarizer?: "LocalAverage" | "GlobalHistogram";
 }
 
 /** Subconjunto de `readBarcodes` de zxing-wasm que usa el decodificador; inyectable en pruebas (design.md, decisión 4). */
@@ -22,10 +30,22 @@ export type DecodificadorPdf417 = (imagen: Pixeles, opciones: OpcionesLector) =>
 export interface DependenciasDecodificador {
   readonly readBarcodes?: DecodificadorPdf417;
   readonly decodificarPixeles?: DecodificadorPixeles;
+  /** Límite de tiempo total en ms (LPI-12); por defecto 15 000. */
+  readonly limiteMs?: number;
+  /** Reloj en ms (LPI-12); por defecto `performance.now`. */
+  readonly ahora?: () => number;
+  /** Acepta los bytes de un intento de localización (LPI-11); por defecto el parser de la amarilla. */
+  readonly aceptar?: (bytes: Uint8Array) => boolean;
+  /** `false` desactiva banda y rejilla (LPI-11). */
+  readonly localizar?: boolean;
 }
 
+export const LIMITE_MS_POR_DEFECTO = 15_000;
+/** Por encima de este número de píxeles la banda va antes de los intentos de LPI-02 (LPI-11). */
+const PIXELES_FOTO_GRANDE = 4_000_000;
+
 /** Intentos en orden (LPI-02): imagen original, reducciones y giros de ±2° que compensan la tolerancia de zxing-cpp. */
-const INTENTOS: readonly (readonly [IntentoPdf417, (p: Pixeles) => Pixeles])[] = [
+const INTENTOS: readonly (readonly [IntentoBase, (p: Pixeles) => Pixeles])[] = [
   ["original", (p) => p],
   ["escala-0.75", (p) => reescalar(p, 0.75)],
   ["escala-0.5", (p) => reescalar(p, 0.5)],
@@ -33,8 +53,57 @@ const INTENTOS: readonly (readonly [IntentoPdf417, (p: Pixeles) => Pixeles])[] =
   ["giro-2", (p) => girar(p, -2)],
 ];
 
-function opcionesLector(): OpcionesLector {
-  return { formats: ["PDF417"], tryHarder: true, tryRotate: true, maxNumberOfSymbols: 1 };
+function opcionesLector(binarizer?: "LocalAverage" | "GlobalHistogram"): OpcionesLector {
+  const base: OpcionesLector = { formats: ["PDF417"], tryHarder: true, tryRotate: true, maxNumberOfSymbols: 1 };
+  return binarizer === undefined ? base : { ...base, tryDownscale: true, binarizer };
+}
+
+/** Un intento: nombre, imagen (perezosa), opciones y si exige que el parser acepte los bytes. */
+interface Intento {
+  readonly nombre: IntentoPdf417;
+  readonly imagen: () => Pixeles;
+  readonly opciones: OpcionesLector;
+  readonly exigeAceptar: boolean;
+}
+
+function* intentosBase(p: Pixeles): Generator<Intento> {
+  for (const [nombre, transformar] of INTENTOS) yield { nombre, imagen: () => transformar(p), opciones: opcionesLector(), exigeAceptar: false };
+}
+
+function* intentosBanda(p: Pixeles): Generator<Intento> {
+  const caja = cajaBanda(p);
+  if (caja === null) return;
+  const recorte = recortar(p, caja);
+  for (const [giro, sufijo] of [[0, ""], [2, "-giro+2"], [-2, "-giro-2"]] as const) {
+    const imagen = () => (giro === 0 ? recorte : girar(recorte, giro));
+    yield { nombre: `banda${sufijo}`, imagen, opciones: opcionesLector("LocalAverage"), exigeAceptar: true };
+    yield { nombre: `banda-global${sufijo}`, imagen, opciones: opcionesLector("GlobalHistogram"), exigeAceptar: true };
+  }
+}
+
+function* intentosRejilla(p: Pixeles): Generator<Intento> {
+  for (const tamano of TAMANOS_VENTANA) {
+    for (const caja of ventanas(p.width, p.height, tamano)) {
+      yield { nombre: `ventana-${tamano}`, imagen: () => recortar(p, caja), opciones: opcionesLector("LocalAverage"), exigeAceptar: true };
+    }
+  }
+}
+
+/** Orden de intentos (LPI-02, LPI-11): en fotos grandes la banda va primero. */
+function* intentos(p: Pixeles, localizar: boolean): Generator<Intento> {
+  if (!localizar) return yield* intentosBase(p);
+  if (p.width * p.height > PIXELES_FOTO_GRANDE) {
+    yield* intentosBanda(p);
+    yield* intentosBase(p);
+  } else {
+    yield* intentosBase(p);
+    yield* intentosBanda(p);
+  }
+  yield* intentosRejilla(p);
+}
+
+function aceptarPorDefecto(bytes: Uint8Array): boolean {
+  return parsearPdf417Amarilla(bytes).ok;
 }
 
 // Especificador en variable: módulo solo de Node, que el empaquetador del navegador no debe resolver.
@@ -71,6 +140,10 @@ function lectorDiferido(): DecodificadorPdf417 {
 export function crearDecodificador(dependencias: DependenciasDecodificador = {}): (imagen: unknown) => Promise<ResultadoPdf417Imagen> {
   const leer = dependencias.readBarcodes ?? lectorDiferido();
   const aPixeles = dependencias.decodificarPixeles ?? decodificarPixeles;
+  const limiteMs = dependencias.limiteMs ?? LIMITE_MS_POR_DEFECTO;
+  const ahora = dependencias.ahora ?? (() => performance.now());
+  const aceptar = dependencias.aceptar ?? aceptarPorDefecto;
+  const localizar = dependencias.localizar ?? true;
   return async (imagen) => {
     let pixeles: Pixeles | null;
     try {
@@ -81,15 +154,21 @@ export function crearDecodificador(dependencias: DependenciasDecodificador = {})
       pixeles = null;
     }
     if (pixeles === null) return { ok: false, error: "imagen-ilegible" };
-    for (const [intento, transformar] of INTENTOS) {
+    const inicio = ahora();
+    let primero = true;
+    for (const intento of intentos(aGris(pixeles), localizar)) {
+      if (!primero && ahora() - inicio >= limiteMs) break;
+      primero = false;
       let resultados;
       try {
-        resultados = await leer(transformar(pixeles), opcionesLector());
+        resultados = await leer(intento.imagen(), intento.opciones);
       } catch {
         return { ok: false, error: "imagen-ilegible" };
       }
-      const valido = resultados.find((r) => r.isValid && r.bytes instanceof Uint8Array && r.bytes.length > 0);
-      if (valido !== undefined) return { ok: true, bytes: Uint8Array.from(valido.bytes), intento };
+      const valido = resultados.find(
+        (r) => r.isValid && r.bytes instanceof Uint8Array && r.bytes.length > 0 && (!intento.exigeAceptar || aceptar(r.bytes)),
+      );
+      if (valido !== undefined) return { ok: true, bytes: Uint8Array.from(valido.bytes), intento: intento.nombre };
     }
     return { ok: false, error: "pdf417-no-encontrado" };
   };
@@ -97,6 +176,7 @@ export function crearDecodificador(dependencias: DependenciasDecodificador = {})
 
 /**
  * Decodifica el PDF417 de una imagen: bytes PNG/JPEG (`Uint8Array`) o `ImageData`. Nunca lanza.
- * Intenta en el tamaño original, reducida a 0,75 y 0,5 y girada ±2°; devuelve los bytes crudos del primer símbolo válido.
+ * Convierte a gris, intenta en el tamaño original, reducida a 0,75 y 0,5 y girada ±2° y después localiza el código por
+ * banda de bordes y rejilla de ventanas (LPI-11), con un límite de 15 s; devuelve los bytes crudos del primer símbolo válido.
  */
 export const decodificarPdf417Imagen: (imagen: unknown) => Promise<ResultadoPdf417Imagen> = crearDecodificador();

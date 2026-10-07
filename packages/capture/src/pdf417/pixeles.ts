@@ -1,5 +1,6 @@
 // Paso de bytes PNG/JPEG o ImageData a píxeles RGBA y reescalado por promedio de área (spec lectura-pdf417-imagen,
-// LPI-02 y LPI-03). Todo en memoria: nada se escribe a disco.
+// LPI-02 y LPI-03). Todo en memoria: nada se escribe a disco. Aplica la orientación EXIF del JPEG (LPI-10).
+import { aplicarOrientacion, orientacionExif } from "./orientacion.js";
 
 /** Píxeles RGBA con la forma de `ImageData` (sirve también en Node, donde `ImageData` no existe). */
 export interface Pixeles {
@@ -55,11 +56,12 @@ async function decodificarEnNode(bytes: Uint8Array, tipo: "png" | "jpeg"): Promi
   }
   const jpeg = ((await import(/* @vite-ignore */ MODULO_JPEG)) as { default: typeof import("jpeg-js") }).default;
   const img = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: true });
-  return { data: new Uint8ClampedArray(img.data.buffer, img.data.byteOffset, img.data.byteLength), width: img.width, height: img.height };
+  const p = { data: new Uint8ClampedArray(img.data.buffer, img.data.byteOffset, img.data.byteLength), width: img.width, height: img.height };
+  return aplicarOrientacion(p, orientacionExif(bytes));
 }
 
 async function decodificarEnNavegador(bytes: Uint8Array): Promise<Pixeles> {
-  const mapa = await createImageBitmap(new Blob([bytes as Uint8Array<ArrayBuffer>]));
+  const mapa = await createImageBitmap(new Blob([bytes as Uint8Array<ArrayBuffer>]), { imageOrientation: "from-image" });
   const lienzo = new OffscreenCanvas(mapa.width, mapa.height);
   const ctx = lienzo.getContext("2d");
   if (ctx === null) throw new Error("sin contexto 2d");

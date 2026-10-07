@@ -104,13 +104,13 @@ describe("LPI-02 Opciones del lector y reintentos", { timeout: LIMITE_MS }, () =
     expect(r).toStrictEqual({ ok: true, bytes: F.bytes, intento: "giro+2" });
   });
 
-  it("LPI-02 Sin símbolo en ningún intento", async () => {
+  it("LPI-02 Sin símbolo en ningún intento (LPI-11 Modo sin localización)", async () => {
     const recibidas: Pixeles[] = [];
     const lector: DecodificadorPdf417 = async (img) => {
       recibidas.push(img);
       return [];
     };
-    const r = await crearDecodificador({ readBarcodes: lector })(S);
+    const r = await crearDecodificador({ readBarcodes: lector, localizar: false })(S);
     expect(recibidas.map((x) => `${x.width}x${x.height}`)).toStrictEqual(["1920x1080", "1440x810", "960x540", "1920x1080", "1920x1080"]);
     expect(recibidas[3]?.data).not.toStrictEqual(recibidas[4]?.data);
     expect(r).toStrictEqual({ ok: false, error: "pdf417-no-encontrado" });
