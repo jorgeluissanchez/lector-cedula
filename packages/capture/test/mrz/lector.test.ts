@@ -157,7 +157,7 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
     const alterado = generarMrzTd1(PERSONA_BASE, { variante: "cd-compuesto-alterado" });
     const { reg, crearWorker } = falso([alterado.texto]);
     const r = await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF);
-    expect(reg.imagenes).toHaveLength(2);
+    expect(reg.imagenes).toHaveLength(3);
     expect(r).toMatchObject({ ok: true, intento: "proyeccion", digitosValidos: 3 });
   });
 
@@ -171,7 +171,7 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
   it("LMI-04 Nada legible", async () => {
     const { reg, crearWorker } = falso([""]);
     expect(await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF)).toStrictEqual({ ok: false, error: "mrz-no-encontrada" });
-    expect(reg.imagenes).toHaveLength(2);
+    expect(reg.imagenes).toHaveLength(3);
   });
 
   it("LMI-04 Un error del OCR cuenta como texto vacío y se sigue con el siguiente candidato", async () => {

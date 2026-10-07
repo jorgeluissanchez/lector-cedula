@@ -1,4 +1,4 @@
-// Localización de la franja MRZ TD1 en una imagen (spec lectura-mrz-imagen, LMI-01 y LMI-01b; design.md, decisión 2).
+// Localización de la franja MRZ TD1 en una imagen (spec lectura-mrz-imagen, LMI-01, LMI-01b y LMI-10; design.md, decisión 2).
 // Pura y total: no lanza, no modifica la entrada y no guarda nada. La validación final la dan los dígitos de control.
 
 export interface CajaMrz {
@@ -8,7 +8,7 @@ export interface CajaMrz {
   readonly alto: number;
 }
 
-export type MetodoLocalizacion = "proyeccion" | "recorte-inferior";
+export type MetodoLocalizacion = "proyeccion" | "recorte-inferior" | "imagen-completa";
 
 export interface CandidatoMrz {
   readonly metodo: MetodoLocalizacion;
@@ -158,7 +158,8 @@ function candidatoProyeccion(p: PixelesRgba): CandidatoMrz | null {
 
 /**
  * Candidatos de la franja MRZ en orden de prueba (LMI-01): `"proyeccion"` si hay 3 bandas regulares en la mitad
- * inferior y siempre `"recorte-inferior"` (el 40 % inferior). `[]` solo si la entrada no tiene forma de píxeles.
+ * inferior, siempre `"recorte-inferior"` (el 40 % inferior) y, al final, `"imagen-completa"` (LMI-10: la foto ya es el
+ * recorte de la MRZ). `[]` solo si la entrada no tiene forma de píxeles.
  */
 export function localizarFranjaMrz(pixeles: unknown): CandidatoMrz[] {
   if (!esPixelesRgba(pixeles)) return [];
@@ -166,5 +167,6 @@ export function localizarFranjaMrz(pixeles: unknown): CandidatoMrz[] {
   const y = Math.round((1 - FRACCION_INFERIOR) * h);
   const inferior: CandidatoMrz = { metodo: "recorte-inferior", caja: { x: 0, y, ancho: w, alto: h - y } };
   const proyeccion = candidatoProyeccion(pixeles);
-  return proyeccion === null ? [inferior] : [proyeccion, inferior];
+  const completa: CandidatoMrz = { metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: w, alto: h } };
+  return proyeccion === null ? [inferior, completa] : [proyeccion, inferior, completa];
 }

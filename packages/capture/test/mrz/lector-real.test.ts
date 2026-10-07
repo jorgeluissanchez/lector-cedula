@@ -11,6 +11,7 @@ import { PNG } from "pngjs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
 import { crearLectorMrz, type LectorMrz, type ResultadoLectorMrz } from "../../src/mrz/lector.js";
+import { localizarFranjaMrz } from "../../src/mrz/localizar.js";
 
 const RAIZ = resolve(fileURLToPath(new URL("../../../..", import.meta.url)));
 const MODELO = join(RAIZ, "models", "tesseract");
@@ -19,6 +20,9 @@ const P = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
 
 let R: Uint8Array;
 let F: Uint8Array;
+/** Recorte sintético que contiene solo las 3 líneas MRZ (LMI-10). */
+let M: Uint8Array;
+let dimM: { width: number; height: number };
 let lector: LectorMrz;
 let vacio: string;
 
@@ -56,7 +60,14 @@ const AJENAS = /^(node_modules|\.git|test-results|coverage|reports|\.stryker-tmp
 beforeAll(async () => {
   if (!existsSync(join(MODELO, "mrz.traineddata"))) throw new Error("falta el modelo: ejecuta npm run modelos:mrz");
   const render = await crearRenderizador();
-  R = (await render.render(P.lineas)).bytes;
+  const r = await render.render(P.lineas);
+  R = r.bytes;
+  const fuente = PNG.sync.read(Buffer.from(R));
+  const { x, y, ancho, alto } = r.cajaMrz;
+  const recorte = new PNG({ width: ancho, height: alto });
+  PNG.bitblt(fuente, recorte, x, y, ancho, alto, 0, 0);
+  M = new Uint8Array(PNG.sync.write(recorte));
+  dimM = { width: ancho, height: alto };
   F = (await render.render(P.lineas, { foto: true })).bytes;
   await render.cerrar();
   lector = crearLectorMrz({ rutaModelo: MODELO });
@@ -142,5 +153,13 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
 
   it("LMI-06 Foto sintética completa", async () => {
     lecturaCorrecta(await lector.leer(F, REF));
+  });
+
+  it("LMI-10 Recorte que contiene solo la MRZ", async () => {
+    const c = localizarFranjaMrz(PNG.sync.read(Buffer.from(M)));
+    expect(c.at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: dimM.width, alto: dimM.height } });
+    const r = await lector.leer(M, REF);
+    lecturaCorrecta(r);
+    expect(r).toMatchObject({ ok: true, intento: "imagen-completa", digitosValidos: 4 });
   });
 });

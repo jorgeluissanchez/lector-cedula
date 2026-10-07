@@ -50,13 +50,16 @@ describe("LMI-01 Localización de la franja MRZ", { timeout: 60_000 }, () => {
   });
 
   it("LMI-01 Sin bandas, solo recorte inferior", () => {
-    expect(localizarFranjaMrz(lienzo(1000, 600))).toStrictEqual([{ metodo: "recorte-inferior", caja: { x: 0, y: 360, ancho: 1000, alto: 240 } }]);
+    expect(localizarFranjaMrz(lienzo(1000, 600))).toStrictEqual([
+      { metodo: "recorte-inferior", caja: { x: 0, y: 360, ancho: 1000, alto: 240 } },
+      { metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: 1000, alto: 600 } },
+    ]);
   });
 
   it("LMI-01 Dos bandas no bastan", async () => {
     const r = await render.render([P.lineas[0], P.lineas[1], ""]);
     const c = localizarFranjaMrz(pixelesPng(r.bytes));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior"]);
+    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01 Nunca lanza (fc.anything)", () => {
@@ -89,7 +92,8 @@ describe("LMI-01 Localización de la franja MRZ", { timeout: 60_000 }, () => {
       fc.property(valido, (x) => {
         const r = localizarFranjaMrz(x);
         expect(r.length).toBeGreaterThanOrEqual(1);
-        expect(r.at(-1)?.metodo).toBe("recorte-inferior");
+        expect(r.at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: x.width, alto: x.height } });
+        expect(r.at(-2)?.metodo).toBe("recorte-inferior");
         for (const { caja } of r) {
           expect(caja.x).toBeGreaterThanOrEqual(0);
           expect(caja.y).toBeGreaterThanOrEqual(0);
@@ -103,7 +107,7 @@ describe("LMI-01 Localización de la franja MRZ", { timeout: 60_000 }, () => {
 
   it("LMI-01 Acepta Uint8Array y Uint8ClampedArray; rechaza lados no enteros o negativos", () => {
     const l = lienzo(10, 10);
-    expect(localizarFranjaMrz({ ...l, data: new Uint8Array(l.data) })).toHaveLength(1);
+    expect(localizarFranjaMrz({ ...l, data: new Uint8Array(l.data) })).toHaveLength(2);
     expect(localizarFranjaMrz({ ...l, width: 10.5 })).toStrictEqual([]);
     expect(localizarFranjaMrz({ ...l, height: -10 })).toStrictEqual([]);
     expect(localizarFranjaMrz({ ...l, data: Array.from(l.data) })).toStrictEqual([]);
@@ -124,7 +128,7 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
 
   it("LMI-01b Bandas irregulares", () => {
     const c = localizarFranjaMrz(lienzo(1000, 600, [tres[0], tres[1], [50, 480, 900, 40]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior"]);
+    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01b La caja se recorta a la imagen", () => {
@@ -134,12 +138,12 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
 
   it("LMI-01b Solo la mitad inferior cuenta", () => {
     const c = localizarFranjaMrz(lienzo(1000, 600, [[50, 100, 900, 20], [50, 140, 900, 20], [50, 180, 900, 20]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior"]);
+    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01b Separaciones irregulares", () => {
     const c = localizarFranjaMrz(lienzo(1000, 600, [[50, 400, 900, 20], [50, 440, 900, 20], [50, 520, 900, 20]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior"]);
+    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01b Con 4 bandas toma el trío inferior regular", () => {
@@ -150,7 +154,7 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
   it("LMI-01b Una fila con menos del 0,5 % del ancho en tinta no es banda", () => {
     // 4 píxeles de tinta en 1000 de ancho (0,4 %): ninguna banda.
     const c = localizarFranjaMrz(lienzo(1000, 600, [[50, 400, 4, 20], [50, 440, 4, 20], [50, 480, 4, 20]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior"]);
+    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
     const d = localizarFranjaMrz(lienzo(1000, 600, [[50, 400, 5, 20], [50, 440, 5, 20], [50, 480, 5, 20]]));
     expect(d[0]?.metodo).toBe("proyeccion");
   });
@@ -241,5 +245,18 @@ describe("LMI-01b Piezas de la proyección (límites exactos)", { timeout: 60_00
     expect(d[0]).toStrictEqual({ metodo: "proyeccion", caja: { x: 40, y: 291, ancho: 920, alto: 119 } });
     const e = localizarFranjaMrz(lienzo(1000, 604, [[50, 300, 900, 20], [50, 340, 900, 20], [50, 380, 900, 20]]));
     expect(e[0]).toStrictEqual({ metodo: "proyeccion", caja: { x: 40, y: 292, ancho: 920, alto: 118 } });
+  });
+});
+
+describe("LMI-10 Candidato de imagen completa", { timeout: 60_000 }, () => {
+  it("LMI-10 Orden de candidatos en el reverso completo", async () => {
+    const r = await render.render(P.lineas);
+    const c = localizarFranjaMrz(pixelesPng(r.bytes));
+    expect(c.map((x) => x.metodo)).toStrictEqual(["proyeccion", "recorte-inferior", "imagen-completa"]);
+    expect(c.at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: r.width, alto: r.height } });
+  });
+
+  it("LMI-10 Lienzo sin bandas: el último candidato es la imagen completa", () => {
+    expect(localizarFranjaMrz(lienzo(37, 23)).at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: 37, alto: 23 } });
   });
 });
