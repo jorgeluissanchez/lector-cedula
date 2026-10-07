@@ -28,6 +28,7 @@ Estados: **pendiente**, **confirmada**, **refutada**. La evidencia de confirmaci
 | M02 | El NUIP va en el opcional de la línea 2 [18-28], 10 dígitos (Eitol) u 11 (fgardila) | Eitol, fgardila | pendiente | |
 | M03 | El opcional de la línea 1 [15-19] es el DIVIPOL de expedición (depto 2 + municipio 3) | Eitol | pendiente | fgardila lo ignora |
 | M04 | El espécimen público `back-ccd.png` tiene el dígito compuesto inválido | fgardila | pendiente | Calcula 9, impreso 8 |
+| M05 | La MRZ TD1 de la cédula digital ocupa la franja inferior del reverso (zona de unos 17,9 mm de alto, ICAO 9303 parte 5), en 3 líneas monoespaciadas de alto uniforme impresas en OCR-B; la OCR-B de Skala (`evals/sinteticos/fuentes/OCRB.otf`) es suficientemente parecida a la impresa para medir el lector con sintéticas | ICAO 9303 partes 3 y 5; cambio OpenSpec `leer-mrz-desde-imagen` (LMI-01, LMI-06) | pendiente | Sin medición sobre espécimen ni cédula real; la exactitud real se mide con el set de campo cifrado |
 
 ## Número de identificación (formato)
 
