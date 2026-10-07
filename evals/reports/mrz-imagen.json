@@ -1,0 +1,50 @@
+{
+  "limpias": {
+    "n": 200,
+    "correctas": 200,
+    "falsas": 0
+  },
+  "distorsiones": {
+    "rotacion+2": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    },
+    "rotacion-2": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    },
+    "blur1": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    },
+    "brillo+20": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    },
+    "brillo-20": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    },
+    "jpeg70": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    },
+    "escala0.8": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    },
+    "ruido8": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
+    }
+  },
+  "cumple": true
+}

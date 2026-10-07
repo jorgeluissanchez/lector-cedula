@@ -13,3 +13,11 @@ Notas:
 - La fuente no tiene identificador SPDX de la lista permitida; se asimila a dominio público/permisiva. Requiere decisión humana (principio IV) antes de versionarla.
 - El zip de la fuente incluye scripts de autotools bajo GPL con excepción; no se copian.
 - Descartados: `fastmrz` y `alsenet mrz-scanner` (AGPL, constitución), `@napi-rs/canvas` (MIT, pero binario nativo con riesgo frente a la directiva de Control de aplicaciones de Windows; el render se hace en el Chromium de Playwright).
+
+## Comprobación de la tarea 1 (2026-10-06): `mrz.traineddata` con Tesseract.js 7.0.0
+
+- El modelo descargado coincide: SHA-256 `e44f5b7a…a9bd`, 11 396 382 bytes. La fuente `OCRB.otf` coincide: `87c8d5bf…8707`.
+- `mrz.traineddata` (tessdata_best, coma flotante) **carga y lee** con los cores `tesseract-core-simd-lstm`, `tesseract-core-lstm` y `tesseract-core` de `tesseract.js-core@7.0.0`.
+- Con el core `tesseract-core-relaxedsimd-lstm`, que Tesseract.js elige por defecto en Node 24 y en Chromium con relaxed SIMD, aborta: `missing function: _ZN9tesseract13DotProductSSEEPKfS1_i`. El parámetro `dotproduct` no lo evita.
+- Decisión: no se aplica la alternativa `eng` (decisión 2 del orquestador). En Node, worker propio `packages/capture/worker/tesseract-node.cjs` que fija `tesseract-core-simd-lstm` (y no tiene `fetch` ni escribe caché). En el navegador, `rutaCore` apunta al archivo `tesseract-core-simd-lstm.wasm.js` (si `corePath` termina en `.js`, Tesseract.js lo usa tal cual) y `rutaWorker` al `worker.min.js` local; sin ambas rutas el lector devuelve `modelo-no-disponible` en vez de usar la CDN.
+- Las opciones de LMI-02 existen con esos nombres en 7.0.0 (`langPath`, `gzip`, `cacheMethod`, `OEM.LSTM_ONLY = 1`, `tessedit_char_whitelist`, `tessedit_pageseg_mode`). Se añaden `workerPath`, `corePath`, `workerBlobURL: false` y `errorHandler` (sin él, un fallo al cargar el modelo lanza fuera de toda promesa).

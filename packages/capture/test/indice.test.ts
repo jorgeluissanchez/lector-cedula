@@ -22,4 +22,27 @@ describe("Índice público de @lector-cedula/capture", () => {
     expect(capture.LADO_ANALISIS).toBe(640);
     expect(capture.UMBRALES_POR_DEFECTO.umbralListo).toBe(70);
   });
+
+  it("exporta el flujo, el Worker, los frames, la captura y el detector por defecto (grupos 3 y 4)", () => {
+    expect(Object.keys(capture)).toEqual(
+      expect.arrayContaining([
+        "evaluarEntorno",
+        "clasificarResolucion",
+        "avisoResolucion",
+        "clasificarErrorCamara",
+        "calcularGuia",
+        "guiaEnAnalisis",
+        "guiaEnPantalla",
+        "crearDetectorGuia",
+        "crearPlanificador",
+        "crearAutocaptura",
+        "crearFeedback",
+        "iniciarWorkerCalidad",
+        "crearClienteCalidad",
+        "tomarFrameAnalisis",
+        "tomarFrameCaptura",
+        "crearCapturaAceptada",
+      ]),
+    );
+  });
 });

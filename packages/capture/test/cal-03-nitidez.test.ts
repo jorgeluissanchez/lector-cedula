@@ -14,7 +14,8 @@ function nitidez(e: Escena, cuad: Cuadrilatero = completo(e.ancho, e.alto)) {
   return medirNitidez(luminanciasFrame(e.pixeles, e.ancho, e.alto), region.mascara, e.ancho, e.alto, U);
 }
 
-describe("CAL-03 Nitidez", { timeout: 60_000 }, () => {
+// 600 s: bajo la instrumentación de Stryker (perTest) la metamórfica tarda más de 60 s; en Vitest normal, unos 3 s.
+describe("CAL-03 Nitidez", { timeout: 600_000 }, () => {
   it("CAL-03 Patrones de varianza conocida", () => {
     const escenas = [gris(64, 64, 128), tablero(64, 64, 0, 255), rayas(64, 64, 0, 255), tablero(64, 64, 60, 190)];
     expect(escenas.map((e) => nitidez(e))).toStrictEqual([

@@ -13,15 +13,18 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "worker"
   ],
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"
   },
   "dependencies": {
+    "@lector-cedula/parsers": "0.0.0",
     "jpeg-js": "0.4.4",
     "pngjs": "7.0.0",
+    "tesseract.js": "7.0.0",
     "zxing-wasm": "3.1.5"
   },
   "devDependencies": {

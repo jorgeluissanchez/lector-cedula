@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "nombre": "tesseract-mrz",
+    "licencia": "BSD-3-Clause",
+    "fuente": "https://raw.githubusercontent.com/DoubangoTelecom/tesseractMRZ/1e7adfecda5f3c9ae1fb12cf6b4b8c3958c63e46/tessdata_best/mrz.traineddata",
+    "sha256": "e44f5b7a6bdd3f382ef3bfa84ee0057f5897946a84a094c26910e0a124f3a9bd",
+    "uso": "produccion"
+  }
+]

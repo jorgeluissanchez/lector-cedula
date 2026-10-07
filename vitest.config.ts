@@ -7,7 +7,10 @@ export default defineConfig({
     alias: { "@lector-cedula/fixtures": fileURLToPath(new URL("./packages/fixtures/src/index.ts", import.meta.url)) },
   },
   test: {
-    include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts", "tools/test/**/*.test.mjs"],
+    // Contrato de tipos (captura-calidad-pwa, design.md, decisión 13): `npx vitest run --typecheck.only packages/capture`.
+    // El tsconfig raíz no incluye archivos (`files: []`), así que se usa uno que sí incluye los *.test-d.ts.
+    typecheck: { tsconfig: "packages/capture/tsconfig.typecheck.json", include: ["packages/*/test/**/*.test-d.ts"] },
+    include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts", "tools/test/**/*.test.mjs", "evals/test/**/*.test.mjs"],
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**"],
