@@ -81,6 +81,9 @@ class RegistroIdempotencia:
             entrada.respuesta = respuesta
             entrada.vence_en = ahora + VIGENCIA_S
 
+    def olvidar(self, propietario: str, clave: str) -> None:
+        self._entradas.pop((propietario, clave), None)
+
     def liberar_si_en_curso(self, propietario: str, clave: str) -> None:
         entrada = self._entradas.get((propietario, clave))
         if entrada is not None and entrada.respuesta is None:

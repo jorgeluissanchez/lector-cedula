@@ -23,7 +23,8 @@ def instante(segundos: float) -> str:
 def fecha_hora_utc(momento: datetime) -> str:
     """`datetime` con zona en RFC 3339 UTC con `Z`, conservando los microsegundos si los hay."""
     utc = momento.astimezone(UTC)
-    texto = utc.strftime("%Y-%m-%dT%H:%M:%S")
+    # strftime("%Y") no rellena con ceros los años < 1000 en Linux: el año se escribe a mano.
+    texto = f"{utc.year:04d}-{utc:%m-%dT%H:%M:%S}"
     if utc.microsecond:
         texto += f".{utc.microsecond:06d}".rstrip("0")
     return texto + "Z"

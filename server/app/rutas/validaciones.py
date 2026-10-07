@@ -4,6 +4,7 @@ Toda ruta exige `Authorization: Bearer <clave>` (AV-02), salvo la subida con tok
 La paridad de rutas con el contrato se exige en AV-01.
 """
 
+import json
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
@@ -76,6 +77,12 @@ def respuesta_validacion(request: Request, validacion: Validacion, estado: int =
     return Response(content=contenido, status_code=estado, media_type=TIPO_JSON)
 
 
+def _suprimida(servicio: ServicioValidaciones, previa: Repetir, propietario: str) -> bool:
+    """La respuesta guardada apunta a una validación que ya no existe (suprimida o vencida)."""
+    id_validacion = json.loads(previa.respuesta.contenido)["id"]
+    return servicio.obtener(id_validacion, propietario) is None
+
+
 def registrar(aplicacion: FastAPI) -> None:
     """Registra las operaciones en la aplicación (no en un router incluido) para que la prueba de
     paridad las lea de `aplicacion.routes`."""
@@ -97,6 +104,12 @@ def registrar(aplicacion: FastAPI) -> None:
                 raise ErrorApi(409, "idempotency-key-in-progress")
             if isinstance(previa, Reutilizada):
                 raise ErrorApi(422, "idempotency-key-reused")
+            if isinstance(previa, Repetir) and _suprimida(servicio, previa, cliente.hash_clave):
+                # AV-23: tras la supresión todo sobre ese id es 404; repetir el 201 lo contradiría.
+                registro.olvidar(cliente.hash_clave, clave)
+                previa = registro.reservar(
+                    cliente.hash_clave, clave, huella_cuerpo(cuerpo), servicio.puertos.reloj.ahora()
+                )
             if isinstance(previa, Repetir):
                 guardada = previa.respuesta
                 return Response(

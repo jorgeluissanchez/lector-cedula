@@ -51,9 +51,9 @@ Reglas para todas las tareas: TDD (principio II): cada prueba se escribe primero
 
 ## 8. Verificación externa en Docker
 
-- [ ] 8.1 `server/schemathesis.toml` (estados esperados de `positive_data_acceptance`, sin `--baseline`) y ajustes del contrato que Schemathesis revele. Ver fallar primero `C` contra el estado anterior a los ajustes, o documentar que pasó a la primera con la salida completa. Cubre AV-34 (contrato) y, de forma transversal, AV-01 a AV-33. Tipos de prueba: **contrato**. Verificación: `A` y luego `C` con código 0 y 0 fallos; informe JUnit en `server/reportes/schemathesis/` (ignorado por git).
-- [ ] 8.2 Escaneos de seguridad: corregir lo que reporten ZAP y Semgrep. Cubre AV-34 (DAST y SAST). Tipos de prueba: **seguridad**. Verificación: `A` y luego `Z` con 0 alertas de `riskcode` 3; `G` con 0 hallazgos; `P` con ruff `S` y `T20` sin hallazgos.
-- [ ] 8.3 `server/carga/locustfile.py` con el flujo creación, subida y consulta en sandbox e imágenes sintéticas generadas en memoria, y el umbral de salida en el evento `quitting`. Verlo fallar primero con un umbral temporal de 1 ms. Cubre AV-35. Tipos de prueba: **carga**. Verificación: `A` y luego `K` con código 0, p95 < 3000 ms por endpoint y 0 fallos en `server/carga/reporte_stats.csv` (ignorado por git).
+- [x] 8.1 `server/schemathesis.toml` (estados esperados de `positive_data_acceptance`, sin `--baseline`) y ajustes del contrato que Schemathesis revele. Ver fallar primero `C` contra el estado anterior a los ajustes, o documentar que pasó a la primera con la salida completa. Cubre AV-34 (contrato) y, de forma transversal, AV-01 a AV-33. Tipos de prueba: **contrato**. Verificación: `A` y luego `C` con código 0 y 0 fallos; informe JUnit en `server/reportes/schemathesis/` (ignorado por git).
+- [x] 8.2 Escaneos de seguridad: corregir lo que reporten ZAP y Semgrep. Cubre AV-34 (DAST y SAST). Tipos de prueba: **seguridad**. Verificación: `A` y luego `Z` con 0 alertas de `riskcode` 3; `G` con 0 hallazgos; `P` con ruff `S` y `T20` sin hallazgos.
+- [x] 8.3 `server/carga/locustfile.py` con el flujo creación, subida y consulta en sandbox e imágenes sintéticas generadas en memoria, y el umbral de salida en el evento `quitting`. Verlo fallar primero con un umbral temporal de 1 ms. Cubre AV-35. Tipos de prueba: **carga**. Verificación: `A` y luego `K` con código 0, p95 < 3000 ms por endpoint y 0 fallos en `server/carga/reporte_stats.csv` (ignorado por git).
 
 ## 9. Integración
 

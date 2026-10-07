@@ -72,11 +72,13 @@ def convertir_rfc3339(texto: str) -> datetime | None:
         tz = timezone(signo * timedelta(hours=horas, minutes=minutos))
     microsegundos = int((fraccion or ".0")[1:7].ljust(6, "0"))
     try:
-        return datetime(
+        momento = datetime(
             int(anio), int(mes), int(dia), int(hora), int(minuto), int(segundo), microsegundos, tzinfo=tz
         )
-    except ValueError:
+        momento.astimezone(UTC)  # fuera de rango en UTC (antes del año 1 o después del 9999)
+    except (ValueError, OverflowError):
         return None
+    return momento
 
 
 def url_de_webhook_valida(url: str) -> bool:

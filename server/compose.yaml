@@ -11,6 +11,8 @@ services:
       - ./openapi:/srv/openapi:ro
       - ./pyproject.toml:/srv/pyproject.toml:ro
       - ./uv.lock:/srv/uv.lock:ro
+      # AV-30: la prueba de configuración lee `read_only` de este archivo.
+      - ./compose.yaml:/srv/compose.yaml:ro
       # AV-19: los IDs de warnings se comprueban contra el registro de hipótesis del formato.
       - ../docs/decisiones/hipotesis-formato.md:/srv/docs/decisiones/hipotesis-formato.md:ro
 

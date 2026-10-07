@@ -1,0 +1,15 @@
+# Schemathesis 4.29.4 (tarea 8.1, AV-34). Comando `C` de design.md: siempre `--checks all` y nunca
+# `--baseline`. Este archivo solo declara qué estados son respuestas correctas a peticiones que cumplen
+# el esquema pero violan reglas de negocio que JSON Schema no expresa (decisión 16).
+
+[[operations]]
+# Reglas de valor de AV-04 a AV-06 y AV-20: autorización sin `datos: true`, `otorgada_en` en el
+# futuro, escenario de sandbox incompatible, `face_match` sin `sensibles`, etc. -> 422.
+include-name = "POST /v1/validations"
+checks.positive_data_acceptance.expected-statuses = ["2XX", "401", "404", "409", "422", "429"]
+
+[[operations]]
+# AV-07 y AV-10: firma que no coincide con el tipo declarado (415), parte vacía o selfie inesperada
+# o requerida (422), tamaño (413), segunda subida (409) y token (403).
+include-name = "POST /v1/validations/{id}/images"
+checks.positive_data_acceptance.expected-statuses = ["2XX", "403", "404", "409", "413", "415", "422", "429"]
