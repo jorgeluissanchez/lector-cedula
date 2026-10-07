@@ -76,3 +76,9 @@ Según el principio II y la fila "Captura web" de la matriz de `.claude/skills/e
 | OFF-17 | E2E (actualización fallida) | Playwright | `E(actualizacion)` | `lector-A` intacta; lectura offline verde |
 | OFF-18 | Accesibilidad | @axe-core/playwright | `E(accesibilidad)` | 0 serious/critical en 3 pantallas, 2 proyectos |
 | Todos | Licencias y privacidad del repositorio | `licencia-check`, `privacidad-check` | `L`, `P`, `npm run check` | 0 infracciones |
+
+## Decisiones humanas (2026-10-07)
+
+- Se acepta la precaché de unos 19 MB (incluye `mrz.traineddata` de 11,4 MB); el tope de 20 MiB de OFF-16 se mantiene.
+- Se precachean las dos variantes del core de tesseract (`simd-lstm` y `lstm`) para leer sin red también en navegadores sin SIMD.
+- El Worker de calidad se precachea (OFF-01); reemplaza los escenarios CAM-01 "Precarga sin el Worker de calidad" y CAM-12 "Worker diferido" de `captura-calidad-pwa`.
