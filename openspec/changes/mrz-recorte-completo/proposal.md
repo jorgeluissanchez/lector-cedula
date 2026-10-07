@@ -5,6 +5,7 @@ Prueba con una foto real (2026-10-07): el usuario envió un recorte que contiene
 ## What Changes
 
 - LMI-10 (ADDED): `localizarFranjaMrz` añade siempre, al final, el candidato `"imagen-completa"` (toda la imagen), para fotos que ya son el recorte de la MRZ.
+- LMI-11 (ADDED): candidatos "franja" (ventanas horizontales de abajo arriba) para fotos de la tarjeta completa sobre fondos con textura (foto real del 2026-10-07, 900x1600, tarjeta centrada).
 
 ## Impact
 

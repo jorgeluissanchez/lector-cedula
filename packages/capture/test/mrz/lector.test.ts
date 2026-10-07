@@ -7,14 +7,21 @@ import { PNG } from "pngjs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
 import { crearLectorMrz, fechaReferenciaValida, recortarYAmpliar, type WorkerOcr } from "../../src/mrz/lector.js";
+import { girar, localizarFranjaMrz } from "../../src/mrz/localizar.js";
 
 const REF = { fechaReferencia: "2026-10-06" };
 const P = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
 let R: Uint8Array;
+/** Intentos de R: candidatos de la imagen derecha, girada 90° y girada 270° (LMI-04, LMI-11 y LMI-12). */
+let intentosR: { derecha: number; total: number };
 
 beforeAll(async () => {
   const render = await crearRenderizador();
   R = (await render.render(P.lineas)).bytes;
+  const png = PNG.sync.read(Buffer.from(R));
+  const p = { width: png.width, height: png.height, data: new Uint8ClampedArray(png.data) };
+  const derecha = localizarFranjaMrz(p).length;
+  intentosR = { derecha, total: derecha + localizarFranjaMrz(girar(p, 90)).length + localizarFranjaMrz(girar(p, 270)).length };
   await render.cerrar();
 }, 60_000);
 
@@ -157,7 +164,10 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
     const alterado = generarMrzTd1(PERSONA_BASE, { variante: "cd-compuesto-alterado" });
     const { reg, crearWorker } = falso([alterado.texto]);
     const r = await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF);
-    expect(reg.imagenes).toHaveLength(3);
+    // Sin 4 dígitos válidos se prueban todos los candidatos, también los de las vistas giradas (LMI-12).
+    expect(intentosR.derecha).toBeGreaterThan(3);
+    expect(intentosR.total).toBeGreaterThan(intentosR.derecha);
+    expect(reg.imagenes).toHaveLength(intentosR.total);
     expect(r).toMatchObject({ ok: true, intento: "proyeccion", digitosValidos: 3 });
   });
 
@@ -171,7 +181,19 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
   it("LMI-04 Nada legible", async () => {
     const { reg, crearWorker } = falso([""]);
     expect(await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF)).toStrictEqual({ ok: false, error: "mrz-no-encontrada" });
-    expect(reg.imagenes).toHaveLength(3);
+    expect(reg.imagenes).toHaveLength(intentosR.total);
+  });
+
+  it("LMI-12 Las vistas giradas solo se prueban si la derecha no da 4 dígitos válidos, con sufijo de giro", async () => {
+    // El texto correcto llega en el primer intento de la vista girada 90°.
+    const { reg, crearWorker } = falso((i) => (i === intentosR.derecha ? P.texto : ""));
+    const r = await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF);
+    expect(r).toMatchObject({ ok: true, intento: "proyeccion@90", digitosValidos: 4 });
+    expect(reg.imagenes).toHaveLength(intentosR.derecha + 1);
+    const { crearWorker: c270 } = falso((i) => (i === intentosR.total - 1 ? P.texto : ""));
+    const s = await crearLectorMrz({ rutaModelo: "/m", crearWorker: c270 }).leer(R, REF);
+    expect(s).toMatchObject({ ok: true, digitosValidos: 4 });
+    expect(s.ok && s.intento.endsWith("@270")).toBe(true);
   });
 
   it("LMI-04 Un error del OCR cuenta como texto vacío y se sigue con el siguiente candidato", async () => {

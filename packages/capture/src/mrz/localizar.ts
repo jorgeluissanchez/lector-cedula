@@ -8,7 +8,7 @@ export interface CajaMrz {
   readonly alto: number;
 }
 
-export type MetodoLocalizacion = "proyeccion" | "recorte-inferior" | "imagen-completa";
+export type MetodoLocalizacion = "proyeccion" | "recorte-inferior" | "imagen-completa" | "franja";
 
 export interface CandidatoMrz {
   readonly metodo: MetodoLocalizacion;
@@ -168,5 +168,104 @@ export function localizarFranjaMrz(pixeles: unknown): CandidatoMrz[] {
   const inferior: CandidatoMrz = { metodo: "recorte-inferior", caja: { x: 0, y, ancho: w, alto: h - y } };
   const proyeccion = candidatoProyeccion(pixeles);
   const completa: CandidatoMrz = { metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: w, alto: h } };
-  return proyeccion === null ? [inferior, completa] : [proyeccion, inferior, completa];
+  const base = proyeccion === null ? [inferior, completa] : [proyeccion, inferior, completa];
+  const luma = luminancias(pixeles);
+  return [...base, ...franjas(w, h).map((f) => ajustarFranja(luma, w, f))];
+}
+
+/** Una columna es fondo (p. ej. madera al lado de la tarjeta) si tiene tinta en al menos esta fracción de filas. */
+const FRACCION_COLUMNA_FONDO = 0.8;
+/** Salto mínimo de luminancia que cuenta como borde, y fracción de columnas con borde para que una fila sea texto. */
+const UMBRAL_BORDE = 40;
+const FRACCION_BORDES_FILA = 0.03;
+
+/**
+ * LMI-11: dentro de la franja, con umbral de Otsu local y sin las columnas de fondo, busca el trío regular de bandas
+ * más bajo y ajusta la caja a él (con margen de medio alto de línea). Si no lo hay, devuelve la franja tal cual.
+ */
+function ajustarFranja(luma: Uint8Array, w: number, f: CandidatoMrz): CandidatoMrz {
+  const { y: y0, alto: hf } = f.caja;
+  const local = luma.subarray(y0 * w, (y0 + hf) * w);
+  // Borde fuerte: salto de luminancia >= UMBRAL_BORDE entre vecinos horizontales. El texto OCR-B produce muchos; la
+  // madera y el fondo impreso de la tarjeta, pocos.
+  const borde = (x: number, y: number): boolean =>
+    x + 1 < w && Math.abs((local[y * w + x] as number) - (local[y * w + x + 1] as number)) >= UMBRAL_BORDE;
+  const bordeCol = new Uint32Array(w);
+  for (let y = 0; y < hf; y++) for (let x = 0; x < w; x++) if (borde(x, y)) bordeCol[x] = (bordeCol[x] as number) + 1;
+  const util = (x: number): boolean => (bordeCol[x] as number) < FRACCION_COLUMNA_FONDO * hf;
+  let utiles = 0;
+  for (let x = 0; x < w; x++) if (util(x)) utiles++;
+  if (utiles === 0) return f;
+  const conteos = new Uint32Array(hf);
+  for (let y = 0; y < hf; y++) {
+    let n = 0;
+    for (let x = 0; x < w; x++) if (util(x) && borde(x, y)) n++;
+    conteos[y] = n;
+  }
+  const encontradas = bandas(conteos, 0, Math.max(2, Math.ceil(FRACCION_BORDES_FILA * utiles)));
+  for (let i = encontradas.length - 3; i >= 0; i--) {
+    const [a, b, c] = encontradas.slice(i, i + 3) as [Banda, Banda, Banda];
+    if (!bandasRegulares(a, b, c)) continue;
+    let x0 = w;
+    let x1 = -1;
+    for (let y = a.inicio; y <= c.fin; y++) {
+      for (let x = 0; x < w; x++) {
+        if (util(x) && borde(x, y)) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+        }
+      }
+    }
+    const margen = Math.round(((alto(a) + alto(b) + alto(c)) / 3) * 0.5);
+    const izq = Math.max(0, x0 - margen);
+    const der = Math.min(w, x1 + 1 + margen);
+    const arriba = Math.max(0, a.inicio - margen);
+    const abajo = Math.min(hf, c.fin + 1 + margen);
+    return { metodo: "franja", caja: { x: izq, y: y0 + arriba, ancho: der - izq, alto: abajo - arriba } };
+  }
+  return f;
+}
+
+/** Alto y paso de las franjas de LMI-11, como fracción del alto de la imagen. */
+const FRACCIONES_FRANJA = [0.15, 0.3, 0.45] as const;
+const FRACCION_PASO = 0.05;
+
+/**
+ * LMI-11: ventanas horizontales de todo el ancho, de abajo arriba, sin repetir cajas. Sirven cuando la tarjeta
+ * completa está sobre un fondo con textura y la proyección global no separa las 3 bandas.
+ */
+function franjas(w: number, h: number): CandidatoMrz[] {
+  const paso = Math.max(1, Math.round(FRACCION_PASO * h));
+  const r: CandidatoMrz[] = [];
+  for (const fraccion of FRACCIONES_FRANJA) {
+    const alto = Math.max(1, Math.round(fraccion * h));
+    const vistas = new Set<number>();
+    for (let y = h - alto; y > -paso; y -= paso) {
+      const y0 = Math.max(0, y);
+      if (vistas.has(y0)) continue;
+      vistas.add(y0);
+      r.push({ metodo: "franja", caja: { x: 0, y: y0, ancho: w, alto: Math.min(alto, h - y0) } });
+    }
+  }
+  return r;
+}
+
+/** Giros de LMI-12, en grados en sentido horario. */
+export const GIROS = [90, 270] as const;
+export type Giro = (typeof GIROS)[number];
+
+/** LMI-12: copia de `p` girada `grados` en sentido horario (90 o 270). No modifica la entrada. */
+export function girar(p: PixelesRgba, grados: Giro): PixelesRgba {
+  const { width: w, height: h } = p;
+  const data = new Uint8ClampedArray(w * h * 4);
+  // Destino de h x w: en 90 horario, (xd, yd) viene de (yd, h - 1 - xd); en 270, de (w - 1 - yd, xd).
+  for (let yd = 0; yd < w; yd++) {
+    for (let xd = 0; xd < h; xd++) {
+      const [xs, ys] = grados === 90 ? [yd, h - 1 - xd] : [w - 1 - yd, xd];
+      const o = (yd * h + xd) * 4;
+      const s = (ys * w + xs) * 4;
+      for (let k = 0; k < 4; k++) data[o + k] = p.data[s + k] as number;
+    }
+  }
+  return { width: h, height: w, data };
 }

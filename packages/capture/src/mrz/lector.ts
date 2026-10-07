@@ -7,7 +7,7 @@ import { decodificarPixeles, type DecodificadorPixeles, type Pixeles } from "../
 import { enderezar } from "./enderezar.js";
 import { codificarPng, crearWorkerTesseract, opcionesWorker } from "./entorno.js";
 import { extraerLineasMrz } from "./extraer.js";
-import { esPixelesRgba, localizarFranjaMrz, type CajaMrz, type MetodoLocalizacion, type PixelesRgba } from "./localizar.js";
+import { esPixelesRgba, GIROS, girar, localizarFranjaMrz, type CajaMrz, type Giro, type MetodoLocalizacion, type PixelesRgba } from "./localizar.js";
 
 /** Lista blanca y modo de segmentación del OCR (LMI-02). */
 export const PARAMETROS_OCR = Object.freeze({
@@ -49,10 +49,13 @@ export type ErrorLectorMrz =
   | "lector-terminado"
   | "fecha-referencia-invalida";
 
+/** Método del candidato que leyó la MRZ; con sufijo `@90` o `@270` si se leyó sobre la imagen girada (LMI-12). */
+export type IntentoMrz = MetodoLocalizacion | `${MetodoLocalizacion}@${Giro}`;
+
 export type ResultadoParserMrz = Extract<ResultadoMrzCedulaDigital, { ok: true }>;
 
 export type ResultadoLectorMrz =
-  | { ok: true; intento: MetodoLocalizacion; digitosValidos: number; resultado: ResultadoParserMrz }
+  | { ok: true; intento: IntentoMrz; digitosValidos: number; resultado: ResultadoParserMrz }
   | { ok: false; error: ErrorLectorMrz };
 
 export interface LectorMrz {
@@ -142,18 +145,26 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
     if (w === null) return { ok: false, error: "modelo-no-disponible" };
     if (terminado) return { ok: false, error: "lector-terminado" };
 
-    let mejor: { intento: MetodoLocalizacion; digitosValidos: number; resultado: ResultadoParserMrz } | null = null;
-    for (const { metodo, caja } of localizarFranjaMrz(pixeles)) {
-      // Un fallo del OCR cuenta como texto ilegible; el parser rechaza `null` (sin 3 líneas) con ok: false.
-      const texto: unknown = await w
-        .recognize(await codificarPng(enderezar(recortarYAmpliar(pixeles, caja))))
-        .then((r) => r.data.text)
-        .catch(() => "");
-      const resultado = parsearMrzCedulaDigital(extraerLineasMrz(texto), { fechaReferencia: fecha });
-      if (!resultado.ok) continue;
-      const digitosValidos = contarValidos(resultado);
-      if (mejor === null || digitosValidos > mejor.digitosValidos) mejor = { intento: metodo, digitosValidos, resultado };
-      if (digitosValidos === 4) break;
+    let mejor: { intento: IntentoMrz; digitosValidos: number; resultado: ResultadoParserMrz } | null = null;
+    // LMI-12: si la imagen derecha no da 4 dígitos válidos, se repite girada 90° y 270° (tarjeta en vertical).
+    // Las vistas giradas se calculan solo si hacen falta.
+    const vistas = function* (): Generator<[PixelesRgba, string]> {
+      yield [pixeles, ""];
+      for (const g of GIROS) yield [girar(pixeles, g), `@${g}`];
+    };
+    for (const [imagenVista, sufijo] of vistas()) {
+      for (const { metodo, caja } of localizarFranjaMrz(imagenVista)) {
+        // Un fallo del OCR cuenta como texto ilegible; el parser rechaza `null` (sin 3 líneas) con ok: false.
+        const texto: unknown = await w
+          .recognize(await codificarPng(enderezar(recortarYAmpliar(imagenVista, caja))))
+          .then((r) => r.data.text)
+          .catch(() => "");
+        const resultado = parsearMrzCedulaDigital(extraerLineasMrz(texto), { fechaReferencia: fecha });
+        if (!resultado.ok) continue;
+        const digitosValidos = contarValidos(resultado);
+        if (mejor === null || digitosValidos > mejor.digitosValidos) mejor = { intento: `${metodo}${sufijo}` as IntentoMrz, digitosValidos, resultado };
+        if (digitosValidos === 4) return { ok: true, ...mejor };
+      }
     }
     return mejor === null ? { ok: false, error: "mrz-no-encontrada" } : { ok: true, ...mejor };
   }

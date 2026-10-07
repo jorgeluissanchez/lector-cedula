@@ -5,7 +5,7 @@ import fc from "fast-check";
 import { PNG } from "pngjs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
-import { bandasRegulares, esPixelesRgba, localizarFranjaMrz, luminancias, umbralOtsu } from "../../src/mrz/localizar.js";
+import { bandasRegulares, esPixelesRgba, girar, localizarFranjaMrz, luminancias, umbralOtsu } from "../../src/mrz/localizar.js";
 
 const P = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
 type Renderizador = Awaited<ReturnType<typeof crearRenderizador>>;
@@ -15,6 +15,9 @@ function pixelesPng(bytes: Uint8Array) {
   const png = PNG.sync.read(Buffer.from(bytes));
   return { width: png.width, height: png.height, data: new Uint8ClampedArray(png.data) };
 }
+
+/** Candidatos de LMI-01 y LMI-10: excluye las franjas de LMI-11, añadidas después y probadas aparte. */
+const sinFranjas = (c: ReturnType<typeof localizarFranjaMrz>) => c.filter((x) => x.metodo !== "franja");
 
 /** Lienzo blanco con rectángulos negros `[x, y, ancho, alto]`. */
 function lienzo(w: number, h: number, rects: readonly (readonly [number, number, number, number])[] = []) {
@@ -50,7 +53,7 @@ describe("LMI-01 Localización de la franja MRZ", { timeout: 60_000 }, () => {
   });
 
   it("LMI-01 Sin bandas, solo recorte inferior", () => {
-    expect(localizarFranjaMrz(lienzo(1000, 600))).toStrictEqual([
+    expect(sinFranjas(localizarFranjaMrz(lienzo(1000, 600)))).toStrictEqual([
       { metodo: "recorte-inferior", caja: { x: 0, y: 360, ancho: 1000, alto: 240 } },
       { metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: 1000, alto: 600 } },
     ]);
@@ -59,7 +62,7 @@ describe("LMI-01 Localización de la franja MRZ", { timeout: 60_000 }, () => {
   it("LMI-01 Dos bandas no bastan", async () => {
     const r = await render.render([P.lineas[0], P.lineas[1], ""]);
     const c = localizarFranjaMrz(pixelesPng(r.bytes));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
+    expect(sinFranjas(c).map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01 Nunca lanza (fc.anything)", () => {
@@ -92,8 +95,11 @@ describe("LMI-01 Localización de la franja MRZ", { timeout: 60_000 }, () => {
       fc.property(valido, (x) => {
         const r = localizarFranjaMrz(x);
         expect(r.length).toBeGreaterThanOrEqual(1);
-        expect(r.at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: x.width, alto: x.height } });
-        expect(r.at(-2)?.metodo).toBe("recorte-inferior");
+        const base = sinFranjas(r);
+        expect(base.at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: x.width, alto: x.height } });
+        expect(base.at(-2)?.metodo).toBe("recorte-inferior");
+        // Las franjas (LMI-11) van todas después de imagen-completa.
+        expect(r.slice(0, base.length)).toStrictEqual(base);
         for (const { caja } of r) {
           expect(caja.x).toBeGreaterThanOrEqual(0);
           expect(caja.y).toBeGreaterThanOrEqual(0);
@@ -107,7 +113,8 @@ describe("LMI-01 Localización de la franja MRZ", { timeout: 60_000 }, () => {
 
   it("LMI-01 Acepta Uint8Array y Uint8ClampedArray; rechaza lados no enteros o negativos", () => {
     const l = lienzo(10, 10);
-    expect(localizarFranjaMrz({ ...l, data: new Uint8Array(l.data) })).toHaveLength(2);
+    expect(localizarFranjaMrz({ ...l, data: new Uint8Array(l.data) })).toStrictEqual(localizarFranjaMrz(l));
+    expect(sinFranjas(localizarFranjaMrz(l))).toHaveLength(2);
     expect(localizarFranjaMrz({ ...l, width: 10.5 })).toStrictEqual([]);
     expect(localizarFranjaMrz({ ...l, height: -10 })).toStrictEqual([]);
     expect(localizarFranjaMrz({ ...l, data: Array.from(l.data) })).toStrictEqual([]);
@@ -128,7 +135,7 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
 
   it("LMI-01b Bandas irregulares", () => {
     const c = localizarFranjaMrz(lienzo(1000, 600, [tres[0], tres[1], [50, 480, 900, 40]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
+    expect(sinFranjas(c).map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01b La caja se recorta a la imagen", () => {
@@ -138,12 +145,12 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
 
   it("LMI-01b Solo la mitad inferior cuenta", () => {
     const c = localizarFranjaMrz(lienzo(1000, 600, [[50, 100, 900, 20], [50, 140, 900, 20], [50, 180, 900, 20]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
+    expect(sinFranjas(c).map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01b Separaciones irregulares", () => {
     const c = localizarFranjaMrz(lienzo(1000, 600, [[50, 400, 900, 20], [50, 440, 900, 20], [50, 520, 900, 20]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
+    expect(sinFranjas(c).map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
   });
 
   it("LMI-01b Con 4 bandas toma el trío inferior regular", () => {
@@ -154,7 +161,7 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
   it("LMI-01b Una fila con menos del 0,5 % del ancho en tinta no es banda", () => {
     // 4 píxeles de tinta en 1000 de ancho (0,4 %): ninguna banda.
     const c = localizarFranjaMrz(lienzo(1000, 600, [[50, 400, 4, 20], [50, 440, 4, 20], [50, 480, 4, 20]]));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
+    expect(sinFranjas(c).map((x) => x.metodo)).toStrictEqual(["recorte-inferior", "imagen-completa"]);
     const d = localizarFranjaMrz(lienzo(1000, 600, [[50, 400, 5, 20], [50, 440, 5, 20], [50, 480, 5, 20]]));
     expect(d[0]?.metodo).toBe("proyeccion");
   });
@@ -252,11 +259,75 @@ describe("LMI-10 Candidato de imagen completa", { timeout: 60_000 }, () => {
   it("LMI-10 Orden de candidatos en el reverso completo", async () => {
     const r = await render.render(P.lineas);
     const c = localizarFranjaMrz(pixelesPng(r.bytes));
-    expect(c.map((x) => x.metodo)).toStrictEqual(["proyeccion", "recorte-inferior", "imagen-completa"]);
-    expect(c.at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: r.width, alto: r.height } });
+    expect(c.slice(0, 3).map((x) => x.metodo)).toStrictEqual(["proyeccion", "recorte-inferior", "imagen-completa"]);
+    expect(c.slice(3).every((x) => x.metodo === "franja")).toBe(true);
+    expect(c[2]).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: r.width, alto: r.height } });
   });
 
-  it("LMI-10 Lienzo sin bandas: el último candidato es la imagen completa", () => {
-    expect(localizarFranjaMrz(lienzo(37, 23)).at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: 37, alto: 23 } });
+  it("LMI-10 Lienzo sin bandas: imagen completa justo después del recorte inferior", () => {
+    expect(localizarFranjaMrz(lienzo(37, 23))[1]).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: 37, alto: 23 } });
+  });
+});
+
+describe("LMI-11 Franjas horizontales", { timeout: 60_000 }, () => {
+  it("LMI-11 Primera franja de cada altura pegada al borde inferior (atrapa: franjas de arriba abajo, alturas o paso distintos)", () => {
+    const franjas = localizarFranjaMrz(lienzo(1000, 1000)).filter((c) => c.metodo === "franja");
+    // Oráculo literal: altos 150, 300 y 450; paso 50; de abajo arriba; lienzo sin bordes, sin ajuste.
+    const esperadas = [150, 300, 450].flatMap((a) =>
+      Array.from({ length: (1000 - a) / 50 + 1 }, (_, k) => ({ metodo: "franja", caja: { x: 0, y: 1000 - a - 50 * k, ancho: 1000, alto: a } })),
+    );
+    expect(franjas).toStrictEqual(esperadas);
+    expect(franjas[0]).toStrictEqual({ metodo: "franja", caja: { x: 0, y: 850, ancho: 1000, alto: 150 } });
+    expect(franjas[1]).toStrictEqual({ metodo: "franja", caja: { x: 0, y: 800, ancho: 1000, alto: 150 } });
+    expect(franjas[18]).toStrictEqual({ metodo: "franja", caja: { x: 0, y: 700, ancho: 1000, alto: 300 } });
+    expect(franjas[33]).toStrictEqual({ metodo: "franja", caja: { x: 0, y: 550, ancho: 1000, alto: 450 } });
+  });
+
+  it("LMI-11 Sin repetir cajas cuando el paso no divide el alto", () => {
+    const franjas = localizarFranjaMrz(lienzo(10, 37)).filter((c) => c.metodo === "franja");
+    for (const a of [6, 11, 17]) {
+      const ys = franjas.filter((c) => c.caja.alto === a).map((c) => c.caja.y);
+      expect(new Set(ys).size).toBe(ys.length);
+      expect(ys[0]).toBe(37 - a);
+      expect(ys.at(-1)).toBe(0);
+    }
+  });
+
+  it("LMI-11 Las franjas van después de imagen-completa (atrapa: franjas antes que los candidatos de LMI-01)", () => {
+    const metodos = localizarFranjaMrz(lienzo(1000, 1000)).map((c) => c.metodo);
+    expect(metodos.indexOf("franja")).toBeGreaterThan(metodos.indexOf("imagen-completa"));
+  });
+
+  /** 3 líneas de 40 "caracteres" de 10x15 px separados 10 px, en y = 900, 930 y 960. */
+  const texto = [900, 930, 960].flatMap((y) => Array.from({ length: 40 }, (_, k) => [100 + 20 * k, y, 10, 15] as const));
+
+  it("LMI-11 La franja se ajusta al trío de líneas por bordes horizontales", () => {
+    const franjas = localizarFranjaMrz(lienzo(1000, 1000, texto)).filter((c) => c.metodo === "franja");
+    // Bordes en x = 99 ... 889; margen round(15 / 2) = 8; bandas locales 50-64, 80-94 y 110-124 de la franja y = 850.
+    expect(franjas[0]).toStrictEqual({ metodo: "franja", caja: { x: 91, y: 892, ancho: 807, alto: 91 } });
+  });
+
+  it("LMI-11 Ignora las columnas de fondo con bordes en casi todas las filas (atrapa: textura que tapa las líneas)", () => {
+    const vetas = Array.from({ length: 20 }, (_, k) => [2 * k, 0, 1, 1000] as const);
+    const franjas = localizarFranjaMrz(lienzo(1000, 1000, [...vetas, ...texto])).filter((c) => c.metodo === "franja");
+    expect(franjas[0]).toStrictEqual({ metodo: "franja", caja: { x: 91, y: 892, ancho: 807, alto: 91 } });
+  });
+});
+
+describe("LMI-12 Giro de la imagen", () => {
+  it("LMI-12 girar 90 y 270 en sentido horario, sin modificar la entrada", () => {
+    // 3x2: valores 0..5 en el canal R por filas.
+    const p = { width: 3, height: 2, data: new Uint8ClampedArray([0, 1, 2, 3, 4, 5].flatMap((v) => [v, 0, 0, 255])) };
+    const copia = new Uint8ClampedArray(p.data);
+    const r = (q: { data: Uint8ClampedArray | Uint8Array }) => Array.from(q.data).filter((_, i) => i % 4 === 0);
+    const g90 = girar(p, 90);
+    expect([g90.width, g90.height]).toStrictEqual([2, 3]);
+    expect(r(g90)).toStrictEqual([3, 0, 4, 1, 5, 2]);
+    const g270 = girar(p, 270);
+    expect([g270.width, g270.height]).toStrictEqual([2, 3]);
+    expect(r(g270)).toStrictEqual([2, 5, 1, 4, 0, 3]);
+    expect(Array.from(g90.data).filter((_, i) => i % 4 === 3).every((a) => a === 255)).toBe(true);
+    expect(p.data).toStrictEqual(copia);
+    expect(r(girar(girar(p, 90), 270))).toStrictEqual(r(p));
   });
 });

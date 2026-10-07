@@ -11,7 +11,7 @@ import { PNG } from "pngjs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
 import { crearLectorMrz, type LectorMrz, type ResultadoLectorMrz } from "../../src/mrz/lector.js";
-import { localizarFranjaMrz } from "../../src/mrz/localizar.js";
+import { girar, localizarFranjaMrz } from "../../src/mrz/localizar.js";
 
 const RAIZ = resolve(fileURLToPath(new URL("../../../..", import.meta.url)));
 const MODELO = join(RAIZ, "models", "tesseract");
@@ -23,7 +23,53 @@ let F: Uint8Array;
 /** Recorte sintético que contiene solo las 3 líneas MRZ (LMI-10). */
 let M: Uint8Array;
 let dimM: { width: number; height: number };
+/** Foto sintética 900x1600 con textura de madera y R centrado (LMI-11). */
+let T: Uint8Array;
+/** R girado 90° en sentido antihorario: tarjeta en vertical, líneas MRZ verticales (LMI-12). */
+let V: Uint8Array;
 let lector: LectorMrz;
+
+/** Textura de madera determinista: vetas casi verticales con ondulación y grano (sin azar). */
+function madera(w: number, h: number): PNG {
+  const png = new PNG({ width: w, height: h });
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const veta = Math.sin(x * 0.35 + 3 * Math.sin(y * 0.013) + 0.8 * Math.sin(x * 0.041));
+      const grano = ((x * 7919 + y * 104729) % 23) - 11;
+      const l = 120 + 80 * veta + grano;
+      const o = (y * w + x) * 4;
+      png.data[o] = Math.max(0, Math.min(255, l + 40));
+      png.data[o + 1] = Math.max(0, Math.min(255, l));
+      png.data[o + 2] = Math.max(0, Math.min(255, l - 45));
+      png.data[o + 3] = 255;
+    }
+  }
+  return png;
+}
+
+/** Pega `fuente` escalada (bilineal) a `ancho` px, centrada en `destino`. */
+function pegarEscalada(destino: PNG, fuente: PNG, ancho: number): void {
+  const alto = Math.round((fuente.height * ancho) / fuente.width);
+  const f = fuente.width / ancho;
+  const x0 = Math.round((destino.width - ancho) / 2);
+  const y0 = Math.round((destino.height - alto) / 2);
+  for (let y = 0; y < alto; y++) {
+    const sy = Math.min(fuente.height - 1, Math.max(0, (y + 0.5) * f - 0.5));
+    const ya = Math.floor(sy);
+    const yb = Math.min(fuente.height - 1, ya + 1);
+    for (let x = 0; x < ancho; x++) {
+      const sx = Math.min(fuente.width - 1, Math.max(0, (x + 0.5) * f - 0.5));
+      const xa = Math.floor(sx);
+      const xb = Math.min(fuente.width - 1, xa + 1);
+      for (let k = 0; k < 4; k++) {
+        const v = (yy: number, xx: number): number => fuente.data[(yy * fuente.width + xx) * 4 + k] as number;
+        const a = v(ya, xa) * (1 - (sx - xa)) + v(ya, xb) * (sx - xa);
+        const b = v(yb, xa) * (1 - (sx - xa)) + v(yb, xb) * (sx - xa);
+        destino.data[((y0 + y) * destino.width + x0 + x) * 4 + k] = a * (1 - (sy - ya)) + b * (sy - ya);
+      }
+    }
+  }
+}
 let vacio: string;
 
 function lecturaCorrecta(r: ResultadoLectorMrz, v = P): void {
@@ -69,6 +115,13 @@ beforeAll(async () => {
   M = new Uint8Array(PNG.sync.write(recorte));
   dimM = { width: ancho, height: alto };
   F = (await render.render(P.lineas, { foto: true })).bytes;
+  const fondo = madera(900, 1600);
+  pegarEscalada(fondo, fuente, 820);
+  T = new Uint8Array(PNG.sync.write(fondo));
+  const girada = girar({ width: fuente.width, height: fuente.height, data: new Uint8ClampedArray(fuente.data) }, 270);
+  const pv = new PNG({ width: girada.width, height: girada.height });
+  pv.data.set(girada.data);
+  V = new Uint8Array(PNG.sync.write(pv));
   await render.cerrar();
   lector = crearLectorMrz({ rutaModelo: MODELO });
   vacio = mkdtempSync(join(tmpdir(), "mrz-sin-modelo-"));
@@ -156,10 +209,21 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
   });
 
   it("LMI-10 Recorte que contiene solo la MRZ", async () => {
-    const c = localizarFranjaMrz(PNG.sync.read(Buffer.from(M)));
+    const c = localizarFranjaMrz(PNG.sync.read(Buffer.from(M))).filter((x) => x.metodo !== "franja");
     expect(c.at(-1)).toStrictEqual({ metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: dimM.width, alto: dimM.height } });
     const r = await lector.leer(M, REF);
     lecturaCorrecta(r);
     expect(r).toMatchObject({ ok: true, intento: "imagen-completa", digitosValidos: 4 });
+  });
+  it("LMI-11 Tarjeta completa en el centro de una foto vertical con textura", async () => {
+    const r = await lector.leer(T, REF);
+    lecturaCorrecta(r);
+    expect(r).toMatchObject({ ok: true, intento: "franja", digitosValidos: 4 });
+  });
+
+  it("LMI-12 Reverso girado 90° (líneas MRZ verticales)", async () => {
+    const r = await lector.leer(V, REF);
+    lecturaCorrecta(r);
+    expect(r.ok && r.intento.endsWith("@90")).toBe(true);
   });
 });
