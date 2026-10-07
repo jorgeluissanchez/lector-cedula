@@ -28,7 +28,10 @@
     "check:completo": "npm run check && npm run test:mutacion",
     "test:e2e": "playwright test",
     "demo": "tsc -b && node tools/demo.mjs",
-    "leer-foto": "tsc -b && node tools/leer-foto.mjs"
+    "leer-foto": "node tools/leer-foto.mjs",
+    "modelos:mrz": "node tools/modelos/descargar-mrz.mjs",
+    "eval:mrz-imagen": "tsc -b && node evals/runners/mrz-imagen.mjs",
+    "build": "tsc -b"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
