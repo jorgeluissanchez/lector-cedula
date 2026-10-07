@@ -243,3 +243,35 @@ Reglas comunes: un `it` por escenario, nombrado `"<PA-xx> <escenario> (atrapa: <
 - Pregunta 5: NO. La salida de producción solo lleva IDs de hipótesis del formato (H, M, N, D). En modo offsets se emite `H04` en lugar de `G01`; ajusta la spec antes de codificar el grupo correspondiente. Aplicado antes del grupo 1: PA-02, PA-15, PA-19, decisión 11 y la fila PA-19 de `## Pruebas` ya no llevan `G01`.
 - Pregunta 6: se aceptan como convenciones documentadas, a revisar con el set de campo.
 - Evidencia pública del 2026-10-06 (`docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`), aplicada antes del grupo 1: la hipótesis de lectura de nombres sin offsets pasa de `H12` a `H15` (H12 era del investigador; se registró como H16); `C(p)` lleva `[32,40)` en 0x00 y `[40,48)` como campo numérico de 8 bytes (G01 corregida), sin el campo de 6 dígitos; `warnings` solo con hipótesis no confirmadas (decisión 11); el localizador del NUIP no toma como apellido el marcador pegado a la cabecera (PA-09) y una trama sin NUL (H14) da error, no nombres partidos (PA-08). Leer el nombre concatenado de H14 queda como mejora posterior.
+
+## Mutantes equivalentes (tarea 9.1)
+
+Marcados en el código con `// Stryker disable next-line <Mutador>: <razón>`. Todos los demás mutantes de `src/pdf417-amarilla/` y del adaptador se matan con pruebas.
+
+| Archivo:línea | Mutador | Razón |
+|---|---|---|
+| `packages/parsers/src/pdf417-amarilla/patrones.ts:143` (`?? ""` de `primerNombre`) | StringLiteral | Inalcanzable: antes se exige al menos un nombre (`nombres-no-reconocidos`), así que el índice siempre existe. |
+| `packages/parsers/src/pdf417-amarilla/patrones.ts:75` (`i < bytes.length` en `leerSegmento`) | EqualityOperator | En `i = length` el byte fuera de rango se normaliza a separador y el siguiente también: corta en `fin = length`, igual que el original. (Vivo en la corrida reproducible; en la anterior lo mató un timeout.) |
+| `packages/parsers/src/pdf417-amarilla/bytes.ts:16` (`byte === undefined` en `esLetra`) | ConditionalExpression | Comparar `undefined` con números ya da `false`; la guarda solo estrecha el tipo para TypeScript. |
+| `packages/parsers/src/pdf417-amarilla/bytes.ts:25` (`byte !== undefined` en `esDigito`) | ConditionalExpression | Igual que el anterior. |
+| `packages/parsers/src/pdf417-amarilla/ensamblar.ts:72` (guarda `typeof respuesta !== "object" \|\| respuesta === null`, 4 mutantes) | ConditionalExpression (x3), LogicalOperator | Un primitivo deja `encontrado` en `undefined` y `null` lanza dentro del `try`: ambas rutas terminan en `error-resolutor`, igual que con la guarda. |
+| `packages/parsers/src/pdf417-amarilla/trama.ts:19` (`i < hasta` en el run de NUL) | EqualityOperator | Solo se llama con `hasta = 24`, y el byte 24 de una trama completa es el marcador (0x50), que reinicia el contador igual. |
+| `evals/runners/adaptadores/pdf417-amarilla.mjs:16` (`i < bytes.length`) | EqualityOperator | Escribir en el índice `length` de un `Uint8Array` no tiene efecto. |
+
+## Informe de mutación reproducible (2026-10-07)
+
+Configuración (fuera del repo, en el scratchpad del agente: `scratchpad/pdf417/stryker-parser.mjs` y `vitest-parser.mjs`): `mutate` = `packages/parsers/src/pdf417-amarilla/**/*.ts` y `evals/runners/adaptadores/**/*.mjs`; pruebas = `packages/parsers/test/pdf417-amarilla-*.test.ts` y `tools/test/adaptador-pdf417-amarilla.test.mjs`, sin `pdf417-amarilla-generador.test.ts` (propiedades de 1000 casos por variante; sigue en `npm test`); `coverageAnalysis: "perTest"`, `concurrency: 6`, `ignorePatterns` con `.stryker-tmp*`. Equivalente en el repo: `npm run test:mutacion -- --mutate "packages/parsers/src/pdf417-amarilla/**/*.ts,evals/runners/adaptadores/**/*.mjs"` (más lento: corre todas las pruebas). Corrida previa a marcar `patrones.ts:75` (el único vivo, ya documentado arriba):
+
+| Archivo | Score | Muertos | Timeout | Vivos |
+|---|---|---|---|---|
+| Todos | 99,88 % | 805 | 10 | 1 |
+| `evals/runners/adaptadores/pdf417-amarilla.mjs` | 100 % | 28 | 1 | 0 |
+| `bloque-demografico.ts` | 100 % | 180 | 0 | 0 |
+| `bytes.ts` | 100 % | 72 | 2 | 0 |
+| `ensamblar.ts` | 100 % | 203 | 0 | 0 |
+| `index.ts` | 100 % | 47 | 0 | 0 |
+| `offsets.ts` | 100 % | 84 | 1 | 0 |
+| `patrones.ts` | 99,42 % | 165 | 5 | 1 |
+| `trama.ts` | 100 % | 26 | 1 | 0 |
+
+`packages/capture/src/pdf417` (cambio `leer-pdf417-desde-imagen`) tiene su resumen en el `design.md` de ese cambio.

@@ -12,6 +12,7 @@ const HEX = /^(?:[0-9a-f]{2})*$/;
 function bytesDeHex(hex) {
   if (typeof hex !== "string" || !HEX.test(hex)) throw new Error("entrada no es hex en minúsculas de longitud par");
   const bytes = new Uint8Array(hex.length / 2);
+  // Stryker disable next-line EqualityOperator: escribir en el índice length de un Uint8Array no tiene efecto
   for (let i = 0; i < bytes.length; i++) bytes[i] = Number.parseInt(hex.slice(2 * i, 2 * i + 2), 16);
   return bytes;
 }

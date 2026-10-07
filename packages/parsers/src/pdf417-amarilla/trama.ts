@@ -15,6 +15,7 @@ const MIN_RUN_NUL = 5;
 
 function hayRunNul(bytes: Uint8Array, desde: number, hasta: number, minimo: number): boolean {
   let run = 0;
+  // Stryker disable next-line EqualityOperator: solo se llama con hasta = 24, y el byte 24 es el marcador (0x50), que reinicia el contador igual
   for (let i = desde; i < hasta; i++) {
     run = bytes[i] === 0 ? run + 1 : 0;
     if (run >= minimo) return true;

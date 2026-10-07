@@ -71,6 +71,7 @@ export function leerSegmento(bytes: Uint8Array, inicio: number): Segmento {
   let crudoValido = true;
   let texto = "";
   let i = inicio;
+  // Stryker disable next-line EqualityOperator: en i = length el byte fuera de rango cuenta como separador y el siguiente también, así que corta en fin = length igual
   for (; i < bytes.length; i++) {
     if (i >= LIMITE_BLOQUE) return { fin: i, esNombre: false, crudoValido, texto };
     const normalizado = normalizadoEn(bytes, i);
@@ -138,6 +139,7 @@ export function leerPatrones(bytes: Uint8Array): ResultadoLector {
         numeroDocumento: formato.numero,
         primerApellido: apellido.texto,
         segundoApellido: nombres.length > 1 ? (nombres[0] ?? null) : null,
+        // Stryker disable next-line StringLiteral: inalcanzable, antes se exige al menos un nombre (nombres-no-reconocidos), así que el índice siempre existe
         primerNombre: nombres[nombres.length > 1 ? 1 : 0] ?? "",
         segundoNombre: nombres[2] ?? null,
         ...campoBloque,

@@ -55,3 +55,17 @@ Datos: solo `@lector-cedula/fixtures`; ninguna imagen en el repositorio. Las fot
 4. Se acepta numRuns >= 50 en la ida y vuelta con WASM.
 5. Si el writer no acepta binario, latin1 con ECI. (Comprobado en la tarea 1.1: el writer acepta `Uint8Array` binario; no hace falta ECI.)
 6. (Tarea 3.1) En Chromium, zxing-wasm decodifica S girada hasta 2° pero no a 2,5° ni 3°, así que LPI-04 fallaba. Se añaden dos intentos tras las escalas: giro +2° y giro -2° de la imagen original (LPI-01, LPI-02 y sus escenarios actualizados en la spec delta). Coste: hasta dos lecturas más solo cuando las tres primeras fallan.
+
+## Informe de mutación reproducible de `packages/capture/src/pdf417` (2026-10-07, agente de parser-pdf417-amarilla)
+
+Configuración (en el scratchpad del agente: `scratchpad/pdf417/stryker-captura.mjs` y `vitest-captura.mjs`): `mutate` = `packages/capture/src/pdf417/**/*.ts` (4 archivos, 806 mutantes); pruebas = `packages/capture/test/pdf417/*.test.ts`; `vitest.related: false` (las pruebas importan el índice del paquete); `dryRunTimeoutMinutes: 30`; `testNamePattern` excluye "foto grande", "CLI" y "D-EXIF", porque con instrumentación cada una pasa de 10 min.
+
+Resultado: **no terminó en 60 min y no hay score por archivo**. Ninguna corrida pasó de la corrida en seco:
+
+| Intento | Inicio | Resultado |
+|---|---|---|
+| 1 | 13:03 | Falla en seco: "LPI-02 Giros tras las escalas" (3 elementos en vez de 4). Con Vitest normal pasó un minuto después: el archivo se estaba editando |
+| 2 | 13:23 | Falla en seco: "LPI-11 Banda primero en foto grande" excede 600 s con instrumentación |
+| 3 | 13:45 | Falla en seco a las 14:05: "LPI-02 Orden de reintentos" (`['1920x1080','1440x810']` frente a tres escalas). Prueba en edición por otro agente |
+
+Pendiente: repetir `npx stryker run scratchpad/pdf417/stryker-captura.mjs` cuando `packages/capture/test/pdf417/decodificar.test.ts` esté estable; la parte de `src/pdf417-amarilla` y del adaptador terminó (99,88 %, ver `design.md` de parser-pdf417-amarilla).

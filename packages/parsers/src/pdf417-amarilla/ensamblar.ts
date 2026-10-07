@@ -68,6 +68,7 @@ function idsHipotesis(warnings: unknown): string[] {
 function consultarResolutor(resolutor: ResolutorDivipol, codigo: string): RespuestaResolutor {
   try {
     const respuesta: unknown = resolutor(codigo);
+    // Stryker disable next-line ConditionalExpression,LogicalOperator: un primitivo deja encontrado undefined y null lanza dentro del try; ambas rutas terminan en error-resolutor
     if (typeof respuesta !== "object" || respuesta === null) return ERROR_RESOLUTOR;
     const leida = respuesta as { encontrado?: unknown; motivo?: unknown; warnings?: unknown };
     const encontrado = leida.encontrado;

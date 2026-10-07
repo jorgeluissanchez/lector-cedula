@@ -12,6 +12,7 @@ export const MARCADOR_PUBDSK: readonly number[] = [0x50, 0x75, 0x62, 0x44, 0x53,
 
 /** Letra de nombre (PA-05): 0x41-0x5A, 0x61-0x7A, 0xC0-0xD6, 0xD8-0xF6 y 0xF8-0xFF. */
 export function esLetra(byte: number | undefined): boolean {
+  // Stryker disable next-line ConditionalExpression: comparar undefined con números ya da false; la guarda solo estrecha el tipo para TypeScript
   if (byte === undefined) return false;
   if (byte >= 0x41 && byte <= 0x5a) return true;
   if (byte >= 0x61 && byte <= 0x7a) return true;
@@ -20,6 +21,7 @@ export function esLetra(byte: number | undefined): boolean {
 
 /** Dígito ASCII 0x30-0x39. */
 export function esDigito(byte: number | undefined): boolean {
+  // Stryker disable next-line ConditionalExpression: comparar undefined con números ya da false; la guarda solo estrecha el tipo para TypeScript
   return byte !== undefined && byte >= 0x30 && byte <= 0x39;
 }
 
