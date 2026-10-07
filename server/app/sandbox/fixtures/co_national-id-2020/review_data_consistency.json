@@ -49,8 +49,6 @@
     "sources": [
       "mrz"
     ],
-    "warnings": [
-      "M02"
-    ]
+    "warnings": []
   }
 }

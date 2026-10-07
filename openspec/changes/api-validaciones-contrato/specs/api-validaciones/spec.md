@@ -292,22 +292,26 @@ En `pending`, `checks` SHALL ser `[]` y `document` `null`. En `success` ningún 
 
 #### Scenario: Cédula amarilla en sandbox
 - **WHEN** termina la subida en sandbox con `document_type` `"co_national-id-2000"` y el escenario `success`
-- **THEN** `document` es exactamente `{"type": "co_national-id-2000", "document_number": "9999123456", "first_surname": "PEÑA", "second_surname": "DE LA OSSA", "first_name": "FICTICIA", "second_name": null, "sex": "F", "date_of_birth": "1990-02-28", "place_of_birth": {"divipol_department": "01", "divipol_municipality": "001"}, "blood_type": "AB-", "date_of_issue": null, "place_of_issue": null, "date_of_expiry": null, "sources": ["pdf417"], "warnings": ["H03", "H05", "H06"]}`
+- **THEN** `document` es exactamente `{"type": "co_national-id-2000", "document_number": "9999123456", "first_surname": "PEÑA", "second_surname": "DE LA OSSA", "first_name": "FICTICIA", "second_name": null, "sex": "F", "date_of_birth": "1990-02-28", "place_of_birth": {"divipol_department": "01", "divipol_municipality": "001"}, "blood_type": "AB-", "date_of_issue": null, "place_of_issue": null, "date_of_expiry": null, "sources": ["pdf417"], "warnings": []}`
 
 #### Scenario: Cédula digital en sandbox
 - **WHEN** termina la subida en sandbox con `document_type` `"co_national-id-2020"` y el escenario `success`
-- **THEN** `document` es exactamente `{"type": "co_national-id-2020", "document_number": "9999654321", "first_surname": "NUÑEZ", "second_surname": "MARTINEZ", "first_name": "PRUEBA", "second_name": "SINTETICA", "sex": "M", "date_of_birth": "1985-12-01", "place_of_birth": null, "blood_type": null, "date_of_issue": null, "place_of_issue": null, "date_of_expiry": "2035-12-01", "sources": ["mrz"], "warnings": ["M02"]}`
+- **THEN** `document` es exactamente `{"type": "co_national-id-2020", "document_number": "9999654321", "first_surname": "NUÑEZ", "second_surname": "MARTINEZ", "first_name": "PRUEBA", "second_name": "SINTETICA", "sex": "M", "date_of_birth": "1985-12-01", "place_of_birth": null, "blood_type": null, "date_of_issue": null, "place_of_issue": null, "date_of_expiry": "2035-12-01", "sources": ["mrz"], "warnings": []}`
 
 #### Scenario: Dominios de los campos en el contrato
 - **WHEN** se lee el esquema `Document` del contrato
 - **THEN** `sex` admite `M` y `F`; `blood_type` admite `O+`, `O-`, `A+`, `A-`, `B+`, `B-`, `AB+`, `AB-` y `null`; `document_number` cumple `^[0-9]{6,11}$`; `divipol_department` cumple `^[0-9]{2}$` y `divipol_municipality` `^[0-9]{3}$`; `sources` admite `pdf417`, `mrz` y `ocr`; `additionalProperties` es `false`
 
 ### Requirement: AV-19 Advertencias de hipótesis del formato
-`document.warnings` SHALL listar los IDs de las hipótesis no confirmadas que se aplicaron al extraer los datos (principio VI). Cada ID MUST existir en la tabla de `docs/decisiones/hipotesis-formato.md` y cumplir `^[HMN][0-9]{2}$`.
+`document.warnings` SHALL listar los IDs de las hipótesis no confirmadas que se aplicaron al extraer los datos (principio VI). Cada ID MUST existir en la tabla de `docs/decisiones/hipotesis-formato.md`, cumplir `^[HMN][0-9]{2}$` y tener estado `pendiente` en su tabla "Actualización de estados"; una hipótesis confirmada (aunque sea con corrección) o refutada MUST NOT aparecer.
 
 #### Scenario: IDs existentes en el registro de hipótesis
 - **WHEN** se recorren los `warnings` de todos los fixtures de sandbox
 - **THEN** cada ID aparece en la primera columna de una tabla de `docs/decisiones/hipotesis-formato.md`
+
+#### Scenario: Solo hipótesis pendientes
+- **WHEN** se recorren los `warnings` de todos los fixtures de sandbox
+- **THEN** ningún ID tiene en la tabla "Actualización de estados" de `docs/decisiones/hipotesis-formato.md` un estado distinto de `pendiente` (en particular no aparecen H03, H05, H06 ni M02) y los fixtures de `success` tienen `warnings` `[]`
 
 #### Scenario: Patrón en el contrato
 - **WHEN** se lee el esquema de `Document.warnings` del contrato
@@ -347,11 +351,15 @@ Mientras no exista un motor de procesamiento real, una subida en modo live SHALL
 - **THEN** la respuesta es 503 `PROBLEM(engine-unavailable)`, `GET` devuelve `status` `"pending"` y no se encola ningún webhook
 
 ### Requirement: AV-23 Supresión por revocación
-`DELETE /v1/validations/{id}` SHALL eliminar la validación y su resultado y responder 204. Después, toda operación sobre ese `id` MUST responder 404 y los webhooks pendientes de esa validación MUST cancelarse.
+`DELETE /v1/validations/{id}` SHALL eliminar la validación y su resultado y responder 204. Después, toda operación sobre ese `id` MUST responder 404 y los webhooks pendientes MUST cancelarse. Solo SHALL quedar un registro mínimo de prueba de la autorización (Decreto 1377 de 2013; pendiente de validación legal), sin datos del documento ni imágenes y no expuesto por la API.
 
 #### Scenario: Supresión de una validación terminada
 - **WHEN** se hace `DELETE` con `KT` sobre una validación en `success`
 - **THEN** la respuesta es 204 sin cuerpo, y `GET`, una nueva subida y un segundo `DELETE` sobre el mismo `id` responden 404 `PROBLEM(not-found)`
+
+#### Scenario: Registro mínimo de prueba de la autorización
+- **WHEN** se hace `DELETE` con `KT` a las `2026-10-06T15:21:00Z` sobre una validación en `success` creada con `CREAR`
+- **THEN** el registro de prueba guarda exactamente `{"validation_id": <id>, "datos": true, "sensibles": false, "version_texto": "2026-10-01", "otorgada_en": "2026-10-06T15:19:00Z", "registrada_en": "2026-10-06T15:20:00Z", "suprimida_en": "2026-10-06T15:21:00Z", "motivo": "revocacion"}` y no contiene `9999123456`, `PEÑA` ni `FICTICIA`; al vencer la retención de AV-24 se guarda el mismo registro con `motivo` `retencion`
 
 #### Scenario: Reintentos cancelados
 - **WHEN** el receptor del webhook respondió 500 al primer intento y se hace `DELETE` antes del segundo

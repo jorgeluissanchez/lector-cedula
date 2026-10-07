@@ -22,6 +22,7 @@ from app.puertos import Puertos
 from app.rutas import validaciones
 from app.seguridad import MiddlewareSeguridad
 from app.servicio import ServicioValidaciones
+from app.webhooks import ServicioWebhooks
 
 
 def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> FastAPI:
@@ -41,6 +42,9 @@ def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> F
     aplicacion.state.idempotencia = RegistroIdempotencia()
     aplicacion.state.limitador = VentanaDeslizante(config.limite_peticiones_por_minuto)
     aplicacion.state.servicio = ServicioValidaciones(
+        aplicacion.state.almacen, aplicacion.state.puertos, config
+    )
+    aplicacion.state.servicio.webhooks = ServicioWebhooks(
         aplicacion.state.almacen, aplicacion.state.puertos, config
     )
     registrar_manejadores(aplicacion)

@@ -52,10 +52,6 @@
     "sources": [
       "pdf417"
     ],
-    "warnings": [
-      "H03",
-      "H05",
-      "H06"
-    ]
+    "warnings": []
   }
 }

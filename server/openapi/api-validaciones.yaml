@@ -253,7 +253,7 @@ paths:
                       place_of_issue: null
                       date_of_expiry: null
                       sources: [pdf417]
-                      warnings: [H03, H05, H06]
+                      warnings: []
                     autorizacion:
                       datos: true
                       sensibles: false

@@ -3,7 +3,9 @@
 Datos sintéticos únicamente (skill fixture-sintetico): claves, secretos y personas de la spec.
 """
 
+import asyncio
 import hashlib
+import inspect
 import json
 import os
 from pathlib import Path
@@ -91,8 +93,9 @@ class RelojFalso:
 class PlanificadorFalso:
     """Guarda las tareas programadas; el test las ejecuta con `ejecutar_hasta`, nunca con esperas."""
 
-    def __init__(self) -> None:
+    def __init__(self, reloj: "RelojFalso | None" = None) -> None:
         self.tareas: list[list[Any]] = []
+        self.reloj = reloj
 
     def programar(self, instante: float, funcion: Any) -> Any:
         entrada = [instante, funcion, False]
@@ -104,15 +107,87 @@ class PlanificadorFalso:
 
         return _Cancelable()
 
+    def pendientes(self) -> list[float]:
+        return sorted(e[0] for e in self.tareas if not e[2])
+
     def ejecutar_hasta(self, instante: float) -> int:
-        """Ejecuta, en orden de instante, las tareas no canceladas con instante <= `instante`."""
+        """Ejecuta, en orden de instante, las tareas no canceladas con instante <= `instante`, incluidas
+        las que programen las propias tareas. Con reloj, lo lleva al instante de cada tarea antes de
+        ejecutarla y al final a `instante`. Las corrutinas se ejecutan hasta terminar."""
         ejecutadas = 0
-        for entrada in sorted(self.tareas, key=lambda e: e[0]):
-            if entrada[0] <= instante and not entrada[2]:
-                entrada[2] = True
-                entrada[1]()
-                ejecutadas += 1
+        while True:
+            listas = sorted((e for e in self.tareas if e[0] <= instante and not e[2]), key=lambda e: e[0])
+            if not listas:
+                break
+            entrada = listas[0]
+            entrada[2] = True
+            if self.reloj is not None and entrada[0] > self.reloj.ahora():
+                self.reloj.fijar(entrada[0])
+            resultado = entrada[1]()
+            if inspect.isawaitable(resultado):
+                asyncio.run(_esperar(resultado))
+            ejecutadas += 1
+        if self.reloj is not None and instante > self.reloj.ahora():
+            self.reloj.fijar(instante)
         return ejecutadas
+
+
+async def _esperar(resultado: Any) -> Any:
+    return await resultado
+
+
+class GeneradorFijo:
+    """Devuelve los ids dados en orden (AV-25: `val_0123...` y `evt_...0001`)."""
+
+    def __init__(self, validaciones: list[str], eventos: list[str] | None = None) -> None:
+        self._validaciones = list(validaciones)
+        self._eventos = list(eventos or [])
+
+    def id_validacion(self) -> str:
+        return self._validaciones.pop(0)
+
+    def id_evento(self) -> str:
+        return self._eventos.pop(0)
+
+
+class TransporteFalso:
+    """Registra cada `POST` y responde con la secuencia de estados dada (un `TimeoutError` simula los
+    10 s sin respuesta). Nunca abre conexiones."""
+
+    def __init__(self, respuestas: list[Any] | None = None, reloj: "RelojFalso | None" = None) -> None:
+        self.respuestas = list(respuestas or [])
+        self.reloj = reloj
+        self.peticiones: list[dict[str, Any]] = []
+
+    async def enviar(
+        self, url: str, ip: str, cabeceras: dict[str, str], cuerpo: bytes, timeout_s: float
+    ) -> int:
+        self.peticiones.append(
+            {
+                "url": url,
+                "ip": ip,
+                "cabeceras": dict(cabeceras),
+                "cuerpo": cuerpo,
+                "timeout_s": timeout_s,
+                "t": self.reloj.ahora() if self.reloj else None,
+            }
+        )
+        respuesta = self.respuestas.pop(0) if self.respuestas else 204
+        if isinstance(respuesta, BaseException):
+            raise respuesta
+        return int(respuesta)
+
+
+class ResolvedorFalso:
+    """Resuelve cada host a las IPs dadas (por defecto, una IP pública de ejemplo)."""
+
+    def __init__(self, ips: dict[str, list[str]] | None = None) -> None:
+        self.ips = ips or {}
+        self.consultas: list[str] = []
+
+    async def resolver(self, host: str) -> list[str]:
+        self.consultas.append(host)
+        return self.ips.get(host, ["93.184.215.14"])
 
 
 class NotificadorEspia:
@@ -128,8 +203,16 @@ class NotificadorEspia:
 def puertos_de_prueba(**cambios: Any) -> Any:
     from app.puertos import Puertos
 
-    valores: dict[str, Any] = {"reloj": RelojFalso(), "planificador": PlanificadorFalso()}
+    reloj = cambios.pop("reloj", None) or RelojFalso()
+    valores: dict[str, Any] = {
+        "reloj": reloj,
+        "planificador": PlanificadorFalso(reloj),
+        "transporte": TransporteFalso(reloj=reloj),
+        "resolvedor": ResolvedorFalso(),
+    }
     valores.update(cambios)
+    if isinstance(valores["transporte"], TransporteFalso) and valores["transporte"].reloj is None:
+        valores["transporte"].reloj = reloj
     return Puertos(**valores)
 
 

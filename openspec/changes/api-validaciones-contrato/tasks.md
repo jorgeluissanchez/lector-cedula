@@ -41,13 +41,13 @@ Reglas para todas las tareas: TDD (principio II): cada prueba se escribe primero
 
 ## 6. Consulta, supresión y retención
 
-- [ ] 6.1 `GET` y `DELETE /v1/validations/{id}` y vencimiento de la retención. Escribir primero los escenarios de AV-13, "Supresión de una validación terminada" de AV-23 y AV-24, y la versión de AV-33 para creación y subida. Cubre AV-13, AV-23, AV-24, AV-33. Tipos de prueba: **unitaria**. Verificación: `P` en verde.
+- [x] 6.1 `GET` y `DELETE /v1/validations/{id}` y vencimiento de la retención. Escribir primero los escenarios de AV-13, "Supresión de una validación terminada" de AV-23 y AV-24, y la versión de AV-33 para creación y subida. Cubre AV-13, AV-23, AV-24, AV-33. Tipos de prueba: **unitaria**. Verificación: `P` en verde.
 
 ## 7. Webhooks
 
-- [ ] 7.1 Firma HMAC-SHA256 `t=,v1=` (decisión 8). Escribir primero los vectores 1 a 5 de AV-26 como literales (no recalcular el esperado con la función bajo prueba) y la propiedad de verificación. Cubre AV-26. Tipos de prueba: **unitaria**, **propiedad**. Verificación: `P` en verde; 5 de 5 vectores exactos; propiedad con 1000 ejemplos.
-- [ ] 7.2 Entrega del evento `validation.completed` con `Transporte` y `Resolvedor` inyectables, conexión a la IP comprobada (decisión 10) y log de intentos. Escribir primero los tres escenarios de AV-25, "Resolución a red interna" de AV-28 y la propiedad de rangos de IP. Cubre AV-25, AV-28. Tipos de prueba: **unitaria**, **propiedad**, **seguridad**. Verificación: `P` en verde; cuerpo de 232 bytes idéntico al de la spec.
-- [ ] 7.3 Reintentos con calendario fijo, timeout de 10 s, sin redirecciones y cancelación por `DELETE`. Escribir primero los tres escenarios de AV-27 y "Reintentos cancelados" de AV-23, con `Planificador` y `Reloj` falsos que el test avanza. Cubre AV-27, AV-23. Tipos de prueba: **unitaria**. Verificación: `P` en verde; instantes `t` exactos.
+- [x] 7.1 Firma HMAC-SHA256 `t=,v1=` (decisión 8). Escribir primero los vectores 1 a 5 de AV-26 como literales (no recalcular el esperado con la función bajo prueba) y la propiedad de verificación. Cubre AV-26. Tipos de prueba: **unitaria**, **propiedad**. Verificación: `P` en verde; 5 de 5 vectores exactos; propiedad con 1000 ejemplos.
+- [x] 7.2 Entrega del evento `validation.completed` con `Transporte` y `Resolvedor` inyectables, conexión a la IP comprobada (decisión 10) y log de intentos. Escribir primero los tres escenarios de AV-25, "Resolución a red interna" de AV-28 y la propiedad de rangos de IP. Cubre AV-25, AV-28. Tipos de prueba: **unitaria**, **propiedad**, **seguridad**. Verificación: `P` en verde; cuerpo de 232 bytes idéntico al de la spec.
+- [x] 7.3 Reintentos con calendario fijo, timeout de 10 s, sin redirecciones y cancelación por `DELETE`. Escribir primero los tres escenarios de AV-27 y "Reintentos cancelados" de AV-23, con `Planificador` y `Reloj` falsos que el test avanza. Cubre AV-27, AV-23. Tipos de prueba: **unitaria**. Verificación: `P` en verde; instantes `t` exactos.
 
 ## 8. Verificación externa en Docker
 

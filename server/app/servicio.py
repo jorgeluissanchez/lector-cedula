@@ -33,6 +33,13 @@ class ServicioValidaciones:
         self.almacen = almacen
         self.puertos = puertos
         self.config = config
+        # Registro mínimo de prueba de la autorización que sobrevive a la supresión (AV-23; Decreto
+        # 1377 de 2013). Solo campos de la autorización: nunca datos del documento ni imágenes.
+        self.pruebas_autorizacion: list[dict[str, Any]] = []
+        # Se fija al crear la aplicación (evita una importación circular con los webhooks).
+        self.webhooks: Any = None
+        # id -> tareas programadas (vencimiento del token y de la retención), para cancelarlas.
+        self._tareas: dict[str, list[Any]] = {}
 
     def crear(
         self, cuerpo: CrearValidacion, propietario: str, sandbox: bool, otorgada_en: datetime
@@ -59,8 +66,15 @@ class ServicioValidaciones:
         self.almacen.guardar(validacion)
         planificador = self.puertos.planificador
         assert planificador is not None  # noqa: S101 - Puertos.__post_init__ lo garantiza
-        planificador.programar(validacion.subida_vence_en + 1, lambda: self._vencer_subida(validacion.id))
+        tarea = planificador.programar(
+            validacion.subida_vence_en + 1, lambda: self._vencer_subida(validacion.id)
+        )
+        self._tareas[validacion.id] = [tarea]
         return validacion
+
+    def _cancelar_tareas(self, id_validacion: str) -> None:
+        for tarea in self._tareas.pop(id_validacion, []):
+            tarea.cancel()
 
     def obtener(self, id_validacion: str, propietario: str | None) -> Validacion | None:
         """La validación del propietario (`None`: sin comprobar propietario, solo para el token
@@ -71,7 +85,53 @@ class ServicioValidaciones:
             validacion = self.almacen.obtener(id_validacion, propietario)
         if validacion is not None:
             self._aplicar_vencimiento(validacion)
+            if self._retencion_vencida(validacion):
+                self.suprimir(validacion, "retencion")
+                return None
         return validacion
+
+    def _vence_retencion(self, validacion: Validacion) -> float | None:
+        if validacion.completada_en is None:
+            return None
+        return validacion.completada_en + self.config.retencion_resultados_s
+
+    def _retencion_vencida(self, validacion: Validacion) -> bool:
+        vence = self._vence_retencion(validacion)
+        return vence is not None and self.puertos.reloj.ahora() >= vence
+
+    def _vencer_retencion(self, id_validacion: str) -> None:
+        validacion = self.almacen.obtener_sin_propietario(id_validacion)
+        if validacion is not None and self._retencion_vencida(validacion):
+            self.suprimir(validacion, "retencion")
+
+    def suprimir(self, validacion: Validacion, motivo: str) -> None:
+        """Elimina la validación y su resultado, cancela sus webhooks y deja solo el registro mínimo
+        de prueba de la autorización (AV-23, AV-24). Con `retencion`, el instante de supresión es el del
+        vencimiento, no el de la lectura que lo detectó."""
+        momento = self.puertos.reloj.ahora()
+        if motivo == "retencion":
+            momento = self._vence_retencion(validacion) or momento
+        autorizacion = validacion.autorizacion
+        self.pruebas_autorizacion.append(
+            {
+                "validation_id": validacion.id,
+                "datos": autorizacion["datos"],
+                "sensibles": autorizacion["sensibles"],
+                "version_texto": autorizacion["version_texto"],
+                "otorgada_en": autorizacion["otorgada_en"],
+                "registrada_en": autorizacion["registrada_en"],
+                "suprimida_en": instante(momento),
+                "motivo": motivo,
+            }
+        )
+        if self.webhooks is not None:
+            self.webhooks.cancelar(validacion.id)
+        self._cancelar_tareas(validacion.id)
+        self.almacen.eliminar(validacion.id)
+        log.info(
+            "validacion_suprimida",
+            extra={"campos": {"validation_id": validacion.id, "sandbox": validacion.sandbox}},
+        )
 
     def _vencer_subida(self, id_validacion: str) -> None:
         validacion = self.almacen.obtener_sin_propietario(id_validacion)
@@ -128,5 +188,14 @@ class ServicioValidaciones:
             "validacion_terminada",
             extra={"campos": {"validation_id": validacion.id, "sandbox": validacion.sandbox}},
         )
+        planificador = self.puertos.planificador
+        assert planificador is not None  # noqa: S101 - Puertos.__post_init__ lo garantiza
+        vence = momento + self.config.retencion_resultados_s
+        self._cancelar_tareas(validacion.id)
+        self._tareas[validacion.id] = [
+            planificador.programar(vence, lambda: self._vencer_retencion(validacion.id))
+        ]
+        if self.webhooks is not None:
+            self.webhooks.al_terminar(validacion)
         if self.puertos.notificador is not None:
             self.puertos.notificador(validacion)

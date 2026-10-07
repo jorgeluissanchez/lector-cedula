@@ -7,7 +7,7 @@ Motivación en `proposal.md`. Estado actual de `server/`: FastAPI con un único 
 Restricciones que dan forma al diseño:
 
 - Principio III: el servidor procesa solo en memoria, no escribe imágenes a disco, no hay PII en logs, toda validación exige autorización expresa (`docs/legal/autorizacion-tratamiento.md`).
-- Principio VI: el documento normalizado depende de hipótesis pendientes (H03, H05, H06 en la amarilla; M02 en la digital). `place_of_birth.divipol_department` y `divipol_municipality` asumen H05 y H06; por eso los fixtures de sandbox las declaran en `document.warnings` (AV-19).
+- Principio VI: `document.warnings` lista solo hipótesis con estado `pendiente` en `docs/decisiones/hipotesis-formato.md` (AV-19). La evidencia del 2026-10-06 confirmó H03, H05, H06 y M02 (decisión del orquestador), así que los fixtures de sandbox no declaran ninguna y su `warnings` es `[]`.
 - Este cambio entrega contrato más stub. El motor real (re-decodificación, OCR, liveness, face match) llega en cambios posteriores y se enchufa en la interfaz `Motor` (decisión 6).
 
 ## Goals / Non-Goals
@@ -159,7 +159,7 @@ Las marcadas **(ratificar antes de `/opsx:apply`)** podrían cambiar la spec; el
 
 ## Decisiones del orquestador (2026-10-06, pendientes de ratificación humana y legal)
 
-- Pregunta 1: `DELETE` conserva un registro mínimo de prueba de la autorización (versión del texto, fechas, identificador de la validación, sin ningún dato del documento ni imágenes), por el deber de prueba del Decreto 1377 de 2013. Requiere validación de un abogado; si la tarea de AV-23 choca con esto, el implementador ajusta la spec por OpenSpec antes de codificar.
+- Pregunta 1 (llevada a AV-23 con su escenario): `DELETE` conserva un registro mínimo de prueba de la autorización (versión del texto, fechas, identificador de la validación, sin ningún dato del documento ni imágenes), por el deber de prueba del Decreto 1377 de 2013. Requiere validación de un abogado; si la tarea de AV-23 choca con esto, el implementador ajusta la spec por OpenSpec antes de codificar.
 - Pregunta 2: se aceptan la subida única síncrona y el objeto `autorizacion` en español (nombres del documento legal).
 - Pregunta 3: el sandbox mantiene `review` para `data_consistency` y `document_liveness`.
 - Preguntas 4 a 7: se aceptan los valores por defecto propuestos como configuración, no como constantes.

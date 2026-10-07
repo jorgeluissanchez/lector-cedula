@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from app.motor import Motor
+from app.red import Resolvedor, ResolvedorSistema, Transporte, TransporteHttpx
 from app.sandbox.motor import MotorSandbox
 
 
@@ -79,6 +80,8 @@ class Puertos:
     # Modo live: sin motor real todavía; la subida responde 503 (AV-22).
     motor_live: Motor | None = None
     # Recibe cada validación que llega a un estado terminal (los webhooks se enchufan aquí).
+    transporte: Transporte = field(default_factory=TransporteHttpx)
+    resolvedor: Resolvedor = field(default_factory=ResolvedorSistema)
     notificador: Callable[[Any], None] | None = None
     # Punto de espera tras reservar una `Idempotency-Key` y antes de crear. Solo lo usan las pruebas de
     # concurrencia (AV-12) con un `asyncio.Event`; en producción es `None`.

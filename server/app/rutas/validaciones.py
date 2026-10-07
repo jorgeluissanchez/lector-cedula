@@ -1,13 +1,12 @@
 """Rutas de `/v1/validations`.
 
 Toda ruta exige `Authorization: Bearer <clave>` (AV-02), salvo la subida con token firmado (AV-08).
-`DELETE` aún responde 501 hasta la tarea 6.1; la paridad de rutas
-con el contrato ya se exige (AV-01).
+La paridad de rutas con el contrato se exige en AV-01.
 """
 
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import Response
 from pydantic import ValidationError
 
@@ -132,9 +131,11 @@ def registrar(aplicacion: FastAPI) -> None:
         return respuesta_validacion(request, _validacion_del_cliente(request, id, cliente))
 
     @aplicacion.delete("/v1/validations/{id}")
-    async def suprimir_validacion(id: str, request: Request, cliente: ClienteAutenticado) -> None:
-        _validacion_del_cliente(request, id, cliente)
-        raise HTTPException(status_code=501)
+    async def suprimir_validacion(id: str, request: Request, cliente: ClienteAutenticado) -> Response:
+        """Supresión por revocación (AV-23): 204 sin cuerpo; después, 404 para todo."""
+        validacion = _validacion_del_cliente(request, id, cliente)
+        _servicio(request).suprimir(validacion, "revocacion")
+        return Response(status_code=204)
 
     @aplicacion.post("/v1/validations/{id}/images")
     async def subir_imagenes(id: str, request: Request) -> Response:

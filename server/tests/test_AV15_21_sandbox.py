@@ -89,7 +89,7 @@ DOC_AMARILLA = {
     "place_of_issue": None,
     "date_of_expiry": None,
     "sources": ["pdf417"],
-    "warnings": ["H03", "H05", "H06"],
+    "warnings": [],
 }
 DOC_DIGITAL = {
     "type": "co_national-id-2020",
@@ -106,7 +106,7 @@ DOC_DIGITAL = {
     "place_of_issue": None,
     "date_of_expiry": "2035-12-01",
     "sources": ["mrz"],
-    "warnings": ["M02"],
+    "warnings": [],
 }
 
 CLAVE_PROHIBIDA = re.compile(
@@ -296,7 +296,6 @@ def test_AV19_ids_existentes_en_el_registro_de_hipotesis() -> None:
         re.findall(r"^\|\s*([HMN][0-9]{2})\s*\|", RUTA_HIPOTESIS.read_text(encoding="utf-8"), re.M)
     )
     ids = {w for _, f in _fixtures() if f["document"] for w in f["document"]["warnings"]}
-    assert ids == {"H03", "H05", "H06", "M02"}
     assert ids <= primera_columna
 
 
@@ -349,3 +348,28 @@ def test_AV31_comprobacion_en_tiempo_de_ejecucion(respuestas_sandbox: list[Any])
             if isinstance(valor, str):
                 assert len(valor) <= 512
         assert list(VALIDADOR.iter_errors(cuerpo)) == []
+
+
+def _estados_actualizados() -> dict[str, str]:
+    """ID -> estado de la tabla "Actualización de estados" de `hipotesis-formato.md`."""
+    texto = RUTA_HIPOTESIS.read_text(encoding="utf-8")
+    seccion = texto.split("## Actualización de estados", 1)[1]
+    return {
+        m.group(1): m.group(2).strip()
+        for m in re.finditer(r"^\|\s*([A-Z][0-9]{2})\s*\|\s*([^|]+)\|", seccion, re.M)
+    }
+
+
+def test_AV19_solo_hipotesis_pendientes() -> None:
+    """Solo hipótesis pendientes: ningún ID de `warnings` de los fixtures tiene un estado distinto de
+    `pendiente` (no aparecen H03, H05, H06 ni M02) y los fixtures de `success` tienen `warnings` `[]`."""
+    estados = _estados_actualizados()
+    assert {estados[i] for i in ("H03", "H05", "H06")} == {"confirmada"}
+    assert estados["M02"].startswith("confirmada")
+    for ruta, fixture in _fixtures():
+        if fixture["document"] is None:
+            continue
+        for id_hipotesis in fixture["document"]["warnings"]:
+            assert estados.get(id_hipotesis, "").startswith("pendiente"), (ruta.name, id_hipotesis)
+        if ruta.stem == "success":
+            assert fixture["document"]["warnings"] == []
