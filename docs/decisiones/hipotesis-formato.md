@@ -99,3 +99,12 @@ Propuestas nuevas del investigador (pendientes): H13 (dos plantillas dactilares)
 | ID | Hipótesis | Fuente | Estado | Evidencia |
 |---|---|---|---|---|
 | H05b | El RH `AB+` o `AB-` ocupa 3 bytes `[166,169)` y desplaza el separador y la cola una posición | `2026-10-06-evidencia-hipotesis-formato.md` (propuesta) | pendiente | Ningún payload público trae RH AB; una app comercial leería solo `AB`. La declaran los fixtures con RH AB± (FX-14) |
+
+## Evidencia con cédula real (2026-10-06, sin datos personales)
+
+Una cédula amarilla real (expedición 1989, código impreso en 2020) leída localmente, sin guardar la imagen ni los datos:
+- H01: payload de 531 bytes. Confirmada.
+- Trama completa, leída por offsets; ambos modos de lectura coinciden (consistencia-modos OK). Refuerza H02 (byte 24), H03, H04, H05 y H06.
+- Formato del NUIP válido y código DIVIPOL existente en la tabla.
+- Los 10 campos extraídos con confianza 1 y sin warnings.
+- Hallazgo de captura: la foto de celular completa (4096x1842, EXIF rotado) no se decodifica sin recortar la zona del código y pasarla a gris (cambio `localizar-pdf417-en-foto`).
