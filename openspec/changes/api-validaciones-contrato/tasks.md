@@ -57,7 +57,7 @@ Reglas para todas las tareas: TDD (principio II): cada prueba se escribe primero
 
 ## 9. Integración
 
-- [ ] 9.1 Comprobación de privacidad de extremo a extremo y cierre. Escribir "Flujo completo sin datos personales en logs" y "Errores sin datos personales en logs" de AV-32 y "Contenedor de solo lectura" de AV-30. Cubre AV-30, AV-31, AV-32 y la integración de AV-01 a AV-35. Tipos de prueba: **integración**, **unitaria**, **seguridad**. Verificación: `P`, `L`, `Ln` (falla esperada), `A`, `docker compose -f server/compose.yaml exec api-pruebas find /tmp -type f` con salida vacía, `C`, `Z`, `G`, `K`, `V` y `npm run check` en verde; `openspec validate api-validaciones-contrato --strict` válido.
+- [x] 9.1 Comprobación de privacidad de extremo a extremo y cierre. Escribir "Flujo completo sin datos personales en logs" y "Errores sin datos personales en logs" de AV-32 y "Contenedor de solo lectura" de AV-30. Cubre AV-30, AV-31, AV-32 y la integración de AV-01 a AV-35. Tipos de prueba: **integración**, **unitaria**, **seguridad**. Verificación: `P`, `L`, `Ln` (falla esperada), `A`, `docker compose -f server/compose.yaml exec api-pruebas find /tmp -type f` con salida vacía, `C`, `Z`, `G`, `K`, `V` y `npm run check` en verde; `openspec validate api-validaciones-contrato --strict` válido.
 
 ## Workflow follow-up
 
