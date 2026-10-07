@@ -9,7 +9,7 @@ El usuario quiere probar ya el lector con fotos de cédulas amarillas. Hoy `pars
 - Nuevo módulo `packages/capture/src/pdf417/` con `decodificarPdf417Imagen(imagen)`: acepta bytes PNG/JPEG (`Uint8Array`) o `ImageData`, llama a `readBarcodes` con `formats: ["PDF417"]`, `tryHarder`, `tryRotate` y reintentos con escala 0,5 y 0,75, y devuelve los **bytes crudos** del código, nunca el texto.
 - Nueva CLI `npm run leer-foto -- <ruta>` (`tools/leer-foto.mjs`) que encadena el decodificador con `parsearPdf417Amarilla(bytes, { divipol: buscarDivipol })` e imprime el resultado normalizado en stdout. No escribe nada a disco ni a logs y rechaza rutas dentro del repositorio salvo `evals/real/` (ignorado por git).
 - Pruebas solo con imágenes sintéticas: PDF417 generado con el writer de zxing-wasm desde `generarPdf417` de `@lector-cedula/fixtures`, más pruebas metamórficas (rotación ±3°, blur, escala, JPEG) en navegador real.
-- Dependencia nueva: `zxing-wasm@3.1.5` en `packages/capture`.
+- Dependencias nuevas en `packages/capture`, con versión exacta: `zxing-wasm@3.1.5`, `pngjs@7.0.0` y `jpeg-js@0.4.4` (MIT, `licencia-check: OK` el 2026-10-06; decisión 1 del orquestador) y `@types/pngjs@6.0.5` (MIT, desarrollo).
 
 ## Capabilities
 

@@ -93,24 +93,23 @@ function consultarResolutor(resolutor: ResolutorDivipol, codigo: string): Respue
 function confianzaCampo(
   campo: CampoCedulaAmarilla,
   lectura: LecturaPdf417,
-  modo: ModoLecturaPdf417,
   comparada: LecturaPdf417 | null,
 ): ConfianzaCampo {
   if (lectura.campos[campo] === null && !CAMPOS_H15.includes(campo)) return 0;
   if (comparada !== null) return lectura.campos[campo] === comparada.campos[campo] ? 1 : 0.5;
-  return modo === "patrones" && lectura.nombresPorH15 && CAMPOS_H15.includes(campo) ? 0.6 : 0.9;
+  return lectura.nombresPorH15 && CAMPOS_H15.includes(campo) ? 0.6 : 0.9;
 }
 
 function consistencia(
   variante: VarianteTramaPdf417,
   offsets: LecturaPdf417 | null,
   patrones: ResultadoLector,
-  discrepantes: CampoCedulaAmarilla[],
 ): ValidacionPdf417 {
   const id = "consistencia-modos";
   if (variante !== "completa") return validacion(id, "no-aplica", [], "trama-no-completa");
   if (offsets === null) return validacion(id, "no-aplica", [], "offsets-sin-resultado");
   if (!patrones.ok) return validacion(id, "no-aplica", [], "patrones-sin-resultado");
+  const discrepantes = CAMPOS.filter((c) => offsets.campos[c] !== patrones.lectura.campos[c]);
   return discrepantes.length > 0 ? validacion(id, "fallida", discrepantes, null) : validacion(id, "ok", [], null);
 }
 
@@ -122,12 +121,12 @@ function divipolCodigos(lectura: LecturaPdf417): ValidacionPdf417 {
 }
 
 /** Hipótesis no confirmadas que aplicó el camino entregado (PA-19). */
-function hipotesisDelCamino(variante: VarianteTramaPdf417, modo: ModoLecturaPdf417, lectura: LecturaPdf417): string[] {
+function hipotesisDelCamino(variante: VarianteTramaPdf417, lectura: LecturaPdf417): string[] {
   const ids: string[] = [];
   if (variante === "truncada") ids.push("H02");
   if (variante === "sin-pubdsk") ids.push("H07");
   if (lectura.bloque === "fecha-primero") ids.push("H08");
-  if (modo === "patrones" && lectura.nombresPorH15) ids.push("H15");
+  if (lectura.nombresPorH15) ids.push("H15");
   return ids;
 }
 
@@ -154,17 +153,17 @@ export function ensamblar(
   }
 
   const comparada = offsets !== null && patrones.ok ? patrones.lectura : null;
-  const discrepantes = comparada === null ? [] : CAMPOS.filter((c) => lectura.campos[c] !== comparada.campos[c]);
   const confianza = {} as Record<CampoCedulaAmarilla, ConfianzaCampo>;
-  for (const campo of CAMPOS) confianza[campo] = confianzaCampo(campo, lectura, modo, comparada);
+  for (const campo of CAMPOS) confianza[campo] = confianzaCampo(campo, lectura, comparada);
 
+  // Los dos códigos son null a la vez: solo hay códigos si el bloque los dio (estado divipol "ok", PA-11).
   const { codigoDepartamentoNacimiento: departamento, codigoMunicipioNacimiento: municipio } = lectura.campos;
   let existe: RespuestaResolutor;
-  if (departamento === null || municipio === null) existe = { estado: "no-aplica", detalle: "sin-codigos", ids: [] };
+  if (lectura.divipol !== "ok") existe = { estado: "no-aplica", detalle: "sin-codigos", ids: [] };
   else if (resolutor === undefined) existe = { estado: "no-aplica", detalle: "sin-resolutor", ids: [] };
-  else existe = consultarResolutor(resolutor, departamento + municipio);
+  else existe = consultarResolutor(resolutor, `${departamento}${municipio}`);
 
-  const warnings = [...new Set([...existe.ids, ...hipotesisDelCamino(variante, modo, lectura)])].sort();
+  const warnings = [...new Set([...existe.ids, ...hipotesisDelCamino(variante, lectura)])].sort();
 
   return {
     ok: true,
@@ -175,7 +174,7 @@ export function ensamblar(
     confianza,
     validaciones: [
       validacion("formato-nuip", "ok", ["numeroDocumento"], lectura.tipoNuip),
-      consistencia(variante, offsets, patrones, discrepantes),
+      consistencia(variante, offsets, patrones),
       divipolCodigos(lectura),
       validacion("divipol-existe", existe.estado, camposDivipol(), existe.detalle),
     ],

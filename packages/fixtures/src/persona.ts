@@ -112,25 +112,34 @@ const VALIDADORES: readonly (readonly [keyof PersonaFicticia, Validador])[] = [
   ["rh", (v) => ((GRUPOS_RH as readonly unknown[]).includes(v) ? null : "rh-invalido")],
 ];
 
-function esObjeto(valor: unknown): valor is Record<string, unknown> {
-  return typeof valor === "object" && valor !== null && !Array.isArray(valor);
+/**
+ * Copia los 13 campos leyendo cada uno una sola vez (FX-05), o devuelve `null` si `valor` no tiene exactamente esas
+ * 13 claves propias (`Reflect.ownKeys`: cuenta símbolos y no enumerables). `Reflect.ownKeys` lanza con `null` y
+ * primitivos; un getter o un Proxy que lanza también da `null` (FX-03). Un arreglo tiene la clave `length`.
+ */
+function copiarCampos(valor: unknown): Record<string, unknown> | null {
+  try {
+    const claves = Reflect.ownKeys(valor as object);
+    if (claves.length !== VALIDADORES.length || !VALIDADORES.every(([campo]) => claves.includes(campo))) return null;
+    const copia: Record<string, unknown> = {};
+    for (const [campo] of VALIDADORES) copia[campo] = (valor as Record<string, unknown>)[campo];
+    return copia;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Valida una persona recibida como `unknown` (FX-03, FX-04) y devuelve una copia congelada.
+ * Valida una persona recibida como `unknown` (FX-03, FX-04) y devuelve una copia congelada. Se valida la copia, de
+ * modo que un getter o un Proxy no puede dar un valor al validar y otro al generar (FX-05).
  * Lanza el primer `ErrorFixture` en el orden de FX-03.
  */
 export function validarPersona(valor: unknown): PersonaFicticia {
-  if (!esObjeto(valor)) throw new ErrorFixture("persona-invalida", null);
-  const claves = Object.keys(valor);
-  if (claves.length !== VALIDADORES.length || !VALIDADORES.every(([campo]) => Object.hasOwn(valor, campo))) {
-    throw new ErrorFixture("persona-invalida", null);
-  }
-  const copia: Record<string, unknown> = {};
+  const copia = copiarCampos(valor);
+  if (copia === null) throw new ErrorFixture("persona-invalida", null);
   for (const [campo, validar] of VALIDADORES) {
-    const codigo = validar(valor[campo]);
+    const codigo = validar(copia[campo]);
     if (codigo !== null) throw new ErrorFixture(codigo, campo);
-    copia[campo] = valor[campo];
   }
   return Object.freeze(copia) as unknown as PersonaFicticia;
 }

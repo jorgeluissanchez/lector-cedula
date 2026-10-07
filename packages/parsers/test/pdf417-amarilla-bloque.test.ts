@@ -62,6 +62,8 @@ describe("PA-11 y PA-12 Reconocedores de un solo paso (bloque-demografico.ts)", 
       "0F19700101310190",
       "0F19700101310190a+",
       "0F19700101310190BA+",
+      "0F19700101310190OB+",
+      "0F19700101310190BB+",
     ]) {
       expect([t, reconocerSexoPrimero(bytesDe(t), 0)]).toStrictEqual([t, null]);
     }

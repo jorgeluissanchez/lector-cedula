@@ -38,3 +38,11 @@ test-results/
 reports/playwright/
 playwright-report/
 evals/reports/latest.json
+
+# Captura (cambio captura-calidad-pwa): vídeos sintéticos generados y reportes locales
+e2e/videos/sinteticos/
+reports/captura/
+reports/lighthouse/
+.stryker-tmp*/
+stryker-*.tmp.config.mjs
+scratchpad/

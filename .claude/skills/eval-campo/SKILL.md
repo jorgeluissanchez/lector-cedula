@@ -32,6 +32,10 @@ Salida: `evals/reports/latest.json` y una tabla por tipo y campo. Código 1 si h
 3. Crea fixtures en `evals/fixtures/sinteticos/pdf417-co/` (ver skill `fixture-sintetico`).
 4. Corre `npm run eval`; si el resultado es una mejora aprobada, actualiza el baseline.
 
+## Tipos registrados con adaptador de entrada
+
+- `pdf417-amarilla` (cambio parser-pdf417-amarilla): `entrada` es el payload en hexadecimal en minúsculas (el JSON no transporta bytes). El adaptador `evals/runners/adaptadores/pdf417-amarilla.mjs` (`evaluarPdf417AmarillaHex`) valida el hex (lanza con `hex` en el mensaje), llama a `parsearPdf417Amarilla` y aplana: éxito -> `ok`, los diez campos, `variante`, `modo`, `bloqueDemografico` y `warnings`; error -> `ok` y `error`. Los 18 fixtures los genera `node tools/fixtures/pdf417-amarilla.mjs` (requiere `npm run typecheck` antes, porque usa `packages/fixtures/dist`); `tools/test/fixtures-pdf417-amarilla.test.mjs` falla si los archivos derivan del script. No los edites a mano.
+
 ## Cómo leer las métricas
 
 - `exact_match`: fracción de casos con el valor idéntico. Meta de producto: 95 % o más en amarilla y digital.

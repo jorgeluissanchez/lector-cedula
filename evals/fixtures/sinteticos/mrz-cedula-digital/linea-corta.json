@@ -1,0 +1,19 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-cedula-digital",
+  "descripcion": "MZ-01: línea 3 de 29 caracteres",
+  "entrada": [
+    "ICCOL999900123816001<<<<<<<<<<",
+    "9007150F3407150COL9999123456<5",
+    "FICTICIO<EJEMPLO<<ANA<MARIA<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-06"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": false,
+    "motivo": "longitud-linea-invalida",
+    "linea": 3
+  }
+}

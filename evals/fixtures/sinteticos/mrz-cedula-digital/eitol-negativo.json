@@ -1,0 +1,36 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-cedula-digital",
+  "descripcion": "MZ-20: ejemplo sintético público de Eitol, caso negativo (espécimen anterior de la Registraduría, persona ficticia)",
+  "entrada": [
+    "ICCOL000000012305001<<<<<<<<<<",
+    "0403151F3203190C0L1234567890<0",
+    "WALTEROS<<LAURA<<<<<<<<<<<<<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-06"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "valido": false,
+    "serial": "000000012",
+    "codigoLugarMrz": "05001",
+    "fechaNacimiento": "2004-03-15",
+    "sexo": "F",
+    "fechaVencimiento": "2032-03-19",
+    "nacionalidad": "COL",
+    "nuip": "1234567890",
+    "nuipTipoProbable": "nuip",
+    "apellidos": "WALTEROS",
+    "nombres": "LAURA",
+    "nombresPosiblementeTruncados": false,
+    "cdSerial": "invalido",
+    "cdNacimiento": "valido",
+    "cdVencimiento": "valido",
+    "cdCompuesto": "invalido",
+    "correcciones": 1,
+    "errores": "",
+    "warnings": "M03"
+  }
+}

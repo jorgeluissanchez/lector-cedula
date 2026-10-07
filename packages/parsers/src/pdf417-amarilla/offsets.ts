@@ -30,11 +30,17 @@ function leerCampoNombre(bytes: Uint8Array, inicio: number): string | null {
   let fin = inicio;
   while (fin < limite && bytes[fin] !== 0) fin++;
   for (let i = fin; i < limite; i++) if (bytes[i] !== 0) return null;
+  // L+( L+)*: un 0x20 solo tras una letra, y el campo no puede terminar en 0x20.
+  let previoEspacio = true;
   for (let i = inicio; i < fin; i++) {
-    if (esLetra(bytes[i])) continue;
-    const espacioInterior = bytes[i] === ESPACIO && i > inicio && i + 1 < fin && esLetra(bytes[i - 1]) && esLetra(bytes[i + 1]);
-    if (!espacioInterior) return null;
+    if (esLetra(bytes[i])) {
+      previoEspacio = false;
+      continue;
+    }
+    if (bytes[i] !== ESPACIO || previoEspacio) return null;
+    previoEspacio = true;
   }
+  if (previoEspacio && fin > inicio) return null;
   return decodificarLatin1(bytes, inicio, fin);
 }
 

@@ -103,6 +103,10 @@ describe("PA-06 Clasificación de la trama (trama.ts)", () => {
     expect(clasificarTrama(sustituir(C(P1), 9, [0]))).toBe("completa");
   });
 
+  it("PA-06 Marcador en el byte 0 es truncada, no sin-pubdsk (atrapa: tratar la posición 0 como ausencia)", () => {
+    expect(clasificarTrama(Uint8Array.from([...MARCADOR, ...nulos(40)]))).toBe("truncada");
+  });
+
   it("PA-06 El run cuenta solo dentro de [10,24) (atrapa: contar NUL fuera de la cabecera)", () => {
     const c = sustituir(sustituir(C(P1), 2, nulos(8)), 10, "XXXXXXXXXXXXXX");
     expect(clasificarTrama(sustituir(c, 12, nulos(3)))).toBe("truncada");

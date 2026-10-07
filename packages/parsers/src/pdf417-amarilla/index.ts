@@ -87,11 +87,11 @@ function error(motivo: MotivoErrorPdf417): ResultadoPdf417Amarilla {
  * Lee `opciones` (PA-15): `undefined`, `null` o un objeto no array cuya propiedad `divipol`, leída una vez,
  * es `undefined` o una función. Devuelve `null` si no son válidas.
  */
-function leerOpciones(opciones: unknown): { divipol: ResolutorDivipol | undefined } | null {
-  if (opciones === undefined || opciones === null) return { divipol: undefined };
+function leerOpciones(opciones: unknown): OpcionesPdf417Amarilla | null {
+  if (opciones === undefined || opciones === null) return {};
   if (typeof opciones !== "object" || Array.isArray(opciones)) return null;
   const divipol: unknown = (opciones as { divipol?: unknown }).divipol;
-  if (divipol === undefined) return { divipol: undefined };
+  if (divipol === undefined) return {};
   return typeof divipol === "function" ? { divipol: divipol as ResolutorDivipol } : null;
 }
 

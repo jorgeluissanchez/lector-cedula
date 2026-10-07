@@ -53,4 +53,5 @@ Datos: solo `@lector-cedula/fixtures`; ninguna imagen en el repositorio. Las fot
 2. La CLI enmascara por defecto NUIP y nombres (p. ej. 9999****56, P***** E******); `--sin-mascara` los muestra completos. Ajustar LPI-06 con su escenario.
 3. Se aprueba rechazar rutas del repositorio salvo evals/real/.
 4. Se acepta numRuns >= 50 en la ida y vuelta con WASM.
-5. Si el writer no acepta binario, latin1 con ECI.
+5. Si el writer no acepta binario, latin1 con ECI. (Comprobado en la tarea 1.1: el writer acepta `Uint8Array` binario; no hace falta ECI.)
+6. (Tarea 3.1) En Chromium, zxing-wasm decodifica S girada hasta 2° pero no a 2,5° ni 3°, así que LPI-04 fallaba. Se añaden dos intentos tras las escalas: giro +2° y giro -2° de la imagen original (LPI-01, LPI-02 y sus escenarios actualizados en la spec delta). Coste: hasta dos lecturas más solo cuando las tres primeras fallan.

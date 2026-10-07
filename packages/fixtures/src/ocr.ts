@@ -77,7 +77,8 @@ export function validarOpcionesOcr(esOcr: boolean, errores: unknown, posiciones:
     return { errores: n as number };
   }
   if (errores !== undefined || !Array.isArray(posiciones) || posiciones.length === 0) throw invalida("posicionesOcr");
-  const fijas = posiciones.map((p: unknown) => validarPosicion(p, lineas));
+  // Array.from recorre también los huecos (como `undefined`), que `map` saltaría.
+  const fijas = Array.from(posiciones as unknown[], (p) => validarPosicion(p, lineas));
   const claves = new Set(fijas.map((i) => `${i.linea}:${i.posicion}`));
   if (claves.size !== fijas.length) throw invalida("posicionesOcr");
   return { fijas };

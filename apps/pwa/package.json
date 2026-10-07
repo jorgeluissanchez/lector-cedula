@@ -1,0 +1,19 @@
+{
+  "name": "@lector-cedula/pwa",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PWA de captura de la cédula: cámara trasera, guía de encuadre y calidad en el dispositivo.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "7.3.7"
+  },
+  "dependencies": {
+    "preact": "10.29.8"
+  }
+}

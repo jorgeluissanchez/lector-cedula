@@ -9,7 +9,7 @@ Convenciones: `F = generarPdf417(PERSONA_BASE, { semilla: 1 })` de `@lector-cedu
 ## ADDED Requirements
 
 ### Requirement: LPI-01 Bytes crudos, no texto
-`decodificarPdf417Imagen(imagen)` MUST devolver `{ ok: true, bytes: Uint8Array, intento: "original" | "escala-0.75" | "escala-0.5" }` con los bytes exactos del símbolo (campo `bytes` del resultado de zxing-wasm), nunca la cadena `text`. Los bytes MUST ser idénticos al payload codificado, incluidos los bytes >= 0x80 (por ejemplo `Ñ` = 0xD1 en ISO-8859-1).
+`decodificarPdf417Imagen(imagen)` MUST devolver `{ ok: true, bytes: Uint8Array, intento: "original" | "escala-0.75" | "escala-0.5" | "giro+2" | "giro-2" }` con los bytes exactos del símbolo (campo `bytes` del resultado de zxing-wasm), nunca la cadena `text`. Los bytes MUST ser idénticos al payload codificado, incluidos los bytes >= 0x80 (por ejemplo `Ñ` = 0xD1 en ISO-8859-1).
 
 #### Scenario: Round-trip de la imagen sintética S
 - **WHEN** se decodifica la imagen sintética S como `Uint8Array` PNG
@@ -20,7 +20,7 @@ Convenciones: `F = generarPdf417(PERSONA_BASE, { semilla: 1 })` de `@lector-cedu
 - **THEN** los bytes devueltos son iguales al payload codificado y contienen 0xD1 en la posición `rangos.primerApellido[0] + 2`
 
 ### Requirement: LPI-02 Opciones del lector y reintentos
-Cada intento MUST llamar a `readBarcodes` con `formats: ["PDF417"]`, `tryHarder: true`, `tryRotate: true` y `maxNumberOfSymbols: 1`. Los intentos MUST ejecutarse en el orden original, escala 0,75, escala 0,5 (lados redondeados con `Math.round`) y detenerse en el primero con un símbolo válido.
+Cada intento MUST llamar a `readBarcodes` con `formats: ["PDF417"]`, `tryHarder: true`, `tryRotate: true` y `maxNumberOfSymbols: 1`. Los intentos MUST ejecutarse en el orden original, escala 0,75, escala 0,5 (lados redondeados con `Math.round`), giro +2° y giro -2° (la imagen original girada sobre su centro, mismo tamaño, fondo blanco; ángulo positivo en sentido horario con el eje y hacia abajo, como `CanvasRenderingContext2D.rotate`) y detenerse en el primero con un símbolo válido. Los giros compensan la tolerancia de unos 2° de zxing-cpp a la rotación (medida en la tarea 3.1; skill `captura-movil`, issue #145) y son necesarios para LPI-04.
 
 #### Scenario: Opciones enviadas
 - **WHEN** se decodifica S con un `readBarcodes` inyectado que registra sus argumentos
@@ -29,6 +29,14 @@ Cada intento MUST llamar a `readBarcodes` con `formats: ["PDF417"]`, `tryHarder:
 #### Scenario: Orden de reintentos
 - **WHEN** el `readBarcodes` inyectado devuelve `[]` en las dos primeras llamadas y el resultado real de S en la tercera
 - **THEN** hay 3 llamadas, la segunda recibe una imagen de 1440x810, la tercera una de 960x540 y `intento` es `"escala-0.5"`
+
+#### Scenario: Giros tras las escalas
+- **WHEN** el `readBarcodes` inyectado devuelve `[]` en las tres primeras llamadas y el resultado real de S en la cuarta
+- **THEN** hay 4 llamadas, la cuarta recibe una imagen de 1920x1080 con píxeles distintos de S e `intento` es `"giro+2"`
+
+#### Scenario: Sin símbolo en ningún intento
+- **WHEN** el `readBarcodes` inyectado devuelve siempre `[]`
+- **THEN** hay 5 llamadas, la cuarta y la quinta reciben imágenes de 1920x1080 y el resultado es `{ ok: false, error: "pdf417-no-encontrado" }`
 
 ### Requirement: LPI-03 Entradas aceptadas y errores
 La función MUST aceptar `Uint8Array` con PNG o JPEG (Node y navegador) e `ImageData` (navegador), MUST NOT lanzar ante ninguna entrada y MUST devolver `{ ok: false, error }` con `error` en `"entrada-invalida" | "imagen-ilegible" | "pdf417-no-encontrado"`.
@@ -64,11 +72,21 @@ La salida `bytes` MUST poder pasarse sin transformación a `parsearPdf417Amarill
 - **THEN** el resultado tiene `ok: true` y su NUIP, apellidos, nombres, sexo, fecha de nacimiento y RH coinciden con `F.esperado`
 
 ### Requirement: LPI-06 CLI leer-foto
-`npm run leer-foto -- <ruta>` MUST decodificar el archivo, parsearlo con `buscarDivipol` e imprimir en stdout un único JSON `{ ok, intento, resultado }` o `{ ok: false, error }`. Salida: 0 válida, 1 sin PDF417 o ilegible, 2 parser con `ok: false`, 64 uso incorrecto. stderr MUST NOT incluir la ruta ni el contenido.
+`npm run leer-foto -- [--sin-mascara] <ruta>` MUST decodificar el archivo, parsearlo con `buscarDivipol` e imprimir en stdout un único JSON `{ ok, intento, enmascarado, resultado }` o `{ ok: false, error }`. Salida: 0 válida, 1 sin PDF417 o ilegible, 2 parser con `ok: false`, 64 uso incorrecto (sin ruta, más de una ruta, opción desconocida o archivo ilegible). stderr MUST NOT incluir la ruta ni el contenido.
+
+Por defecto (`enmascarado: true`) la CLI MUST enmascarar en `resultado.campos`: `numeroDocumento` conserva los 4 primeros y los 2 últimos dígitos y sustituye el resto por `*` (si tiene menos de 8 dígitos, solo conserva los 2 últimos); `primerApellido`, `segundoApellido`, `primerNombre` y `segundoNombre` conservan la primera letra de cada palabra y sustituyen las demás letras por `*`, manteniendo los espacios (`null` queda `null`). Con `--sin-mascara` (`enmascarado: false`) los campos se imprimen completos. El resto de campos no se modifica.
 
 #### Scenario: Lectura de imagen sintética
-- **WHEN** se ejecuta la CLI sobre S escrita en `os.tmpdir()`
-- **THEN** el código de salida es 0 y el JSON de stdout tiene `ok: true`, `intento: "original"` y los campos de `resultado` coinciden con `F.esperado`
+- **WHEN** se ejecuta la CLI con `--sin-mascara` sobre S escrita en `os.tmpdir()`
+- **THEN** el código de salida es 0 y el JSON de stdout tiene `ok: true`, `intento: "original"`, `enmascarado: false` y los campos de `resultado` coinciden con `F.esperado`
+
+#### Scenario: Máscara por defecto
+- **WHEN** se ejecuta la CLI sin opciones sobre S escrita en `os.tmpdir()`
+- **THEN** el código de salida es 0, `enmascarado` es `true`, `resultado.campos.numeroDocumento` es `"9999****56"`, `primerApellido` es `"P*****"`, `segundoApellido` es `"E******"`, `primerNombre` es `"F*******"`, `segundoNombre` es `"L**"`, `fechaNacimiento` es `"1985-03-14"` y stdout no contiene `9999123456` ni `PRUEBA`
+
+#### Scenario: Opción desconocida
+- **WHEN** se ejecuta con `--otra` y la ruta de S
+- **THEN** el código de salida es 64 y stdout está vacío
 
 #### Scenario: Uso incorrecto
 - **WHEN** se ejecuta sin argumentos y, por separado, con la ruta inexistente `<tmpdir>/no-existe-<uuid>.png`

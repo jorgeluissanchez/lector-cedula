@@ -244,7 +244,7 @@ Todo byte posterior al RH SHALL ser cola (H09): bytes uniformes de 0x00 a 0xFF s
 - **THEN** las colas difieren en al menos un byte
 
 ### Requirement: FX-14 Hipótesis declaradas
-Cada fixture SHALL incluir `hipotesis`: los IDs que asume su variante, ordenados alfabéticamente y sin repetidos, según la tabla fija de los escenarios. Cada ID MUST existir como fila de `docs/decisiones/hipotesis-formato.md`.
+Cada fixture SHALL incluir `hipotesis`: los IDs que asume su variante, ordenados alfabéticamente y sin repetidos, según la tabla fija de los escenarios; un fixture PDF417 con RH `AB+` o `AB-` añade además `H05b` (RH de 3 bytes, pedido del verificador del 2026-10-06). Cada ID MUST existir como fila de `docs/decisiones/hipotesis-formato.md`.
 
 #### Scenario: Hipótesis de la trama completa
 - **WHEN** se llama `generarPdf417(PERSONA_BASE)`

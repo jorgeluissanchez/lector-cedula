@@ -1,4 +1,9 @@
 {
   "files": [],
-  "references": [{ "path": "packages/parsers" }, { "path": "packages/fixtures" }]
+  "references": [
+    { "path": "packages/parsers" },
+    { "path": "packages/fixtures" },
+    { "path": "packages/capture" },
+    { "path": "apps/pwa" }
+  ]
 }

@@ -27,7 +27,8 @@
     "test:mutacion": "stryker run",
     "check:completo": "npm run check && npm run test:mutacion",
     "test:e2e": "playwright test",
-    "demo": "tsc -b && node tools/demo.mjs"
+    "demo": "tsc -b && node tools/demo.mjs",
+    "leer-foto": "tsc -b && node tools/leer-foto.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

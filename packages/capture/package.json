@@ -1,0 +1,30 @@
+{
+  "name": "@lector-cedula/capture",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Captura con cámara en el navegador: score de calidad 0-100 en Web Worker, auto-captura y feedback. Ningún frame sale del dispositivo.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "jpeg-js": "0.4.4",
+    "pngjs": "7.0.0",
+    "zxing-wasm": "3.1.5"
+  },
+  "devDependencies": {
+    "@types/pngjs": "6.0.5"
+  }
+}

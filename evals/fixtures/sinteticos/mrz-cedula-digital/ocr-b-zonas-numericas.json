@@ -1,0 +1,36 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-cedula-digital",
+  "descripcion": "MZ-07: confusiones OCR-B en todas las zonas numéricas, R1 salvo 11 correcciones",
+  "entrada": [
+    "ICCOL9999OO123BI6001<<<<<<<<<<",
+    "9Q071S0F3407I50C0L99991Z345G<S",
+    "FICTICIO<EJEMPLO<<ANA<MARIA<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-06"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "valido": true,
+    "serial": "999900123",
+    "codigoLugarMrz": "16001",
+    "fechaNacimiento": "1990-07-15",
+    "sexo": "F",
+    "fechaVencimiento": "2034-07-15",
+    "nacionalidad": "COL",
+    "nuip": "9999123456",
+    "nuipTipoProbable": "nuip",
+    "apellidos": "FICTICIO EJEMPLO",
+    "nombres": "ANA MARIA",
+    "nombresPosiblementeTruncados": false,
+    "cdSerial": "valido",
+    "cdNacimiento": "valido",
+    "cdVencimiento": "valido",
+    "cdCompuesto": "valido",
+    "correcciones": 11,
+    "errores": "",
+    "warnings": "M03"
+  }
+}

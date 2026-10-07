@@ -53,7 +53,7 @@ Concreciones que el generador del cambio OpenSpec `generador-fixtures-sinteticos
 
 | ID | Hipótesis | Fuente | Estado | Evidencia |
 |---|---|---|---|---|
-| G01 | Disposición exacta de la trama completa: `[0,2)` 2 dígitos, `[2,10)` AFIS, `[10,24)` NUL, `[24,32)` `PubDSK_1`, `[32,40)` 8 NUL, `[40,48)` campo numérico de 8 dígitos (corregido el 2026-10-06: no hay 6 dígitos en `[33,39)`; ver `2026-10-06-evidencia-hipotesis-formato.md`), `[48,58)` NUIP rellenado con `0` a la izquierda, nombres en `[58,81)`, `[81,104)`, `[104,127)`, `[127,150)` (23 bytes, relleno NUL a la derecha; concreta H04 como intervalos semiabiertos), bloque demográfico desde 150 | Eitol (offsets), fgardila (token numérico antes del apellido) | pendiente | Coherente con H02, H03 y H04; los 8 dígitos de `[40,48)` podrían ser NUL en cédulas reales |
+| G01 | Disposición exacta de la trama completa: `[0,2)` 2 dígitos, `[2,10)` AFIS, `[10,24)` NUL, `[24,32)` `PubDSK_1`, `[32,40)` 8 NUL, `[40,48)` campo numérico de 8 dígitos (corregido el 2026-10-06: no hay 6 dígitos en `[33,39)`; ver `2026-10-06-evidencia-hipotesis-formato.md`), `[48,58)` NUIP rellenado con `0` a la izquierda, nombres en `[58,81)`, `[81,104)`, `[104,127)`, `[127,150)` (23 bytes, relleno NUL a la derecha; concreta H04 como intervalos semiabiertos), bloque demográfico desde 150 | Eitol (offsets), fgardila (token numérico antes del apellido) | refutada en parte (corregida en el generador el 2026-10-06) | Coherente con H02, H03 y H04; los 8 dígitos de `[40,48)` podrían ser NUL en cédulas reales |
 | G02 | La trama "Windows truncada" solo pierde los 11 NUL de `[13,24)` de la cabecera; los NUL de relleno de los nombres y separadores se conservan | H02 (Eitol: marcador en el byte 13) | pendiente | Se desconoce si el lector trunca también otros runs de NUL |
 | G03 | En la variante sin `PubDSK` el marcador se sustituye por NUL y aparece un NUL más en el byte 32, de modo que los campos desde el byte 32 empiezan una posición después (desplazamiento +1; la trama conserva 531 bytes) | H07 (fgardila 2020, pmogollons, Yeison07; app Verifíquese decompilada) | pendiente | Dirección en duda: hasta el 2026-10-06 se asumía −1; la app Verifíquese sugiere +1 [E] (`2026-10-06-evidencia-hipotesis-formato.md`). Sin payloads |
 | G04 | En la variante fecha-primero, tras `02` + fecha + sexo siguen departamento (2), municipio (3), 1 dígito y RH, como en H05 | H08 (fgardila 2026 lee `\d*` entre sexo y RH) | pendiente | Solo fixtures sintéticos de fgardila |
@@ -94,3 +94,7 @@ Fuente: `docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md`. Esta tabla 
 | G01 | refutada en parte | [32,40) son NUL y [40,48) numérico de 8 bytes |
 
 Propuestas nuevas del investigador (pendientes): H13 (dos plantillas dactilares), H14 (tramas sin NUL pierden fronteras entre nombres), H16 (prefijo de 2 bytes = tipo de documento; renumerada para no chocar con la H15 del parser PDF417), M05 (especímenes no autoconsistentes), N02 (estructura del NIP).
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| H05b | El RH `AB+` o `AB-` ocupa 3 bytes `[166,169)` y desplaza el separador y la cola una posición | `2026-10-06-evidencia-hipotesis-formato.md` (propuesta) | pendiente | Ningún payload público trae RH AB; una app comercial leería solo `AB`. La declaran los fixtures con RH AB± (FX-14) |

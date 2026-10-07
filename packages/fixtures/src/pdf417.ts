@@ -187,7 +187,8 @@ export function generarPdf417(persona: PersonaFicticia, opciones?: OpcionesPdf41
     variante,
     semilla,
     bytes: Uint8Array.from(final),
-    hipotesis: [...HIPOTESIS_PDF417[variante]],
+    // H05b: el RH AB± ocupa 3 bytes y desplaza el separador y la cola.
+    hipotesis: (p.rh.startsWith("AB") ? [...HIPOTESIS_PDF417[variante], "H05b" as const] : [...HIPOTESIS_PDF417[variante]]).sort(),
     persona: p,
     esperado: esperadoDe(p),
     rangos: declarados,

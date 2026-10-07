@@ -1,0 +1,36 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-cedula-digital",
+  "descripcion": "MZ-13: día siguiente a la referencia, siglo XX",
+  "entrada": [
+    "ICCOL999900123816001<<<<<<<<<<",
+    "2610070F3407150COL9999123456<9",
+    "FICTICIO<EJEMPLO<<ANA<MARIA<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-06"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "valido": true,
+    "serial": "999900123",
+    "codigoLugarMrz": "16001",
+    "fechaNacimiento": "1926-10-07",
+    "sexo": "F",
+    "fechaVencimiento": "2034-07-15",
+    "nacionalidad": "COL",
+    "nuip": "9999123456",
+    "nuipTipoProbable": "nuip",
+    "apellidos": "FICTICIO EJEMPLO",
+    "nombres": "ANA MARIA",
+    "nombresPosiblementeTruncados": false,
+    "cdSerial": "valido",
+    "cdNacimiento": "valido",
+    "cdVencimiento": "valido",
+    "cdCompuesto": "valido",
+    "correcciones": 0,
+    "errores": "",
+    "warnings": "M03"
+  }
+}

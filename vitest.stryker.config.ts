@@ -8,7 +8,7 @@ export default mergeConfig(
   base,
   defineConfig({
     test: {
-      exclude: [...configDefaults.exclude, "tools/test/eval-campo.test.mjs", "tools/test/hooks.test.mjs", "tools/test/divipol-cli.test.mjs"],
+      exclude: [...configDefaults.exclude, "tools/test/eval-campo.test.mjs", "tools/test/hooks.test.mjs", "tools/test/divipol-cli.test.mjs", "tools/test/leer-foto.test.mjs"],
     },
   }),
 );

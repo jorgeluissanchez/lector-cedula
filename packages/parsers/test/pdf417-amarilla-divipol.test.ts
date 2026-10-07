@@ -63,6 +63,8 @@ describe("PA-15 Resolutor DIVIPOL inyectado", () => {
       { encontrado: 1 },
       { encontrado: false },
       { encontrado: false, motivo: "DESCONOCIDO", warnings: ["D01"] },
+      { encontrado: "no", motivo: "desconocido", warnings: ["D01"] },
+      { encontrado: undefined, motivo: "sin-dato", warnings: ["D04"] },
       {
         get encontrado() {
           throw new Error("getter");
@@ -96,7 +98,7 @@ describe("PA-15 Resolutor DIVIPOL inyectado", () => {
   it("PA-15 Solo se copian IDs de hipótesis bien formados (atrapa: copiar texto arbitrario a warnings)", () => {
     const r = exito(
       parsearPdf417Amarilla(C(P1), {
-        divipol: () => ({ encontrado: true, codigo: "16001", warnings: ["D02", "<b>", 7, "d03", "D02", "D0001", " D03", "D03 ", "D3"] }),
+        divipol: () => ({ encontrado: true, codigo: "16001", warnings: ["D02", "<b>", 7, "d03", "D02", "D0001", " D03", "D03 ", "D3", ["D05"], { toString: () => "D06" }] }),
       }),
     );
     expect(r.warnings).toStrictEqual(["D02"]);

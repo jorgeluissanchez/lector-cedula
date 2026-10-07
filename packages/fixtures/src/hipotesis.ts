@@ -5,6 +5,7 @@ export type IdHipotesis =
   | "H03"
   | "H04"
   | "H05"
+  | "H05b"
   | "H06"
   | "H07"
   | "H08"

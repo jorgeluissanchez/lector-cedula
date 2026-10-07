@@ -1,0 +1,19 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-cedula-digital",
+  "descripcion": "MZ-06: otro tipo de documento (ID)",
+  "entrada": [
+    "IDCOL999900123816001<<<<<<<<<<",
+    "9007150F3407150COL9999123456<5",
+    "FICTICIO<EJEMPLO<<ANA<MARIA<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-06"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": false,
+    "motivo": "no-es-cedula-digital",
+    "linea": null
+  }
+}
