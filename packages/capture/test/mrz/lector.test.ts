@@ -6,22 +6,25 @@ import fc from "fast-check";
 import { PNG } from "pngjs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
-import { crearLectorMrz, fechaReferenciaValida, recortarYAmpliar, type WorkerOcr } from "../../src/mrz/lector.js";
-import { girar, localizarFranjaMrz } from "../../src/mrz/localizar.js";
+import { crearLectorMrz, fechaReferenciaValida, planIntentosMrz, recortarYAmpliar, type WorkerOcr } from "../../src/mrz/lector.js";
 
 const REF = { fechaReferencia: "2026-10-06" };
 const P = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
 let R: Uint8Array;
-/** Intentos de R: candidatos de la imagen derecha, girada 90° y girada 270° (LMI-04, LMI-11 y LMI-12). */
-let intentosR: { derecha: number; total: number };
+/** Intentos de R (LMI-12b): pasada 1 de la imagen derecha y plan completo de las tres vistas. */
+let intentosR: { derecha: number; total: number; primero270: number };
+/** Presupuesto por defecto de llamadas al OCR (LMI-13). */
+const MAX_LLAMADAS = 40;
 
 beforeAll(async () => {
   const render = await crearRenderizador();
   R = (await render.render(P.lineas)).bytes;
   const png = PNG.sync.read(Buffer.from(R));
   const p = { width: png.width, height: png.height, data: new Uint8ClampedArray(png.data) };
-  const derecha = localizarFranjaMrz(p).length;
-  intentosR = { derecha, total: derecha + localizarFranjaMrz(girar(p, 90)).length + localizarFranjaMrz(girar(p, 270)).length };
+  const plan = planIntentosMrz(p);
+  // Pasada 1 de la vista derecha: los intentos de giro 0 antes del primero de otra vista.
+  const derecha = plan.findIndex((i) => i.giro !== 0);
+  intentosR = { derecha, total: plan.length, primero270: plan.findIndex((i) => i.giro === 270) };
   await render.cerrar();
 }, 60_000);
 
@@ -167,7 +170,7 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
     // Sin 4 dígitos válidos se prueban todos los candidatos, también los de las vistas giradas (LMI-12).
     expect(intentosR.derecha).toBeGreaterThan(3);
     expect(intentosR.total).toBeGreaterThan(intentosR.derecha);
-    expect(reg.imagenes).toHaveLength(intentosR.total);
+    expect(reg.imagenes).toHaveLength(Math.min(MAX_LLAMADAS, intentosR.total));
     expect(r).toMatchObject({ ok: true, intento: "proyeccion", digitosValidos: 3 });
   });
 
@@ -181,7 +184,7 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
   it("LMI-04 Nada legible", async () => {
     const { reg, crearWorker } = falso([""]);
     expect(await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF)).toStrictEqual({ ok: false, error: "mrz-no-encontrada" });
-    expect(reg.imagenes).toHaveLength(intentosR.total);
+    expect(reg.imagenes).toHaveLength(Math.min(MAX_LLAMADAS, intentosR.total));
   });
 
   it("LMI-12 Las vistas giradas solo se prueban si la derecha no da 4 dígitos válidos, con sufijo de giro", async () => {
@@ -190,7 +193,7 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
     const r = await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF);
     expect(r).toMatchObject({ ok: true, intento: "proyeccion@90", digitosValidos: 4 });
     expect(reg.imagenes).toHaveLength(intentosR.derecha + 1);
-    const { crearWorker: c270 } = falso((i) => (i === intentosR.total - 1 ? P.texto : ""));
+    const { crearWorker: c270 } = falso((i) => (i === intentosR.primero270 ? P.texto : ""));
     const s = await crearLectorMrz({ rutaModelo: "/m", crearWorker: c270 }).leer(R, REF);
     expect(s).toMatchObject({ ok: true, digitosValidos: 4 });
     expect(s.ok && s.intento.endsWith("@270")).toBe(true);
@@ -313,5 +316,100 @@ describe("LMI-05 Entradas aceptadas y errores (OCR inyectado)", { timeout: 120_0
       }),
       { numRuns: 300 },
     );
+  });
+});
+
+describe("LMI-12b Orden de intentos en dos pasadas", { timeout: 60_000 }, () => {
+  const clave = (i: { giro: number; candidato: { caja: { x: number; y: number; ancho: number; alto: number } } }): string =>
+    `${i.giro}:${i.candidato.caja.x},${i.candidato.caja.y},${i.candidato.caja.ancho},${i.candidato.caja.alto}`;
+
+  it("LMI-12b Plan de un lienzo blanco", () => {
+    const blanco = { width: 1000, height: 1000, data: new Uint8ClampedArray(4_000_000).fill(255) };
+    const plan = planIntentosMrz(blanco);
+    expect(plan.slice(0, 4).map((i) => [i.giro, i.candidato.metodo])).toStrictEqual([
+      [0, "recorte-inferior"],
+      [0, "imagen-completa"],
+      [90, "recorte-inferior"],
+      [90, "imagen-completa"],
+    ]);
+    expect(new Set(plan.map(clave)).size).toBe(plan.length);
+    // Pasada 2: las ventanas literales de las tres vistas, después de toda la pasada 1.
+    expect(plan.slice(6).every((i) => i.candidato.metodo === "franja")).toBe(true);
+    expect(plan.slice(6, 8).map((i) => [i.giro, i.candidato.caja])).toStrictEqual([
+      [0, { x: 0, y: 850, ancho: 1000, alto: 150 }],
+      [0, { x: 0, y: 800, ancho: 1000, alto: 150 }],
+    ]);
+    // Cada vista aporta sus ventanas una sola vez: 3 alturas (19 + 15 + 12 ventanas) x 3 vistas.
+    expect(plan).toHaveLength(6 + 3 * (18 + 15 + 12));
+  });
+
+  it("LMI-12b Las franjas ajustadas van en la pasada 1 y sin cajas repetidas", () => {
+    const png = PNG.sync.read(Buffer.from(R));
+    const plan = planIntentosMrz({ width: png.width, height: png.height, data: new Uint8ClampedArray(png.data) });
+    expect(new Set(plan.map(clave)).size).toBe(plan.length);
+    const primeraLiteral = plan.findIndex((i) => i.candidato.metodo === "franja" && i.candidato.caja.x === 0 && i.giro === 0 && i.candidato.caja.ancho === png.width);
+    const ajustadas = plan.filter((i) => i.giro === 0 && i.candidato.metodo === "franja" && i.candidato.caja.ancho < png.width);
+    expect(ajustadas.length).toBeGreaterThan(0);
+    expect(plan.indexOf(ajustadas[ajustadas.length - 1] as (typeof plan)[number])).toBeLessThan(primeraLiteral);
+    expect(plan.findIndex((i) => i.giro === 270)).toBeLessThan(primeraLiteral);
+  });
+
+  it("LMI-12b Entrada sin forma de píxeles: plan vacío", () => {
+    expect(planIntentosMrz(null)).toStrictEqual([]);
+  });
+});
+
+describe("LMI-13 Presupuesto de intentos y de tiempo", { timeout: 60_000 }, () => {
+  it("LMI-13 Corte por número de llamadas", async () => {
+    const { reg, crearWorker } = falso([""]);
+    const r = await crearLectorMrz({ rutaModelo: "/m", crearWorker, maxLlamadasOcr: 5 }).leer(R, REF);
+    expect(r).toStrictEqual({ ok: false, error: "mrz-no-encontrada" });
+    expect(reg.imagenes).toHaveLength(5);
+  });
+
+  it("LMI-13 Corte por tiempo con mejor intento parcial", async () => {
+    const alterado = generarMrzTd1(PERSONA_BASE, { variante: "cd-compuesto-alterado" });
+    let reloj = 1_000;
+    let llamadas = 0;
+    const lector = crearLectorMrz({
+      rutaModelo: "/m",
+      tiempoLimiteMs: 60_000,
+      ahora: () => reloj,
+      crearWorker: async () => ({
+        setParameters: async () => undefined,
+        recognize: async () => {
+          reloj += 30_000;
+          return { data: { text: llamadas++ === 0 ? alterado.texto : "" } };
+        },
+        terminate: async () => undefined,
+      }),
+    });
+    const r = await lector.leer(R, REF);
+    expect(llamadas).toBe(2);
+    expect(r).toMatchObject({ ok: true, intento: "proyeccion", digitosValidos: 3 });
+  });
+
+  it("LMI-13 Presupuesto por defecto", async () => {
+    const { reg, crearWorker } = falso([""]);
+    await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF);
+    expect(intentosR.total).toBeGreaterThan(MAX_LLAMADAS);
+    expect(reg.imagenes).toHaveLength(MAX_LLAMADAS);
+  });
+
+  it("LMI-13 Opciones no enteras positivas toman el valor por defecto", async () => {
+    for (const malo of [0, -3, 2.5, Number.NaN]) {
+      const { reg, crearWorker } = falso([""]);
+      await crearLectorMrz({ rutaModelo: "/m", crearWorker, maxLlamadasOcr: malo, tiempoLimiteMs: malo }).leer(R, REF);
+      expect(reg.imagenes).toHaveLength(MAX_LLAMADAS);
+    }
+  });
+
+  it("LMI-13 El tiempo se mide desde el inicio de cada lectura", async () => {
+    let reloj = 0;
+    const { reg, crearWorker } = falso([""]);
+    const lector = crearLectorMrz({ rutaModelo: "/m", crearWorker, maxLlamadasOcr: 3, ahora: () => (reloj += 1_000) });
+    await lector.leer(R, REF);
+    await lector.leer(R, REF);
+    expect(reg.imagenes).toHaveLength(6);
   });
 });

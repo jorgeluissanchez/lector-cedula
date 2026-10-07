@@ -73,6 +73,10 @@ export { extraerLineasMrz } from "./mrz/extraer.js";
 export { localizarFranjaMrz, type CajaMrz, type CandidatoMrz, type MetodoLocalizacion, type PixelesRgba } from "./mrz/localizar.js";
 export {
   crearLectorMrz,
+  MAX_LLAMADAS_OCR,
+  planIntentosMrz,
+  TIEMPO_LIMITE_MS,
+  type IntentoPlan,
   type CrearWorkerOcr,
   type ErrorLectorMrz,
   type LectorMrz,

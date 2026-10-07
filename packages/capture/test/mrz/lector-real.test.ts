@@ -11,6 +11,7 @@ import { PNG } from "pngjs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
 import { crearLectorMrz, type LectorMrz, type ResultadoLectorMrz } from "../../src/mrz/lector.js";
+import { crearWorkerTesseract, opcionesWorker } from "../../src/mrz/entorno.js";
 import { girar, localizarFranjaMrz } from "../../src/mrz/localizar.js";
 
 const RAIZ = resolve(fileURLToPath(new URL("../../../..", import.meta.url)));
@@ -27,6 +28,8 @@ let dimM: { width: number; height: number };
 let T: Uint8Array;
 /** R girado 90° en sentido antihorario: tarjeta en vertical, líneas MRZ verticales (LMI-12). */
 let V: Uint8Array;
+/** Foto 900x1600 con madera y R girado 90° horario, a 360 px de ancho en (40, 260): MRZ a la izquierda (LMI-12b). */
+let G: Uint8Array;
 let lector: LectorMrz;
 
 /** Textura de madera determinista: vetas casi verticales con ondulación y grano (sin azar). */
@@ -47,12 +50,12 @@ function madera(w: number, h: number): PNG {
   return png;
 }
 
-/** Pega `fuente` escalada (bilineal) a `ancho` px, centrada en `destino`. */
-function pegarEscalada(destino: PNG, fuente: PNG, ancho: number): void {
+/** Pega `fuente` escalada (bilineal) a `ancho` px en `destino`, centrada salvo que se dé la esquina `en`. */
+function pegarEscalada(destino: PNG, fuente: { width: number; height: number; data: Uint8Array | Uint8ClampedArray }, ancho: number, en?: { x: number; y: number }): void {
   const alto = Math.round((fuente.height * ancho) / fuente.width);
   const f = fuente.width / ancho;
-  const x0 = Math.round((destino.width - ancho) / 2);
-  const y0 = Math.round((destino.height - alto) / 2);
+  const x0 = en?.x ?? Math.round((destino.width - ancho) / 2);
+  const y0 = en?.y ?? Math.round((destino.height - alto) / 2);
   for (let y = 0; y < alto; y++) {
     const sy = Math.min(fuente.height - 1, Math.max(0, (y + 0.5) * f - 0.5));
     const ya = Math.floor(sy);
@@ -122,6 +125,9 @@ beforeAll(async () => {
   const pv = new PNG({ width: girada.width, height: girada.height });
   pv.data.set(girada.data);
   V = new Uint8Array(PNG.sync.write(pv));
+  const fondoG = madera(900, 1600);
+  pegarEscalada(fondoG, girar({ width: fuente.width, height: fuente.height, data: new Uint8ClampedArray(fuente.data) }, 90), 360, { x: 40, y: 260 });
+  G = new Uint8Array(PNG.sync.write(fondoG));
   await render.cerrar();
   lector = crearLectorMrz({ rutaModelo: MODELO });
   vacio = mkdtempSync(join(tmpdir(), "mrz-sin-modelo-"));
@@ -226,4 +232,28 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
     lecturaCorrecta(r);
     expect(r.ok && r.intento.endsWith("@90")).toBe(true);
   });
+
+  it("LMI-12b Tarjeta pequeña girada sobre textura", async () => {
+    let llamadas = 0;
+    // Sin límite de tiempo efectivo: bajo carga paralela una llamada OCR tarda varios segundos; se mide por llamadas.
+    const contador = crearLectorMrz({
+      rutaModelo: MODELO,
+      tiempoLimiteMs: 600_000,
+      // Con crearWorker inyectado el lector no resuelve la ruta del worker de Node: se piden las opciones reales.
+      crearWorker: async (idioma, oem) => {
+        const op = await opcionesWorker({ rutaModelo: MODELO });
+        if (op === null) throw new Error("sin modelo");
+        const w = await crearWorkerTesseract(idioma, oem, op);
+        return { setParameters: (p) => w.setParameters(p), terminate: () => w.terminate(), recognize: (i) => (llamadas++, w.recognize(i)) };
+      },
+    });
+    try {
+      const r = await contador.leer(G, REF);
+      lecturaCorrecta(r);
+      expect(r.ok && r.intento.endsWith("@270")).toBe(true);
+      expect(llamadas).toBeLessThanOrEqual(40);
+    } finally {
+      await contador.terminar();
+    }
+  }, 300_000);
 });

@@ -170,7 +170,7 @@ export function localizarFranjaMrz(pixeles: unknown): CandidatoMrz[] {
   const completa: CandidatoMrz = { metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: w, alto: h } };
   const base = proyeccion === null ? [inferior, completa] : [proyeccion, inferior, completa];
   const luma = luminancias(pixeles);
-  return [...base, ...franjas(w, h).map((f) => ajustarFranja(luma, w, f))];
+  return [...base, ...ventanasFranja(w, h).map((f) => ajustarFranja(luma, w, f))];
 }
 
 /** Una columna es fondo (p. ej. madera al lado de la tarjeta) si tiene tinta en al menos esta fracción de filas. */
@@ -234,7 +234,7 @@ const FRACCION_PASO = 0.05;
  * LMI-11: ventanas horizontales de todo el ancho, de abajo arriba, sin repetir cajas. Sirven cuando la tarjeta
  * completa está sobre un fondo con textura y la proyección global no separa las 3 bandas.
  */
-function franjas(w: number, h: number): CandidatoMrz[] {
+export function ventanasFranja(w: number, h: number): CandidatoMrz[] {
   const paso = Math.max(1, Math.round(FRACCION_PASO * h));
   const r: CandidatoMrz[] = [];
   for (const fraccion of FRACCIONES_FRANJA) {

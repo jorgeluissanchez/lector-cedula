@@ -7,7 +7,18 @@ import { decodificarPixeles, type DecodificadorPixeles, type Pixeles } from "../
 import { enderezar } from "./enderezar.js";
 import { codificarPng, crearWorkerTesseract, opcionesWorker } from "./entorno.js";
 import { extraerLineasMrz } from "./extraer.js";
-import { esPixelesRgba, GIROS, girar, localizarFranjaMrz, type CajaMrz, type Giro, type MetodoLocalizacion, type PixelesRgba } from "./localizar.js";
+import {
+  esPixelesRgba,
+  GIROS,
+  girar,
+  localizarFranjaMrz,
+  ventanasFranja,
+  type CajaMrz,
+  type CandidatoMrz,
+  type Giro,
+  type MetodoLocalizacion,
+  type PixelesRgba,
+} from "./localizar.js";
 
 /** Lista blanca y modo de segmentación del OCR (LMI-02). */
 export const PARAMETROS_OCR = Object.freeze({
@@ -20,6 +31,10 @@ export const OEM_LSTM_ONLY = 1;
 
 /** Ancho mínimo de la imagen que recibe el OCR (LMI-04). */
 export const ANCHO_MINIMO_OCR = 900;
+
+/** Presupuesto por defecto de LMI-13: llamadas al OCR y milisegundos por lectura. */
+export const MAX_LLAMADAS_OCR = 40;
+export const TIEMPO_LIMITE_MS = 60_000;
 
 /** Subconjunto del worker de Tesseract.js que usa el lector (inyectable en pruebas). */
 export interface WorkerOcr {
@@ -39,6 +54,12 @@ export interface OpcionesLectorMrz {
   readonly rutaCore?: string;
   readonly crearWorker?: CrearWorkerOcr;
   readonly decodificarPixeles?: DecodificadorPixeles;
+  /** LMI-13: máximo de llamadas al OCR por lectura (entero positivo; por defecto `MAX_LLAMADAS_OCR`). */
+  readonly maxLlamadasOcr?: number;
+  /** LMI-13: tiempo límite por lectura en ms (entero positivo; por defecto `TIEMPO_LIMITE_MS`). */
+  readonly tiempoLimiteMs?: number;
+  /** LMI-13: reloj en ms (por defecto `Date.now`). */
+  readonly ahora?: () => number;
 }
 
 export type ErrorLectorMrz =
@@ -98,6 +119,53 @@ export function recortarYAmpliar(p: PixelesRgba, caja: CajaMrz): Pixeles {
   return { data, width: w, height: h };
 }
 
+/** Un intento del plan de LMI-12b: candidato de la vista girada `giro` grados en sentido horario (0 = derecha). */
+export interface IntentoPlan {
+  readonly giro: 0 | Giro;
+  readonly candidato: CandidatoMrz;
+}
+
+const claveCaja = (c: CajaMrz): string => `${c.x},${c.y},${c.ancho},${c.alto}`;
+
+/**
+ * LMI-12b: intentos en dos pasadas sobre las vistas (derecha, 90, 270), sin cajas repetidas dentro de una vista. La
+ * pasada 1 lleva los candidatos que no son ventanas literales de LMI-11; la pasada 2, las ventanas literales. Las
+ * vistas giradas se calculan al recorrer el generador, solo cuando la pasada 1 las alcanza.
+ */
+export function* intentosMrz(pixeles: PixelesRgba): Generator<IntentoPlan & { readonly imagen: PixelesRgba }> {
+  const vistas: { giro: 0 | Giro; imagen: PixelesRgba; literales: CandidatoMrz[]; vistas: Set<string> }[] = [];
+  for (const giro of [0, ...GIROS] as const) {
+    const imagen = giro === 0 ? pixeles : girar(pixeles, giro);
+    const ventanas = new Set(ventanasFranja(imagen.width, imagen.height).map((v) => claveCaja(v.caja)));
+    const vista = { giro, imagen, literales: [] as CandidatoMrz[], vistas: new Set<string>() };
+    vistas.push(vista);
+    for (const candidato of localizarFranjaMrz(imagen)) {
+      const clave = claveCaja(candidato.caja);
+      if (candidato.metodo === "franja" && ventanas.has(clave)) vista.literales.push(candidato);
+      else if (!vista.vistas.has(clave)) {
+        vista.vistas.add(clave);
+        yield { giro, imagen, candidato };
+      }
+    }
+  }
+  for (const { giro, imagen, literales, vistas: hechas } of vistas) {
+    for (const candidato of literales) {
+      const clave = claveCaja(candidato.caja);
+      if (hechas.has(clave)) continue;
+      hechas.add(clave);
+      yield { giro, imagen, candidato };
+    }
+  }
+}
+
+/** LMI-12b: plan completo de intentos (sin presupuesto). `[]` si la entrada no tiene forma de píxeles. */
+export function planIntentosMrz(pixeles: unknown): IntentoPlan[] {
+  if (!esPixelesRgba(pixeles)) return [];
+  return [...intentosMrz(pixeles)].map(({ giro, candidato }) => ({ giro, candidato }));
+}
+
+const enteroPositivo = (x: number | undefined, defecto: number): number => (Number.isInteger(x) && (x as number) > 0 ? (x as number) : defecto);
+
 function contarValidos(r: ResultadoParserMrz): number {
   const d = r.digitosControl;
   return [d.serial, d.nacimiento, d.vencimiento, d.compuesto].filter((x) => x.estado === "valido").length;
@@ -109,6 +177,9 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
   const aPixeles = opciones.decodificarPixeles ?? decodificarPixeles;
   let worker: Promise<WorkerOcr | null> | null = null;
   let terminado = false;
+  const maxLlamadas = enteroPositivo(opciones.maxLlamadasOcr, MAX_LLAMADAS_OCR);
+  const limiteMs = enteroPositivo(opciones.tiempoLimiteMs, TIEMPO_LIMITE_MS);
+  const ahora = opciones.ahora ?? Date.now;
   // Con `crearWorker` inyectado no hace falta resolver rutas de worker ni core.
   const opcionesInyectadas = opciones.crearWorker === undefined ? null : { langPath: opciones.rutaModelo, gzip: false, cacheMethod: "none" };
 
@@ -146,25 +217,23 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
     if (terminado) return { ok: false, error: "lector-terminado" };
 
     let mejor: { intento: IntentoMrz; digitosValidos: number; resultado: ResultadoParserMrz } | null = null;
-    // LMI-12: si la imagen derecha no da 4 dígitos válidos, se repite girada 90° y 270° (tarjeta en vertical).
-    // Las vistas giradas se calculan solo si hacen falta.
-    const vistas = function* (): Generator<[PixelesRgba, string]> {
-      yield [pixeles, ""];
-      for (const g of GIROS) yield [girar(pixeles, g), `@${g}`];
-    };
-    for (const [imagenVista, sufijo] of vistas()) {
-      for (const { metodo, caja } of localizarFranjaMrz(imagenVista)) {
-        // Un fallo del OCR cuenta como texto ilegible; el parser rechaza `null` (sin 3 líneas) con ok: false.
-        const texto: unknown = await w
-          .recognize(await codificarPng(enderezar(recortarYAmpliar(imagenVista, caja))))
-          .then((r) => r.data.text)
-          .catch(() => "");
-        const resultado = parsearMrzCedulaDigital(extraerLineasMrz(texto), { fechaReferencia: fecha });
-        if (!resultado.ok) continue;
-        const digitosValidos = contarValidos(resultado);
-        if (mejor === null || digitosValidos > mejor.digitosValidos) mejor = { intento: `${metodo}${sufijo}` as IntentoMrz, digitosValidos, resultado };
-        if (digitosValidos === 4) return { ok: true, ...mejor };
-      }
+    // LMI-12 y LMI-12b: vistas derecha, 90° y 270° en dos pasadas. LMI-13: presupuesto de llamadas y de tiempo.
+    const inicio = ahora();
+    let llamadas = 0;
+    for (const { giro, imagen: imagenVista, candidato } of intentosMrz(pixeles)) {
+      if (llamadas >= maxLlamadas || ahora() - inicio >= limiteMs) break;
+      llamadas++;
+      // Un fallo del OCR cuenta como texto ilegible; el parser rechaza `null` (sin 3 líneas) con ok: false.
+      const texto: unknown = await w
+        .recognize(await codificarPng(enderezar(recortarYAmpliar(imagenVista, candidato.caja))))
+        .then((r) => r.data.text)
+        .catch(() => "");
+      const resultado = parsearMrzCedulaDigital(extraerLineasMrz(texto), { fechaReferencia: fecha });
+      if (!resultado.ok) continue;
+      const digitosValidos = contarValidos(resultado);
+      const sufijo = giro === 0 ? "" : `@${giro}`;
+      if (mejor === null || digitosValidos > mejor.digitosValidos) mejor = { intento: `${candidato.metodo}${sufijo}` as IntentoMrz, digitosValidos, resultado };
+      if (digitosValidos === 4) return { ok: true, ...mejor };
     }
     return mejor === null ? { ok: false, error: "mrz-no-encontrada" } : { ok: true, ...mejor };
   }

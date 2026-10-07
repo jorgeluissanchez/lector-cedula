@@ -30,7 +30,7 @@ Cada ventana de LMI-11 MUST ajustarse al trío de líneas más bajo que cumpla L
 - **THEN** el primer candidato `"franja"` es `{ x: 91, y: 892, ancho: 807, alto: 91 }`
 
 ### Requirement: LMI-12 Imagen girada 90° y 270°
-Si ningún candidato de la imagen da los 4 dígitos de control válidos, el lector MUST repetir la localización y la lectura sobre la imagen girada 90° y, después, 270° en sentido horario (tarjeta fotografiada en vertical), calculando cada giro solo si hace falta. `intento` lleva el sufijo del giro: `"<metodo>@90"` o `"<metodo>@270"`. Se devuelve el mejor intento de todas las vistas con el criterio de LMI-04; con 4 dígitos válidos se detiene.
+Si ningún candidato de la imagen da los 4 dígitos de control válidos, el lector MUST repetir la localización y la lectura sobre la imagen girada 90° y, después, 270° en sentido horario (tarjeta fotografiada en vertical), calculando cada giro solo si hace falta, con el orden de LMI-12b y el presupuesto de LMI-13. `intento` lleva el sufijo del giro: `"<metodo>@90"` o `"<metodo>@270"`. Se devuelve el mejor intento de todas las vistas con el criterio de LMI-04; con 4 dígitos válidos se detiene.
 
 #### Scenario: Reverso girado (líneas MRZ verticales)
 - **WHEN** se lee el reverso sintético R girado 90° en sentido antihorario
@@ -38,12 +38,38 @@ Si ningún candidato de la imagen da los 4 dígitos de control válidos, el lect
 
 #### Scenario: Giro solo cuando la imagen derecha falla
 - **WHEN** con OCR inyectado ningún candidato de la imagen derecha da texto legible y el primero de la vista a 90° da la MRZ de R
-- **THEN** `intento` es `"proyeccion@90"` y el OCR se llamó exactamente (candidatos de la imagen derecha + 1) veces
+- **THEN** `intento` es `"proyeccion@90"` y el OCR se llamó exactamente (intentos de la pasada 1 de la imagen derecha según LMI-12b + 1) veces
 
 #### Scenario: Nada legible en ninguna vista
 - **WHEN** con OCR inyectado ningún intento da texto legible
-- **THEN** el resultado es `{ ok: false, error: "mrz-no-encontrada" }` y el OCR se llamó una vez por candidato de las tres vistas
+- **THEN** el resultado es `{ ok: false, error: "mrz-no-encontrada" }` y el OCR se llamó una vez por intento de `planIntentosMrz` (LMI-12b), hasta el presupuesto de LMI-13
 
 #### Scenario: Giro puro
 - **WHEN** se gira 90° y 270° una imagen de 3x2
 - **THEN** el resultado es de 2x3 con los píxeles en la posición girada, alfa intacto y la entrada sin modificar
+
+### Requirement: LMI-12b Orden de intentos en dos pasadas y sin cajas repetidas
+El lector MUST probar los candidatos en dos pasadas sobre las vistas (derecha, `@90`, `@270`): la pasada 1 con los candidatos que no son ventanas literales de LMI-11 (incluidas las franjas que LMI-11b ajustó), en el orden de `localizarFranjaMrz`; la pasada 2 con las ventanas literales. Dentro de una vista no se repite una caja. `planIntentosMrz(pixeles)` MUST devolver ese orden como `{ giro: 0 | 90 | 270, candidato }[]`, sin presupuesto (`[]` si la entrada no tiene forma de píxeles).
+
+#### Scenario: Plan de un lienzo blanco
+- **WHEN** se calcula el plan de un lienzo blanco de 1000x1000
+- **THEN** los 4 primeros intentos son, en orden, `recorte-inferior` y `imagen-completa` de la vista 0, `recorte-inferior` e `imagen-completa` de la vista 90, y ninguna caja se repite dentro de una misma vista
+
+#### Scenario: Tarjeta pequeña girada sobre textura
+- **WHEN** se lee una foto sintética de 900x1600 con textura de madera y el reverso sintético R girado 90° en sentido horario (MRZ a la izquierda, líneas verticales), escalado a 360 px de ancho y pegado en (40, 260)
+- **THEN** el lector devuelve las líneas de R con los 4 dígitos de control válidos, `intento` terminado en `"@270"`, y el OCR se llamó como mucho 40 veces
+
+### Requirement: LMI-13 Presupuesto de intentos y de tiempo
+Antes de cada llamada al OCR, el lector MUST detenerse si ya hizo `maxLlamadasOcr` llamadas (por defecto 40) o si desde el inicio de `leer` pasaron `tiempoLimiteMs` ms (por defecto 60000) según el reloj inyectable `ahora` (por defecto `Date.now`); son opciones de `crearLectorMrz` y un valor que no sea entero positivo toma el defecto. Al cortar devuelve el mejor intento parcial (LMI-04) o `{ ok: false, error: "mrz-no-encontrada" }`.
+
+#### Scenario: Corte por número de llamadas
+- **WHEN** con OCR inyectado ningún intento da texto legible y `maxLlamadasOcr` es 5
+- **THEN** el resultado es `{ ok: false, error: "mrz-no-encontrada" }` y el OCR se llamó exactamente 5 veces
+
+#### Scenario: Corte por tiempo con mejor intento parcial
+- **WHEN** con OCR inyectado cada llamada avanza 30000 ms el reloj inyectado, `tiempoLimiteMs` es 60000 y la primera llamada da la MRZ de R con el dígito compuesto alterado
+- **THEN** el OCR se llamó exactamente 2 veces y el resultado es el intento `"proyeccion"` con 3 dígitos válidos
+
+#### Scenario: Presupuesto por defecto
+- **WHEN** con OCR inyectado ningún intento da texto legible sobre el reverso R, sin opciones de presupuesto
+- **THEN** el OCR se llamó `min(40, longitud de planIntentosMrz(R))` veces
