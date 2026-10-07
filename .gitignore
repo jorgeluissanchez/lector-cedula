@@ -48,3 +48,13 @@ stryker-*.tmp.config.mjs
 scratchpad/
 vitest.stryker-*.tmp.config.*
 *.tmp.config.*
+
+# Modelo MRZ de Tesseract (cambio leer-mrz-desde-imagen): se descarga con npm run modelos:mrz
+models/tesseract/
+
+# Fotos reales: nunca al repositorio
+/*.jpg
+/*.jpeg
+/*.png
+/*.heic
+/*.webp
