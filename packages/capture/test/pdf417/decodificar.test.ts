@@ -7,6 +7,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { crearDecodificador, decodificarPdf417Imagen, type DecodificadorPdf417, type Pixeles } from "../../src/index.js";
 import { codificarJpeg, imagenSintetica, lectorReal, pixelesSinteticos, pngBlanco } from "./sintetica.js";
 
+// WASM y píxeles de 1920x1080: holgura amplia para la instrumentación de Stryker y agentes en paralelo.
+const LIMITE_MS = 300_000;
 const F = generarPdf417(PERSONA_BASE, { semilla: 1 });
 let S: Uint8Array;
 let leer: Awaited<ReturnType<typeof lectorReal>>;
@@ -20,7 +22,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("Imagen sintética S (tarea 1.1)", { timeout: 60_000 }, () => {
+describe("Imagen sintética S (tarea 1.1)", { timeout: LIMITE_MS }, () => {
   it("el writer acepta bytes binarios y S decodifica con readBarcodes directo", async () => {
     const r = await leer(S, { formats: ["PDF417"] });
     expect(r).toHaveLength(1);
@@ -28,7 +30,7 @@ describe("Imagen sintética S (tarea 1.1)", { timeout: 60_000 }, () => {
   });
 });
 
-describe("LPI-01 Bytes crudos, no texto", { timeout: 60_000 }, () => {
+describe("LPI-01 Bytes crudos, no texto", { timeout: LIMITE_MS }, () => {
   it("LPI-01 Round-trip de la imagen sintética S", async () => {
     expect(await decodificarPdf417Imagen(S)).toStrictEqual({ ok: true, bytes: F.bytes, intento: "original" });
   });
@@ -62,7 +64,7 @@ describe("LPI-01 Bytes crudos, no texto", { timeout: 60_000 }, () => {
   }, 300_000);
 });
 
-describe("LPI-02 Opciones del lector y reintentos", { timeout: 180_000 }, () => {
+describe("LPI-02 Opciones del lector y reintentos", { timeout: LIMITE_MS }, () => {
   it("LPI-02 Opciones enviadas", async () => {
     const llamadas: unknown[][] = [];
     const registrador: DecodificadorPdf417 = async (img, opciones) => {
@@ -179,7 +181,7 @@ describe("LPI-02 Opciones del lector y reintentos", { timeout: 180_000 }, () => 
   });
 });
 
-describe("LPI-03 Entradas aceptadas y errores", { timeout: 60_000 }, () => {
+describe("LPI-03 Entradas aceptadas y errores", { timeout: LIMITE_MS }, () => {
   it("LPI-03 Errores literales", async () => {
     const r = [];
     for (const x of [null, "hola", new Uint8Array([1, 2, 3]), pngBlanco(800, 600)]) r.push(await decodificarPdf417Imagen(x));
@@ -221,7 +223,7 @@ describe("LPI-03 Entradas aceptadas y errores", { timeout: 60_000 }, () => {
     const lanza: DecodificadorPdf417 = () => Promise.reject(new Error("x"));
     expect(await crearDecodificador({ readBarcodes: lanza })(S)).toStrictEqual({ ok: false, error: "imagen-ilegible" });
     const basura = (async () => [{ isValid: true, bytes: "no" }]) as unknown as DecodificadorPdf417;
-    expect(await crearDecodificador({ readBarcodes: basura })(S)).toStrictEqual({ ok: false, error: "pdf417-no-encontrado" });
+    expect(await crearDecodificador({ readBarcodes: basura })({ data: new Uint8ClampedArray(64).fill(255), width: 4, height: 4 })).toStrictEqual({ ok: false, error: "pdf417-no-encontrado" });
   });
 
   it("LPI-03 Nunca lanza", async () => {
@@ -240,7 +242,7 @@ describe("LPI-03 Entradas aceptadas y errores", { timeout: 60_000 }, () => {
   });
 });
 
-describe("LPI-05 Encadenado con el parser", { timeout: 60_000 }, () => {
+describe("LPI-05 Encadenado con el parser", { timeout: LIMITE_MS }, () => {
   it("LPI-05 Campos esperados desde imagen", async () => {
     const r = await decodificarPdf417Imagen(S);
     if (!r.ok) throw new Error(r.error);
@@ -260,7 +262,7 @@ describe("LPI-05 Encadenado con el parser", { timeout: 60_000 }, () => {
   });
 });
 
-describe("LPI-07 Privacidad del decodificador", { timeout: 60_000 }, () => {
+describe("LPI-07 Privacidad del decodificador", { timeout: LIMITE_MS }, () => {
   it("LPI-07 Sin consola en el decodificador", async () => {
     const espias = (["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m));
     await decodificarPdf417Imagen(S);
