@@ -4,9 +4,9 @@ Reglas: TDD (principio II), la prueba se ve fallar antes de implementar. Datos s
 
 ## Fase 1. Paquete servidor Node (independiente del frontal)
 
-- [ ] 1.1 Crear `packages/servidor` (`@lector-cedula/servidor`, MIT, `0.1.0`, sin `dependencies`, `exports` con subrutas) con `verificarWebhook`. Cubre SDK-18, SDK-20. Tipos: **unitaria** (vectores de AV-26), **propiedad**, **mutación**. Verificación: `U` y `M`.
-- [ ] 1.2 `crearCliente`, `crearSesion`, `obtenerResultado`, `suprimir`, `ErrorLector` con `fetch` inyectable. Cubre SDK-18, SDK-19 (unitarias con `fetch` falso). Tipos: **unitaria**, **mutación**. Verificación: `U`, `M`.
-- [ ] 1.3 `manejarWebhook` y adaptadores `express`, `nest`, `next`, `fastify` con lectura de bytes crudos. Cubre SDK-21 (unitarias con `Request` construidas). Tipos: **unitaria**, **mutación**; **licencias** (tipos de frameworks como devDependencies). Verificación: `U`, `M`, `L`.
+- [x] 1.1 Crear `packages/servidor` (`@lector-cedula/servidor`, MIT, `0.1.0`, sin `dependencies`, `exports` con subrutas) con `verificarWebhook`. Cubre SDK-18, SDK-20. Tipos: **unitaria** (vectores de AV-26), **propiedad**, **mutación**. Verificación: `U` y `M`.
+- [x] 1.2 `crearCliente`, `crearSesion`, `obtenerResultado`, `suprimir`, `ErrorLector` con `fetch` inyectable. Cubre SDK-18, SDK-19 (unitarias con `fetch` falso). Tipos: **unitaria**, **mutación**. Verificación: `U`, `M`.
+- [x] 1.3 `manejarWebhook` y adaptadores `express`, `nest`, `next`, `fastify` con lectura de bytes crudos. Cubre SDK-21 (unitarias con `Request` construidas). Tipos: **unitaria**, **mutación**; **licencias** (tipos de frameworks como devDependencies). Verificación: `U`, `M`, `L`.
 
 ## Fase 2. Servidor: multi-aplicativo, sesión alojada y recursos del motor
 

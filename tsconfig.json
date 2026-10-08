@@ -4,6 +4,8 @@
     { "path": "packages/parsers" },
     { "path": "packages/fixtures" },
     { "path": "packages/capture" },
+    { "path": "packages/fraud" },
+    { "path": "packages/servidor" },
     { "path": "apps/pwa" }
   ]
 }
