@@ -17,6 +17,10 @@
 
 En esta política, "nosotros" significa [RAZÓN SOCIAL], y "usted" o "el titular" significa la persona cuyos datos se tratan.
 
+**Software y operador.** (a) La aplicación se construye con software libre publicado bajo licencia MIT, que se entrega "tal cual" y sin garantía (archivo `LICENSE` de [URL DEL REPOSITORIO]); esa licencia no regula el tratamiento de datos. (b) Esta política rige el tratamiento en la instancia que opera [RAZÓN SOCIAL], que es el Responsable del tratamiento en el sentido del artículo 3, literal e), de la Ley 1581 de 2012. Los autores y contribuyentes del software no operan esta instancia, no reciben sus datos y no son responsables ni encargados del tratamiento en ella.
+
+> Nota para quien despliega (no publicar este recuadro): esta es una PLANTILLA; ver `docs/legal/README.md`.
+
 ## 2. Alcance
 
 Esta política se aplica a los datos personales que se obtienen cuando usted lee su cédula de ciudadanía con la aplicación web [NOMBRE DE LA APLICACIÓN] (en adelante, "la aplicación") y, si se usa, con su servidor de respaldo. Se aplica a nosotros y a los encargados que traten datos por cuenta nuestra.

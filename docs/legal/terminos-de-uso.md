@@ -4,6 +4,10 @@
 
 Estos términos regulan el uso de la aplicación web [NOMBRE DE LA APLICACIÓN] (en adelante, "la aplicación"), que ofrece [RAZÓN SOCIAL], NIT [NIT], con domicilio en [DOMICILIO] (en adelante, "nosotros"). Al usar la aplicación, usted acepta estos términos.
 
+> Nota para quien despliega (no publicar este recuadro): esta es una PLANTILLA. Quien autoaloja una instancia es el Responsable del tratamiento de esa instancia y completa los [MARCADORES]. Ver `docs/legal/README.md`.
+
+Estos términos distinguen dos cosas: (a) la **licencia del software**, que es la licencia MIT de sus autores (sección 6), y (b) los **términos de servicio de esta instancia**, que fija [RAZÓN SOCIAL] como operador (el resto del documento).
+
 ## 1. Qué hace la aplicación
 
 La aplicación lee con la cámara de su teléfono los datos codificados en su cédula de ciudadanía colombiana (el código de barras PDF417 de la cédula amarilla y la zona de lectura mecánica de la cédula digital) para verificar su identidad en el trámite de [NOMBRE DEL TRÁMITE].
@@ -30,9 +34,11 @@ Según nuestra Política de tratamiento de datos personales ([URL DE LA POLÍTIC
 
 Ofrecemos la aplicación en el estado en que se encuentra. Procuramos que funcione sin errores, pero no garantizamos que esté siempre disponible ni que cada lectura sea exacta. Las decisiones del trámite no se toman solo con la lectura automática: [DESCRIBIR LA REVISIÓN HUMANA O EL CONTROL ADICIONAL DEL TRÁMITE]. Nada de lo anterior limita los derechos que la ley colombiana le reconoce y que no pueden renunciarse, incluidos los de la Ley 1480 de 2011 (Estatuto del Consumidor) cuando sea aplicable. [DECISIÓN PENDIENTE DEL ABOGADO: límites de responsabilidad válidos.]
 
-## 6. Licencias
+## 6. Licencia del software y papel de sus autores
 
-La aplicación usa software de código abierto y datos públicos con licencias propias, que se pueden consultar en la pantalla "Acerca de y licencias". El código de la aplicación se distribuye bajo licencia MIT.
+1. El código de la aplicación es software libre distribuido bajo licencia MIT (archivo `LICENSE` del repositorio [URL DEL REPOSITORIO]). Según esa licencia, el software se entrega "tal cual", sin garantía de ningún tipo; la licencia rige la relación entre sus autores y quien usa o despliega el código, no el servicio que se le presta a usted.
+2. La aplicación usa además software de código abierto y datos públicos con licencias propias (algunos datos bajo CC BY-SA), que se pueden consultar en la pantalla "Acerca de y licencias".
+3. Los autores y contribuyentes del software no operan esta instancia, no son parte del tratamiento de sus datos en ella ni actúan como responsables ni encargados del tratamiento. El operador de esta instancia es [RAZÓN SOCIAL], a quien debe dirigir cualquier consulta o reclamo.
 
 ## 7. Cambios
 

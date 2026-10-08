@@ -4,6 +4,12 @@ Fecha: 2026-10-07. Preparado por el equipo técnico, que no es abogado. Estados:
 
 Textos oficiales cotejados: Ley 1581 https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981 · Decreto 1377 https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646
 
+## Para quien autoaloja
+
+Este repositorio es software libre (MIT). Si usted despliega una instancia, usted (persona o empresa) es el Responsable del tratamiento de esa instancia (Ley 1581, art. 3 lit. e) y este checklist es suyo: donde dice [RAZÓN SOCIAL] o RESPONSABLE, léase "usted". Los autores del software no tratan los datos de su instancia ni responden por ella. Empiece por `README.md` de esta carpeta.
+
+**Instancia de demostración del autor.** Si el autor publica una demo (por ejemplo en Vercel), se recomienda dejar el servidor de respaldo desactivado para que toda lectura ocurra en el navegador y no se transmitan datos; aun así la demo necesita su propio aviso de privacidad, términos y autorización con los datos del autor como responsable, y no debe usarse con cédulas de terceros.
+
 ## A. Antes de publicar (bloqueantes)
 
 | # | Requisito | Norma | Estado | Qué falta |
