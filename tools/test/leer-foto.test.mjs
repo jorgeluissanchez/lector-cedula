@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { PERSONA_BASE, generarMrzTd1, generarPdf417 } from "@lector-cedula/fixtures";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { imagenSintetica, pngBlanco } from "../../packages/capture/test/pdf417/sintetica.ts";
@@ -15,6 +15,8 @@ import { crearRenderizador } from "../../evals/sinteticos/render-mrz.mjs";
 
 const RAIZ = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const CLI = join(RAIZ, "tools", "leer-foto.mjs");
+const HOOK = join(RAIZ, "tools", "test", "ayudas", "bloquear-escrituras.mjs");
+const MARCA = "ESCRITURA-PROHIBIDA";
 const F = generarPdf417(PERSONA_BASE, { semilla: 1 });
 const P = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
 const CORTO = generarPdf417({ ...PERSONA_BASE, nuip: "99991234" }, { semilla: 1 });
@@ -42,8 +44,13 @@ function correr(...args) {
 
 /** Proceso hijo asíncrono: un spawnSync largo (OCR) bloquea el worker de Vitest y provoca timeouts de su RPC. */
 function correrCon(entorno, ...args) {
+  return correrNode({ env: entorno }, CLI, ...args);
+}
+
+/** Node hijo con opciones: `execArgv` (p. ej. el hook que bloquea escrituras), `cwd` y variables de entorno extra. */
+function correrNode({ env: entorno = {}, execArgv = [], cwd = RAIZ }, ...args) {
   return new Promise((resolver, rechazar) => {
-    const hijo = spawn(process.execPath, [CLI, ...args], { cwd: RAIZ, env: { ...process.env, ...entorno }, timeout: TIEMPO_HIJO_MS });
+    const hijo = spawn(process.execPath, [...execArgv, ...args], { cwd, env: { ...process.env, ...entorno }, timeout: TIEMPO_HIJO_MS });
     let stdout = "";
     let stderr = "";
     hijo.stdout.setEncoding("utf8").on("data", (d) => (stdout += d));
@@ -75,6 +82,13 @@ function listado(dir, excluir = new Set()) {
   };
   recorrer(dir);
   return r;
+}
+
+/** Directorio temporal vacío como cwd, HOME y TMP del hijo, con el hook de bloqueo de escrituras precargado. */
+function aislamiento() {
+  const dir = mkdtempSync(join(tmpdir(), "leer-foto-aislado-"));
+  const env = { HOME: dir, USERPROFILE: dir, TMP: dir, TEMP: dir, TMPDIR: dir };
+  return { dir, opciones: { env, cwd: dir, execArgv: ["--import", pathToFileURL(HOOK).href] } };
 }
 
 function camposDe(stdout) {
@@ -275,14 +289,55 @@ describe("LPI-07 Privacidad de la CLI y del decodificador", { timeout: 60_000 },
     expect((await correr(ruta)).status).toBe(0);
   });
 
+  /**
+   * Backlog F1: en vez de comparar el repositorio entero (que Playwright, Lighthouse y otras pruebas modifican en la misma
+   * corrida), el hijo corre con un hook que hace fallar toda escritura de node:fs y la marca en stderr, con cwd, HOME y
+   * TMP en un directorio temporal propio que además se compara antes y después.
+   */
   it("LPI-07 No escribe a disco", async () => {
-    const excluir = new Set(["node_modules", ".git"]);
-    const antesRepo = listado(RAIZ, excluir);
-    const antesTmp = listado(dirTmp);
-    const r = await correr(rutaS);
-    expect(r.status).toBe(0);
-    expect(listado(dirTmp)).toStrictEqual(antesTmp);
-    expect(listado(RAIZ, excluir)).toStrictEqual(antesRepo);
+    const aislado = aislamiento();
+    try {
+      const antesTmp = listado(dirTmp);
+      const antesAislado = listado(aislado.dir);
+      const r = await correrNode(aislado.opciones, CLI, rutaS);
+      expect(r.stderr).not.toContain(MARCA);
+      expect(r.status).toBe(0);
+      expect(JSON.parse(r.stdout).ok).toBe(true);
+      expect(listado(dirTmp)).toStrictEqual(antesTmp);
+      expect(listado(aislado.dir)).toStrictEqual(antesAislado);
+    } finally {
+      rmSync(aislado.dir, { recursive: true, force: true });
+    }
+  });
+
+  // Mutantes del detector: una escritura real por cada familia de API debe quedar bloqueada y marcada.
+  it.each([
+    ["writeFileSync", `import { writeFileSync } from "node:fs"; try { writeFileSync("x.txt", "a"); } catch {}`],
+    ["promises.writeFile", `import { writeFile } from "node:fs/promises"; await writeFile("x.txt", "a").catch(() => {});`],
+    ["createWriteStream", `import fs from "node:fs"; try { fs.createWriteStream("x.txt"); } catch {}`],
+    ["openSync", `import { openSync } from "node:fs"; try { openSync("x.txt", "w"); } catch {}`],
+    ["mkdirSync", `import { mkdirSync } from "node:fs"; try { mkdirSync("d"); } catch {}`],
+  ])("LPI-07 El detector bloquea y marca %s", async (api, codigo) => {
+    const aislado = aislamiento();
+    try {
+      const r = await correrNode(aislado.opciones, "--input-type=module", "-e", codigo);
+      expect(r.stderr).toContain(`${MARCA}: ${api}`);
+      expect(listado(aislado.dir)).toStrictEqual({});
+    } finally {
+      rmSync(aislado.dir, { recursive: true, force: true });
+    }
+  });
+
+  it("LPI-07 El detector deja leer", async () => {
+    const aislado = aislamiento();
+    try {
+      const codigo = `import { readFileSync } from "node:fs"; process.stdout.write(String(readFileSync(${JSON.stringify(CLI)}).length > 0));`;
+      const r = await correrNode(aislado.opciones, "--input-type=module", "-e", codigo);
+      expect(r.stderr).not.toContain(MARCA);
+      expect(r.stdout).toBe("true");
+    } finally {
+      rmSync(aislado.dir, { recursive: true, force: true });
+    }
   });
 });
 
