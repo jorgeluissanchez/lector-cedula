@@ -23,7 +23,12 @@ import {
 } from "@lector-cedula/capture";
 import type { Evento } from "./estado";
 import { conLienzoTemporal } from "./lienzo";
-import { crearClienteLector, nuevoWorkerLector, type ClienteLector } from "./lectura";
+import {
+  crearClienteLector,
+  nuevoWorkerLector,
+  type ClienteLector,
+} from "./lectura";
+import { crearReintentos } from "./reintentos";
 
 export interface Observador {
   evento(e: Evento): void;
@@ -47,7 +52,12 @@ export interface Sesion {
 
 /** Fecha de referencia: hoy en America/Bogota como AAAA-MM-DD (design.md, decisión 11). */
 export function hoyEnBogota(ahora: Date = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" }).format(ahora);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(ahora);
 }
 
 const MARCA_LECTURA = "lectura:inicio";
@@ -61,13 +71,22 @@ export function crearSesion(obs: Observador): Sesion {
   let captura: CapturaAceptada | null = null;
   let generacion = 0;
   let animacion = 0;
-  const planificador = crearPlanificador(UMBRALES_POR_DEFECTO.intervaloMinimoMs, () => performance.now());
+  const planificador = crearPlanificador(
+    UMBRALES_POR_DEFECTO.intervaloMinimoMs,
+    () => performance.now(),
+  );
   const autocaptura = crearAutocaptura(UMBRALES_POR_DEFECTO);
   const feedback = crearFeedback();
+  // OFF-26: cuenta de lecturas de la captura en curso; los botones la reinician, el reintento silencioso no.
+  const reintentos = crearReintentos(() => performance.now());
 
   function obtenerCliente(): ClienteCalidad {
     // CAM-12: el Worker se descarga solo después de pulsar "Iniciar cámara".
-    cliente ??= crearClienteCalidad(new Worker(new URL("./calidad.worker.ts", import.meta.url), { type: "module" }));
+    cliente ??= crearClienteCalidad(
+      new Worker(new URL("./calidad.worker.ts", import.meta.url), {
+        type: "module",
+      }),
+    );
     return cliente;
   }
 
@@ -99,12 +118,27 @@ export function crearSesion(obs: Observador): Sesion {
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
     if (control.signal.aborted || captura !== c) return;
     obs.evento({ tipo: "leyendo" });
-    const pendiente = obtenerLector().leer({ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles }, hoyEnBogota(), control.signal);
+    reintentos.iniciar();
+    const pendiente = obtenerLector().leer(
+      { ancho: c.ancho, alto: c.alto, pixeles: c.pixeles },
+      hoyEnBogota(),
+      control.signal,
+    );
     liberarCaptura();
     const r = await pendiente;
     if (control.signal.aborted) return;
     lectura = null;
     if (r.ok) performance.measure("lectura:tiempo", MARCA_LECTURA);
+    if (
+      !r.ok &&
+      r.error !== "cancelada" &&
+      reintentos.decidir(r) === "reintentar"
+    ) {
+      obs.evento({ tipo: "reintento" });
+      await arrancar();
+      return;
+    }
+    reintentos.reiniciar();
     obs.evento({ tipo: "leida", resultado: r });
   }
 
@@ -125,12 +159,18 @@ export function crearSesion(obs: Observador): Sesion {
     obs.evento({ tipo: "fallo", codigo: "desconocido" });
   }
 
-  async function revalidar(v: HTMLVideoElement, c: ClienteCalidad, gen: number): Promise<void> {
+  async function revalidar(
+    v: HTMLVideoElement,
+    c: ClienteCalidad,
+    gen: number,
+  ): Promise<void> {
     const completo = tomarFrameCaptura(v);
     // El lienzo se vacía en todas las ramas (hallazgo del revisor de privacidad).
-    const r = await conLienzoTemporal(completo, (lienzo) => c.analizar(tomarFrameAnalisis(lienzo, completo.ancho, completo.alto)));
-    if (gen !== generacion) return completo.pixeles.fill(0), undefined;
-    if (!r.ok) return completo.pixeles.fill(0), fallar();
+    const r = await conLienzoTemporal(completo, (lienzo) =>
+      c.analizar(tomarFrameAnalisis(lienzo, completo.ancho, completo.alto)),
+    );
+    if (gen !== generacion) return (completo.pixeles.fill(0), undefined);
+    if (!r.ok) return (completo.pixeles.fill(0), fallar());
     const paso = autocaptura.revalidar(r.resultado);
     if (!paso.aceptada) {
       completo.pixeles.fill(0);
@@ -143,19 +183,37 @@ export function crearSesion(obs: Observador): Sesion {
       [g.x + g.ancho, g.y + g.alto],
       [g.x, g.y + g.alto],
     ];
-    captura = crearCapturaAceptada({ ancho: completo.ancho, alto: completo.alto, pixeles: completo.pixeles, cuadrilatero, calidad: paso.calidad });
+    captura = crearCapturaAceptada({
+      ancho: completo.ancho,
+      alto: completo.alto,
+      pixeles: completo.pixeles,
+      cuadrilatero,
+      calidad: paso.calidad,
+    });
     detener();
-    performance.measure("captura:tiempo-a-listo", { start: MARCA, end: performance.now() });
+    performance.measure("captura:tiempo-a-listo", {
+      start: MARCA,
+      end: performance.now(),
+    });
     obs.feedback(feedback.listo());
     obs.evento({ tipo: "capturada" });
     await leerCaptura();
   }
 
-  async function analizar(v: HTMLVideoElement, c: ClienteCalidad, gen: number): Promise<void> {
+  async function analizar(
+    v: HTMLVideoElement,
+    c: ClienteCalidad,
+    gen: number,
+  ): Promise<void> {
     const inicio = performance.now();
-    const r = await c.analizar(tomarFrameAnalisis(v, v.videoWidth, v.videoHeight));
+    const r = await c.analizar(
+      tomarFrameAnalisis(v, v.videoWidth, v.videoHeight),
+    );
     if (gen !== generacion) return;
-    performance.measure("calidad:frame", { start: inicio, end: performance.now() });
+    performance.measure("calidad:frame", {
+      start: inicio,
+      end: performance.now(),
+    });
     if (!r.ok) return fallar();
     obs.feedback(feedback.actualizar(r.resultado));
     const paso = autocaptura.registrar(r.resultado.score);
@@ -166,7 +224,12 @@ export function crearSesion(obs: Observador): Sesion {
   function bucle(gen: number): void {
     if (gen !== generacion) return;
     const v = video;
-    if (v !== null && v.videoWidth > 0 && autocaptura.fase === "analizando" && planificador.intentar()) {
+    if (
+      v !== null &&
+      v.videoWidth > 0 &&
+      autocaptura.fase === "analizando" &&
+      planificador.intentar()
+    ) {
       analizar(v, obtenerCliente(), gen).catch(() => {
         if (gen === generacion) fallar();
       });
@@ -174,41 +237,51 @@ export function crearSesion(obs: Observador): Sesion {
     animacion = requestAnimationFrame(() => bucle(gen));
   }
 
+  /** Arranca la cámara y el análisis; no toca la cuenta de reintentos (OFF-26). */
+  async function arrancar(): Promise<void> {
+    abortarLectura();
+    detener();
+    liberarCaptura();
+    performance.clearMarks(MARCA);
+    performance.clearMeasures();
+    performance.mark(MARCA);
+    const gen = generacion;
+    const entorno = evaluarEntorno({
+      contextoSeguro: window.isSecureContext,
+      tieneGetUserMedia:
+        typeof navigator.mediaDevices?.getUserMedia === "function",
+    });
+    if (entorno !== "apto")
+      return obs.evento({ tipo: "fallo", codigo: entorno });
+    let nueva: Camara;
+    try {
+      nueva = await iniciarCamara(navigator.mediaDevices);
+    } catch (e) {
+      if (gen === generacion)
+        obs.evento({ tipo: "fallo", codigo: clasificarErrorCamara(e).codigo });
+      return;
+    }
+    if (gen !== generacion) return nueva.detener();
+    camara = nueva;
+    obtenerCliente();
+    obs.feedback(feedback.texto);
+    obs.evento({ tipo: "camara-iniciada" });
+    if (nueva.aviso !== null) obs.evento({ tipo: "aviso", texto: nueva.aviso });
+    if (video !== null) video.srcObject = nueva.stream;
+    animacion = requestAnimationFrame(() => bucle(gen));
+  }
+
   const sesion: Sesion = {
     async iniciar() {
-      abortarLectura();
-      detener();
-      liberarCaptura();
-      performance.clearMarks(MARCA);
-      performance.clearMeasures();
-      performance.mark(MARCA);
-      const gen = generacion;
-      const entorno = evaluarEntorno({
-        contextoSeguro: window.isSecureContext,
-        tieneGetUserMedia: typeof navigator.mediaDevices?.getUserMedia === "function",
-      });
-      if (entorno !== "apto") return obs.evento({ tipo: "fallo", codigo: entorno });
-      let nueva: Camara;
-      try {
-        nueva = await iniciarCamara(navigator.mediaDevices);
-      } catch (e) {
-        if (gen === generacion) obs.evento({ tipo: "fallo", codigo: clasificarErrorCamara(e).codigo });
-        return;
-      }
-      if (gen !== generacion) return nueva.detener();
-      camara = nueva;
-      obtenerCliente();
-      obs.feedback(feedback.texto);
-      obs.evento({ tipo: "camara-iniciada" });
-      if (nueva.aviso !== null) obs.evento({ tipo: "aviso", texto: nueva.aviso });
-      if (video !== null) video.srcObject = nueva.stream;
-      animacion = requestAnimationFrame(() => bucle(gen));
+      reintentos.reiniciar();
+      await arrancar();
     },
     conectarVideo(v) {
       video = v;
       if (v !== null && camara !== null) v.srcObject = camara.stream;
     },
     cancelar() {
+      reintentos.reiniciar();
       abortarLectura();
       detener();
       liberarCaptura();

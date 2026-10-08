@@ -28,14 +28,14 @@ function lienzo(fondo = 0x30): Uint8ClampedArray {
 }
 
 /** Copia `img` escalada (vecino más cercano) en el rectángulo dado, con la luminancia acotada a 40..200. */
-function pegar(d: Uint8ClampedArray, img: Imagen, r: { x: number; y: number; ancho: number; alto: number }): void {
+function pegar(d: Uint8ClampedArray, img: Imagen, r: { x: number; y: number; ancho: number; alto: number }, contraste = 1): void {
   for (let y = 0; y < r.alto; y++) {
     const sy = Math.floor((y * img.height) / r.alto);
     for (let x = 0; x < r.ancho; x++) {
       const sx = Math.floor((x * img.width) / r.ancho);
       const o = (sy * img.width + sx) * 4;
       const i = ((r.y + y) * W + r.x + x) * 4;
-      for (let c = 0; c < 3; c++) d[i + c] = 40 + ((img.data[o + c] as number) * 160) / 255;
+      for (let c = 0; c < 3; c++) d[i + c] = 150 + (40 + ((img.data[o + c] as number) * 160) / 255 - 150) * contraste;
     }
   }
 }
@@ -57,9 +57,10 @@ function reducir(d: Uint8ClampedArray): FrameAnalisis {
   return { ancho: w, alto: h, pixeles: p, anchoOriginal: W, altoOriginal: H };
 }
 
-export function tarjetaEnGuia(img: Imagen): FrameAnalisis {
+/** `contraste` < 1 comprime la luminancia de la tarjeta hacia 150 (cámara de celular real, OFF-25). */
+export function tarjetaEnGuia(img: Imagen, contraste = 1): FrameAnalisis {
   const d = lienzo();
-  pegar(d, img, GUIA);
+  pegar(d, img, GUIA, contraste);
   return reducir(d);
 }
 
@@ -149,4 +150,65 @@ export function texto(): FrameAnalisis {
     for (const [px, py, pw] of palabras) if (x >= px && x < px + pw && y >= py && y < py + 22 && (x - px) % 14 < 10) return 50;
     return 200;
   });
+}
+
+export interface Degradacion {
+  /** Desviación del desenfoque gaussiano en píxeles del frame de análisis (0: sin desenfoque). */
+  readonly sigma: number;
+  /** Calidad JPEG 1..100 (re-codificación con jpeg-js); `null`: sin compresión. */
+  readonly calidadJpeg: number | null;
+  /** Amplitud del ruido uniforme de luminancia (+-); 0: sin ruido. */
+  readonly ruido: number;
+  readonly semilla?: number;
+}
+
+/**
+ * Degrada un frame de análisis como lo entrega la cámara de un celular real (pwa-lectura-offline, OFF-25): desenfoque
+ * gaussiano separable, ruido y compresión JPEG. Devuelve un frame nuevo; la entrada no cambia.
+ */
+export async function degradar(f: FrameAnalisis, d: Degradacion): Promise<FrameAnalisis> {
+  const { ancho: w, alto: h } = f;
+  let p = new Uint8ClampedArray(f.pixeles);
+  if (d.sigma > 0) {
+    const r = Math.ceil(3 * d.sigma);
+    const k: number[] = [];
+    let total = 0;
+    for (let i = -r; i <= r; i++) {
+      const v = Math.exp(-(i * i) / (2 * d.sigma * d.sigma));
+      k.push(v);
+      total += v;
+    }
+    const pasada = (src: Uint8ClampedArray, horizontal: boolean): Uint8ClampedArray => {
+      const out = new Uint8ClampedArray(src.length);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          for (let c = 0; c < 3; c++) {
+            let s = 0;
+            for (let i = -r; i <= r; i++) {
+              const xx = horizontal ? Math.min(w - 1, Math.max(0, x + i)) : x;
+              const yy = horizontal ? y : Math.min(h - 1, Math.max(0, y + i));
+              s += (k[i + r] as number) * (src[(yy * w + xx) * 4 + c] as number);
+            }
+            out[(y * w + x) * 4 + c] = s / total;
+          }
+          out[(y * w + x) * 4 + 3] = 255;
+        }
+      }
+      return out;
+    };
+    p = pasada(pasada(p, true), false);
+  }
+  if (d.ruido > 0) {
+    const azar = prng(d.semilla ?? 11);
+    for (let i = 0; i < p.length; i += 4) {
+      const n = Math.round((azar() * 2 - 1) * d.ruido);
+      for (let c = 0; c < 3; c++) p[i + c] = (p[i + c] as number) + n;
+    }
+  }
+  if (d.calidadJpeg !== null) {
+    const jpeg = (await import("jpeg-js")).default;
+    const codificado = jpeg.encode({ data: Buffer.from(p.buffer, p.byteOffset, p.byteLength), width: w, height: h }, d.calidadJpeg);
+    p = new Uint8ClampedArray(jpeg.decode(codificado.data, { useTArray: true, formatAsRGBA: true }).data);
+  }
+  return { ...f, pixeles: p };
 }

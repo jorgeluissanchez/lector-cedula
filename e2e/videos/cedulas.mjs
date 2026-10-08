@@ -17,6 +17,12 @@ const FONDO = "color=c=0x303030:s=1920x1080:r=10[f]";
 const enGuia = `${FONDO};[0:v]scale=${GUIA.ancho}:${GUIA.alto},${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=${GUIA.x}:${GUIA.y}:shortest=1`;
 const giradaEnGuia = `${FONDO};[0:v]transpose=1,scale=-2:${GUIA.alto},${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=(W-w)/2:${GUIA.y}:shortest=1`;
 
+// OFF-25: cámara de celular real (más suave que los vídeos nítidos): desenfoque y ruido temporal; la amarilla además
+// con el contraste de la tarjeta al 20 %. Varianza del Laplaciano en el frame de análisis < 152 (sin OFF-25, "Desenfocado").
+const suave = (sigma, ruido) => `,gblur=sigma=${sigma},noise=alls=${ruido}:allf=t`;
+const amarillaSuave = enGuia.replace(SIN_REFLEJO, `${SIN_REFLEJO},lutyuv=y='150+(val-150)*0.2'`) + suave(2.5, 4);
+const digitalSuave = enGuia + suave(5, 8);
+
 const enGuia720 = `color=c=0x303030:s=1280x720:r=10[f];[0:v]scale=1028:648,${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=126:36:shortest=1`;
 const completa = "[0:v]scale=1920:1080,format=yuv420p";
 
@@ -29,6 +35,8 @@ export const ESCENAS_CEDULA = [
   { nombre: "nitida-720p", fuente: "amarilla", filtro: enGuia720, ancho: 1280, alto: 720 },
   { nombre: "sin-documento-1080p", fuente: "sin-documento", filtro: completa, ancho: 1920, alto: 1080 },
   { nombre: "tarjeta-ilegible-1080p", fuente: "ilegible", filtro: enGuia, ancho: 1920, alto: 1080 },
+  { nombre: "amarilla-suave-1080p", fuente: "amarilla", filtro: amarillaSuave, ancho: 1920, alto: 1080 },
+  { nombre: "digital-suave-1080p", fuente: "digital", filtro: digitalSuave, ancho: 1920, alto: 1080 },
 ];
 
 function png(ancho, alto, valor) {

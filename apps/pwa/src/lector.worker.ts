@@ -32,4 +32,6 @@ iniciarWorkerLector(self as unknown as AlcanceLector, {
   tesseractCore: absoluta(WebAssembly.validate(SIMD) ? urlCoreSimd : urlCoreLstm),
   modeloMrz: langPath,
   ...PRESUPUESTO_MRZ_PWA,
+  // OFF-09 (decisión del usuario del 2026-10-07): la PWA muestra los datos completos; nada persiste (OFF-11).
+  enmascarar: false,
 });

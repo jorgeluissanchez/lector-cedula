@@ -8,6 +8,7 @@ import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import { leerCabeceraY4m } from "../../e2e/videos/y4m.mjs";
 import { ESCENAS_CEDULA, fuentesCedula } from "../../e2e/videos/cedulas.mjs";
+import { ESCENAS } from "../../e2e/videos/generar.mjs";
 import { lectorReal } from "../../packages/capture/test/pdf417/sintetica.ts";
 
 const RAIZ = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -26,8 +27,20 @@ describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () =
       ["amarilla-1080p", "amarilla", 1920, 1080],
       ["digital-1080p", "digital", 1920, 1080],
       ["digital-girada-90-1080p", "digital", 1920, 1080],
+      // OFF-22: la escena nítida de captura lleva la amarilla sintética (sin cédula nunca hay listo).
+      ["nitida-1080p", "amarilla", 1920, 1080],
+      ["nitida-720p", "amarilla", 1280, 720],
+      ["sin-documento-1080p", "sin-documento", 1920, 1080],
+      ["tarjeta-ilegible-1080p", "ilegible", 1920, 1080],
+      // OFF-25: escenas suaves como la cámara de un celular real.
+      ["amarilla-suave-1080p", "amarilla", 1920, 1080],
+      ["digital-suave-1080p", "digital", 1920, 1080],
     ]);
+    expect(ESCENAS_CEDULA.at(-2).filtro).toContain("gblur=sigma=2.5");
+    expect(ESCENAS_CEDULA.at(-1).filtro).toContain("gblur=sigma=5");
+    expect(ESCENAS.map((e) => e.nombre)).not.toContain("nitida-1080p");
     expect(ESCENAS_CEDULA[2].filtro).toContain("transpose=1");
+    for (const e of ESCENAS_CEDULA.filter((x) => x.fuente !== "sin-documento")) expect(e.filtro).toContain("lutyuv=y='clip(val,40,200)'");
   });
 
   it("las fuentes son PNG sintéticos de PERSONA_BASE con NUIP ^9999", async () => {
@@ -42,6 +55,12 @@ describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () =
     const digital = PNG.sync.read(Buffer.from(f.digital));
     expect([digital.width, digital.height]).toStrictEqual([1011, 638]);
     expect(f.nuip).toMatch(/^9999/u);
+    const sin = PNG.sync.read(Buffer.from(f.sinDocumento));
+    expect([sin.width, sin.height]).toStrictEqual([1920, 1080]);
+    const ilegible = PNG.sync.read(Buffer.from(f.ilegible));
+    expect([ilegible.width, ilegible.height]).toStrictEqual([1011, 638]);
+    // La tarjeta ilegible no contiene ningún PDF417 decodificable.
+    expect(await decodificar({ data: new Uint8ClampedArray(ilegible.data), width: ilegible.width, height: ilegible.height }, { formats: ["PDF417"], tryHarder: true })).toHaveLength(0);
   });
 
   for (const e of ESCENAS_CEDULA) {

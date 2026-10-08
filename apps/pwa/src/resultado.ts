@@ -1,6 +1,6 @@
 /**
- * Campos visibles de la pantalla `resultado` (OFF-09, OFF-18): etiqueta fija y valor ya enmascarado por el Worker
- * lector. Solo se muestran campos de texto con valor; las líneas MRZ y las correcciones nunca se muestran.
+ * Campos visibles de la pantalla `resultado` (OFF-09, OFF-18): etiqueta fija y valor tal como lo devuelve el Worker
+ * lector (completo en la PWA, OFF-09). Solo se muestran campos de texto con valor; las líneas MRZ y las correcciones nunca se muestran.
  */
 import type { LecturaCorrecta } from "./estado";
 

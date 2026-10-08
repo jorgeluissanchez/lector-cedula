@@ -3,7 +3,7 @@
  * transferencia, obtiene el cuadrilátero del detector inyectado (CAL-14) y devuelve el mismo buffer transferido. En un error el buffer recibido se descarta (respuesta literal de CAL-09).
  * Nunca lanza hacia fuera y no guarda referencias a frames entre mensajes (principio III).
  */
-import { aplicarPresencia, detectarPresencia } from "../calidad/presencia.js";
+import { detectarPresencia, evaluarConPresencia } from "../calidad/presencia.js";
 import { analizarFrame } from "../calidad/score.js";
 import { crearConfiguracionUmbrales } from "../calidad/umbrales.js";
 import type { DetectorDocumento } from "../interfaces.js";
@@ -61,11 +61,11 @@ export function iniciarWorkerCalidad(alcance: AlcanceWorker, detector: DetectorD
       const deteccion = await detector.detectar(frame);
       const r = analizarFrame(frame, deteccion, configuracion.umbrales);
       if (!r.ok) return error(r.codigo);
-      const umbral = configuracion.umbrales.umbralListo;
-      // La presencia solo se busca en frames que superan el umbral (la búsqueda de MRZ cuesta decenas de ms).
+      // OFF-22 y OFF-25: la presencia solo se busca si el frame supera el umbral o solo le falta nitidez.
+      const cuadrilatero = deteccion.cuadrilatero;
       const resultado =
-        opciones.presencia === true && deteccion.cuadrilatero !== null && r.resultado.score >= umbral
-          ? aplicarPresencia(r.resultado, detectarPresencia(frame, deteccion.cuadrilatero).presente, umbral)
+        opciones.presencia === true && cuadrilatero !== null
+          ? evaluarConPresencia(r.resultado, () => detectarPresencia(frame, cuadrilatero).presente, configuracion.umbrales.umbralListo)
           : r.resultado;
       responder({ tipo: "resultado", id, resultado, deteccion, pixeles }, pixeles);
     } catch {

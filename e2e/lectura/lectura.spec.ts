@@ -1,5 +1,5 @@
 // OFF-09, OFF-14 y OFF-19 con la amarilla sintética (pwa-lectura-offline, tarea 6.3). Un vídeo por archivo: la cámara
-// simulada se fija al lanzar Chromium. Mutante manual de la tarea: desactivar la máscara del NUIP.
+// simulada se fija al lanzar Chromium. OFF-09 (2026-10-07): la PWA muestra los datos completos, sin máscara.
 import { expect, test } from "@playwright/test";
 import { campo, contenedor, conVideo, esperarPantalla, fijarFecha, historial, iniciarCamara, leer, registrarHistorial } from "./ayudas";
 
@@ -12,9 +12,15 @@ test.describe("amarilla", { timeout: 180_000 }, () => {
     await page.goto("/");
     await leer(page);
     await expect(contenedor(page)).toHaveAttribute("data-tipo", "pdf417");
-    await expect(campo(page, "Número de documento")).toHaveText("********56");
-    const texto = await page.locator("body").innerText();
-    for (const prohibido of ["9999123456", "PRUEBA", "FICTICIA"]) expect(texto).not.toContain(prohibido);
+    await expect(campo(page, "Número de documento")).toHaveText("9999123456");
+    await expect(campo(page, "Primer apellido")).toHaveText("PRUEBA");
+    await expect(campo(page, "Primer nombre")).toHaveText("FICTICIA");
+    await expect(campo(page, "RH")).toBeVisible();
+    await expect(campo(page, "Lugar de nacimiento")).toBeVisible();
+    // Los valores solo están en el texto de los dd, nunca en atributos del DOM.
+    const html = await page.locator("body").evaluate((b) => [...b.querySelectorAll("*")].flatMap((e) => [...e.attributes].map((a) => a.value)).join(" "));
+    for (const valor of ["9999123456", "PRUEBA", "FICTICIA"]) expect(html).not.toContain(valor);
+    expect(await page.locator("body").innerText()).not.toContain("*");
   });
 
   test("OFF-19 Transición automática", async ({ page }) => {

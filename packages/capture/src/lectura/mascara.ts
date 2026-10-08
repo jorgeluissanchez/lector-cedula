@@ -16,18 +16,42 @@ export function enmascararNombre<T>(valor: T): T {
 /** Campos del parser MRZ (`nuip`, `serial`, `apellidos`, `nombres`). */
 export function enmascararCamposMrz<T extends object>(campos: T): T {
   const c = campos as Record<string, unknown>;
-  return { ...campos, nuip: enmascararUltimos2(c.nuip), serial: enmascararUltimos2(c.serial), apellidos: enmascararNombre(c.apellidos), nombres: enmascararNombre(c.nombres) };
+  return {
+    ...campos,
+    nuip: enmascararUltimos2(c.nuip),
+    serial: enmascararUltimos2(c.serial),
+    apellidos: enmascararNombre(c.apellidos),
+    nombres: enmascararNombre(c.nombres),
+  };
 }
 
 /** Cada dígito de control conserva solo su `estado`: `leido` y `calculado` revelarían dígitos del NUIP y del serial. */
-function soloEstados(digitos: Readonly<Record<string, { readonly estado: unknown }>>): Record<string, { estado: unknown }> {
-  return Object.fromEntries(Object.entries(digitos).map(([k, d]) => [k, { estado: d.estado }]));
+function soloEstados(
+  digitos: Readonly<Record<string, { readonly estado: unknown }>>,
+): Record<string, { estado: unknown }> {
+  return Object.fromEntries(
+    Object.entries(digitos).map(([k, d]) => [k, { estado: d.estado }]),
+  );
 }
 
 /** Resultado del parser MRZ: campos enmascarados, dígitos de control solo con su estado y sin las líneas ni las correcciones. */
-export function enmascararResultadoMrz<T extends { readonly campos: object }>(resultado: T): T {
-  const r = { ...resultado, campos: enmascararCamposMrz(resultado.campos), lineasCorregidas: null, correcciones: null };
-  return "digitosControl" in resultado ? { ...r, digitosControl: soloEstados(resultado.digitosControl as Record<string, { estado: unknown }>) } : r;
+export function enmascararResultadoMrz<T extends { readonly campos: object }>(
+  resultado: T,
+): T {
+  const r = {
+    ...resultado,
+    campos: enmascararCamposMrz(resultado.campos),
+    lineasCorregidas: null,
+    correcciones: null,
+  };
+  return "digitosControl" in resultado
+    ? {
+        ...r,
+        digitosControl: soloEstados(
+          resultado.digitosControl as Record<string, { estado: unknown }>,
+        ),
+      }
+    : r;
 }
 
 /** Campos del parser PDF417 de la amarilla. El lugar de nacimiento no se enmascara (LPI-08). */

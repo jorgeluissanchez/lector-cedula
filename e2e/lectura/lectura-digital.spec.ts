@@ -24,10 +24,12 @@ test.describe("digital", { timeout: 300_000 }, () => {
     await page.goto("/");
     await leer(page, 240_000);
     await expect(contenedor(page)).toHaveAttribute("data-tipo", "mrz");
-    await expect(campo(page, "Número de documento")).toHaveText("********56");
-    await expect(campo(page, "Serial")).toHaveText("*******45");
-    const texto = await page.locator("body").innerText();
-    for (const prohibido of ["999912345", "<<"]) expect(texto).not.toContain(prohibido);
+    await expect(campo(page, "Número de documento")).toHaveText("9999123456");
+    await expect(campo(page, "Serial")).toHaveText("999912345");
+    await expect(campo(page, "Apellidos")).toHaveText("PRUEBA EJEMPLO");
+    await expect(campo(page, "Nombres")).toHaveText("FICTICIA LUZ");
+    // OFF-09: las líneas MRZ siguen sin mostrarse.
+    expect(await page.locator("body").innerText()).not.toContain("<<");
     const largas = await page.evaluate(() => (window as unknown as { __largas: number[] }).__largas);
     expect(largas.filter((d) => d > 200)).toStrictEqual([]);
   });

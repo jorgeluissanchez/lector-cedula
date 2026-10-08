@@ -1,5 +1,8 @@
 // Tipos de la lectura en el dispositivo (cambio pwa-lectura-offline, OFF-06 a OFF-13).
-import type { buscarDivipol, parsearPdf417Amarilla } from "@lector-cedula/parsers";
+import type {
+  buscarDivipol,
+  parsearPdf417Amarilla,
+} from "@lector-cedula/parsers";
 import type { LectorMrz } from "../mrz/lector.js";
 import type { Pixeles, ResultadoPdf417Imagen } from "../pdf417/decodificar.js";
 
@@ -22,8 +25,17 @@ export type ErrorLectura =
   | "motor";
 
 export type ResultadoLectura =
-  | { readonly ok: true; readonly tipo: TipoLectura; readonly intento: string; readonly resultado: unknown }
-  | { readonly ok: false; readonly tipo?: TipoLectura; readonly error: ErrorLectura };
+  | {
+      readonly ok: true;
+      readonly tipo: TipoLectura;
+      readonly intento: string;
+      readonly resultado: unknown;
+    }
+  | {
+      readonly ok: false;
+      readonly tipo?: TipoLectura;
+      readonly error: ErrorLectura;
+    };
 
 /** Dependencias inyectadas (design.md, decisión 2): el Worker usa las de navegador; Node, las suyas. */
 export interface DependenciasLectura {
@@ -37,4 +49,6 @@ export interface OpcionesLectura {
   /** `AAAA-MM-DD` en America/Bogota (design.md, decisión 11). */
   readonly fechaReferencia: string;
   readonly senal?: AbortSignal;
+  /** OFF-09: `false` devuelve los campos sin máscara (la PWA); por defecto `true` (CLI y servidor). */
+  readonly enmascarar?: boolean;
 }

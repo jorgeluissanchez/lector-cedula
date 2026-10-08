@@ -26,6 +26,24 @@ const FRACCION_BLOQUES_PDF417 = 0.12;
 /** MRZ: la franja inferior es un único trío de líneas (1 a 6 ventanas con trío); una hoja de texto da decenas. */
 const MAX_VENTANAS_MRZ = 6;
 const EVIDENCIA_MINIMA_MRZ = 0.6;
+/**
+ * PDF417 suave (OFF-22 tras el reporte del 2026-10-07): con desenfoque, ruido y JPEG las barras pierden contraste y
+ * los bloques ya no cumplen el patrón nítido. Un bloque cuenta si su borde vertical medio es >= 1,5, la energía
+ * horizontal es 1,5 veces la vertical y todas sus filas de píxeles tienen al menos la mitad de la energía horizontal
+ * media (las barras cruzan todas las filas; los renglones de texto dejan filas vacías). Calibrado con las sintéticas
+ * degradadas: amarilla 17 a 28 % de bloques, texto y hoja 1,5 a 2,2 %, digital 3 a 14 % (solo se mira sin MRZ).
+ */
+const BORDE_MEDIO_SUAVE = 1.5;
+const RELACION_DX_DY_SUAVE = 1.5;
+const ENERGIA_FILA_SUAVE = 0.5;
+const FRACCION_BLOQUES_SUAVE = 0.08;
+/** Distancia en píxeles de la diferencia que detecta los bordes de la tarjeta: tolera un borde desenfocado. */
+const PASO_BORDE = 2;
+/**
+ * OFF-25: varianza del Laplaciano por debajo de la cual el frame se descarta aunque haya cédula (desenfoque extremo o
+ * movimiento). Calibración en docs/decisiones/2026-10-07-captura-guiada-nitidez.md.
+ */
+export const LAPLACIANO_MINIMO_GUIADO = 12;
 
 export interface Rect {
   readonly x: number;
@@ -69,11 +87,11 @@ function recorteGuia(f: FrameAnalisis, guia: Cuadrilatero): Rect {
 export function buscarTarjeta(l: Uint8Array, w: number, h: number): Rect | null {
   const col = new Uint32Array(w);
   const fila = new Uint32Array(h);
-  for (let y = 0; y + 1 < h; y++) {
-    for (let x = 0; x + 1 < w; x++) {
+  for (let y = 0; y + PASO_BORDE < h; y++) {
+    for (let x = 0; x + PASO_BORDE < w; x++) {
       const v = l[y * w + x] as number;
-      if (Math.abs(v - (l[y * w + x + 1] as number)) >= UMBRAL_BORDE) col[x] = (col[x] as number) + 1;
-      if (Math.abs(v - (l[(y + 1) * w + x] as number)) >= UMBRAL_BORDE) fila[y] = (fila[y] as number) + 1;
+      if (Math.abs(v - (l[y * w + x + PASO_BORDE] as number)) >= UMBRAL_BORDE) col[x] = (col[x] as number) + 1;
+      if (Math.abs(v - (l[(y + PASO_BORDE) * w + x] as number)) >= UMBRAL_BORDE) fila[y] = (fila[y] as number) + 1;
     }
   }
   const cols: number[] = [];
@@ -85,9 +103,10 @@ export function buscarTarjeta(l: Uint8Array, w: number, h: number): Rect | null 
     if (n >= FRACCION_LINEA * w) filas.push(y);
   });
   if (cols.length < 2 || filas.length < 2) return null;
-  const x0 = cols[0] as number;
+  // Con PASO_BORDE, un borde nítido marca PASO_BORDE posiciones: la primera se corrige para dar el mismo rectángulo.
+  const x0 = (cols[0] as number) + PASO_BORDE - 1;
   const x1 = cols[cols.length - 1] as number;
-  const y0 = filas[0] as number;
+  const y0 = (filas[0] as number) + PASO_BORDE - 1;
   const y1 = filas[filas.length - 1] as number;
   const ancho = x1 - x0;
   const alto = y1 - y0;
@@ -122,6 +141,33 @@ export function hayPdf417(l: Uint8Array, w: number, r: Rect): boolean {
   return total > 0 && fuertes >= FRACCION_BLOQUES_PDF417 * total;
 }
 
+/** PDF417 con el patrón suave: bloques con bordes verticales dominantes presentes en todas sus filas. */
+export function hayPdf417Suave(l: Uint8Array, w: number, r: Rect): boolean {
+  let fuertes = 0;
+  let total = 0;
+  const filas = new Float64Array(BLOQUE);
+  for (let by = r.y; by + BLOQUE < r.y + r.alto; by += BLOQUE) {
+    for (let bx = r.x; bx + BLOQUE < r.x + r.ancho; bx += BLOQUE) {
+      let sx = 0;
+      let sy = 0;
+      for (let y = by; y < by + BLOQUE; y++) {
+        let e = 0;
+        for (let x = bx; x < bx + BLOQUE; x++) {
+          const i = y * w + x;
+          e += Math.abs((l[i] as number) - (l[i + 1] as number));
+          sy += Math.abs((l[i] as number) - (l[i + w] as number));
+        }
+        filas[y - by] = e;
+        sx += e;
+      }
+      total++;
+      const minimaFila = Math.min(...filas);
+      if (sx > BLOQUE * BLOQUE * BORDE_MEDIO_SUAVE && sx > RELACION_DX_DY_SUAVE * sy && minimaFila >= (ENERGIA_FILA_SUAVE * sx) / BLOQUE) fuertes++;
+    }
+  }
+  return total > 0 && fuertes >= FRACCION_BLOQUES_SUAVE * total;
+}
+
 function subimagen(f: FrameAnalisis, r: Rect): PixelesRgba {
   const data = new Uint8ClampedArray(r.ancho * r.alto * 4);
   for (let y = 0; y < r.alto; y++) data.set(f.pixeles.subarray(((r.y + y) * f.ancho + r.x) * 4, ((r.y + y) * f.ancho + r.x + r.ancho) * 4), y * r.ancho * 4);
@@ -146,6 +192,7 @@ export function detectarPresencia(frame: FrameAnalisis, guia: Cuadrilatero): Pre
   const tarjeta = { x: recorte.x + t.x, y: recorte.y + t.y, ancho: t.ancho, alto: t.alto };
   if (hayPdf417(l, recorte.ancho, t)) return { tarjeta, contenido: "pdf417", presente: true };
   if (hayMrz(subimagen(frame, tarjeta))) return { tarjeta, contenido: "mrz", presente: true };
+  if (hayPdf417Suave(l, recorte.ancho, t)) return { tarjeta, contenido: "pdf417", presente: true };
   return { tarjeta, contenido: null, presente: false };
 }
 
@@ -153,4 +200,20 @@ export function detectarPresencia(frame: FrameAnalisis, guia: Cuadrilatero): Pre
 export function aplicarPresencia(r: ResultadoCalidad, presente: boolean, umbralListo: number): ResultadoCalidad {
   if (presente || r.score < umbralListo) return r;
   return { ...r, score: umbralListo - 1, motivo: "acerca" };
+}
+
+/**
+ * OFF-22 y OFF-25 en un resultado del Worker de calidad. `presencia` se invoca solo si hace falta (cuesta decenas de ms):
+ * - score >= umbral: sin presencia, `aplicarPresencia` (score umbral - 1, motivo `acerca`).
+ * - Solo la nitidez por debajo del umbral y varianza >= `minimo`: con presencia, score = umbral y motivo `null`
+ *   (captura guiada); sin ella, motivo `acerca` con el mismo score.
+ * - En otro caso (otra limitación o desenfoque extremo), el resultado no cambia.
+ */
+export function evaluarConPresencia(r: ResultadoCalidad, presencia: () => boolean, umbralListo: number, minimo = LAPLACIANO_MINIMO_GUIADO): ResultadoCalidad {
+  if (r.score >= umbralListo) return aplicarPresencia(r, presencia(), umbralListo);
+  const m = r.metricas;
+  if (r.motivo !== "desenfocado" || m === null || m.nitidez.varianza < minimo) return r;
+  const otros = [m.reflejo.subscore, m.exposicion.subscoreOscuro, m.exposicion.subscoreSobreexpuesto, m.tamano?.subscore ?? 100];
+  if (otros.some((s) => s < umbralListo)) return r;
+  return presencia() ? { ...r, score: umbralListo, motivo: null } : { ...r, motivo: "acerca" };
 }

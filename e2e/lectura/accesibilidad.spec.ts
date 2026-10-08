@@ -22,7 +22,7 @@ test.describe("accesibilidad de la lectura", () => {
     await leer(page);
     expect(await graves(page)).toStrictEqual([]);
     // Cada campo tiene etiqueta visible asociada y el resultado está en una región aria-live.
-    await expect(page.getByLabel("Número de documento", { exact: true })).toHaveText("********56");
+    await expect(page.getByLabel("Número de documento", { exact: true })).toHaveText("9999123456");
     await expect(page.locator("section.resultado")).toHaveAttribute("aria-live", "polite");
     await page.getByRole("link", { name: "Fuentes: DANE y Registraduría (CC BY-SA 4.0)" }).click();
     await esperarPantalla(page, "licencias");

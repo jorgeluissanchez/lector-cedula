@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { camposVisibles } from "../src/resultado";
 
 describe("OFF-09 campos de la pantalla de resultado", () => {
+  it("OFF-09 valores completos (sin máscara) se muestran tal cual", () => {
+    const campos = { numeroDocumento: "9999123456", primerApellido: "PRUEBA", primerNombre: "FICTICIA", rh: "AB-", lugarNacimiento: null };
+    expect(camposVisibles({ ok: true, tipo: "pdf417", intento: "original", resultado: { campos } }).map((c) => c.valor)).toStrictEqual(["9999123456", "PRUEBA", "FICTICIA", "AB-", "No resuelto"]);
+  });
+
   it("OFF-09 amarilla: etiquetas fijas, valores enmascarados tal cual y lugar de nacimiento legible", () => {
     const campos = {
       numeroDocumento: "********56",

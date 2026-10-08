@@ -75,6 +75,9 @@ Según el principio II y la fila "Captura web" de la matriz de `.claude/skills/e
 | OFF-16 | Rendimiento web | Lighthouse CI | `LH` | script <= 307200 bytes; performance >= 0,90 |
 | OFF-17 | E2E (actualización fallida) | Playwright | `E(actualizacion)` | `lector-A` intacta; lectura offline verde |
 | OFF-18 | Accesibilidad | @axe-core/playwright | `E(accesibilidad)` | 0 serious/critical en 3 pantallas, 2 proyectos |
+| OFF-22, OFF-25 | Unitaria (Worker en Node con frames sintéticos degradados) | Vitest | `npx vitest run packages/capture/test/lectura` | cédulas degradadas: score 70 y motivo null; escenas sin cédula < 70; desenfoque extremo `desenfocado` |
+| OFF-25 | E2E (vídeos suaves) | Playwright | `npx playwright test e2e/lectura/suave-amarilla.spec.ts e2e/lectura/suave-digital.spec.ts --project=lectura-chromium` | `listo` y `resultado` |
+| OFF-26 | Unitaria (política y reductor) + E2E (tarjeta ilegible) | Vitest, Playwright | `npx vitest run apps/pwa/test/off-26-reintentos.test.ts`, `E(errores)` | decisiones literales; dos `leyendo` antes de `error-lectura` |
 | Todos | Licencias y privacidad del repositorio | `licencia-check`, `privacidad-check` | `L`, `P`, `npm run check` | 0 infracciones |
 
 ## Decisiones humanas (2026-10-07)

@@ -27,6 +27,8 @@ export type Evento =
   | { readonly tipo: "capturada" }
   | { readonly tipo: "leyendo" }
   | { readonly tipo: "leida"; readonly resultado: ResultadoLectura }
+  /** OFF-26: lectura fallida con reintentos disponibles; vuelve a la cámara sin mostrar el error. */
+  | { readonly tipo: "reintento" }
   | { readonly tipo: "licencias" }
   | { readonly tipo: "volver" }
   | { readonly tipo: "cancelar" }
@@ -57,6 +59,8 @@ export function reducir(e: Estado, ev: Evento): Estado {
       return e.pantalla === "listo" ? { pantalla: "leyendo", aviso: null } : e;
     case "leida":
       return leida(e, ev.resultado);
+    case "reintento":
+      return e.pantalla === "leyendo" ? { pantalla: "activo", aviso: null } : e;
     case "licencias":
       return e.pantalla === "inicio" || e.pantalla === "resultado" ? { pantalla: "licencias", aviso: null, anterior: e } : e;
     case "volver":

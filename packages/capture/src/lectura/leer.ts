@@ -1,11 +1,15 @@
 // Orquestación pura de la lectura (OFF-06, OFF-08; design.md, decisión 2), en el mismo orden que tools/leer-foto.mjs:
 // primero PDF417; solo si el error es `pdf417-no-encontrado`, la MRZ TD1 con el plan de giros. Devuelve el resultado
-// ya enmascarado (OFF-09) y pone a cero los bytes del PDF417 tras parsearlos (OFF-11).
+// enmascarado salvo con `enmascarar: false` (OFF-09; la PWA muestra los datos completos) y pone a cero los bytes del PDF417 tras parsearlos (OFF-11).
 import type { Pixeles } from "../pdf417/decodificar.js";
 import { esMayorDeEdad } from "./edad.js";
 import { conLugarNacimiento } from "./lugar.js";
 import { enmascararCamposPdf417, enmascararResultadoMrz } from "./mascara.js";
-import type { DependenciasLectura, OpcionesLectura, ResultadoLectura } from "./tipos.js";
+import type {
+  DependenciasLectura,
+  OpcionesLectura,
+  ResultadoLectura,
+} from "./tipos.js";
 
 const CANCELADA: ResultadoLectura = { ok: false, error: "cancelada" };
 
@@ -14,8 +18,12 @@ function abortada(senal: AbortSignal | undefined): boolean {
   return senal?.aborted === true;
 }
 
-export async function leerDocumento(pixeles: Pixeles, deps: DependenciasLectura, opciones: OpcionesLectura): Promise<ResultadoLectura> {
-  const { senal, fechaReferencia } = opciones;
+export async function leerDocumento(
+  pixeles: Pixeles,
+  deps: DependenciasLectura,
+  opciones: OpcionesLectura,
+): Promise<ResultadoLectura> {
+  const { senal, fechaReferencia, enmascarar = true } = opciones;
   if (abortada(senal)) return CANCELADA;
   const imagen = await deps.decodificar(pixeles);
   if (abortada(senal)) {
@@ -25,23 +33,44 @@ export async function leerDocumento(pixeles: Pixeles, deps: DependenciasLectura,
   if (imagen.ok) {
     let resultado: ReturnType<DependenciasLectura["parsearPdf417"]>;
     try {
-      resultado = deps.parsearPdf417(imagen.bytes, { divipol: deps.buscarDivipol });
+      resultado = deps.parsearPdf417(imagen.bytes, {
+        divipol: deps.buscarDivipol,
+      });
     } finally {
       imagen.bytes.fill(0);
     }
-    if (!resultado.ok) return { ok: false, tipo: "pdf417", error: "pdf417-no-valido" };
-    if (!esMayorDeEdad(resultado.campos.fechaNacimiento, fechaReferencia)) return { ok: false, tipo: "pdf417", error: "menor-de-edad" };
+    if (!resultado.ok)
+      return { ok: false, tipo: "pdf417", error: "pdf417-no-valido" };
+    if (!esMayorDeEdad(resultado.campos.fechaNacimiento, fechaReferencia))
+      return { ok: false, tipo: "pdf417", error: "menor-de-edad" };
     const conLugar = conLugarNacimiento(resultado, deps.buscarDivipol);
-    return { ok: true, tipo: "pdf417", intento: imagen.intento, resultado: { ...conLugar, campos: enmascararCamposPdf417(conLugar.campos) } };
+    return {
+      ok: true,
+      tipo: "pdf417",
+      intento: imagen.intento,
+      resultado: enmascarar
+        ? { ...conLugar, campos: enmascararCamposPdf417(conLugar.campos) }
+        : conLugar,
+    };
   }
-  if (imagen.error !== "pdf417-no-encontrado") return { ok: false, error: imagen.error };
+  if (imagen.error !== "pdf417-no-encontrado")
+    return { ok: false, error: imagen.error };
 
   const lectura = await deps.lectorMrz.leer(pixeles, { fechaReferencia });
   if (abortada(senal)) return CANCELADA;
   if (!lectura.ok) return { ok: false, tipo: "mrz", error: lectura.error };
-  if (!lectura.resultado.valido) return { ok: false, tipo: "mrz", error: "mrz-no-valida" };
+  if (!lectura.resultado.valido)
+    return { ok: false, tipo: "mrz", error: "mrz-no-valida" };
   const nacimiento = lectura.resultado.campos.fechaNacimiento;
   // Stryker disable next-line ConditionalExpression: equivalente; con `valido` la fecha nunca es null (MZ-17), se comprueba para estrechar el tipo.
-  if (nacimiento === null || !esMayorDeEdad(nacimiento, fechaReferencia)) return { ok: false, tipo: "mrz", error: "menor-de-edad" };
-  return { ok: true, tipo: "mrz", intento: lectura.intento, resultado: enmascararResultadoMrz(lectura.resultado) };
+  if (nacimiento === null || !esMayorDeEdad(nacimiento, fechaReferencia))
+    return { ok: false, tipo: "mrz", error: "menor-de-edad" };
+  return {
+    ok: true,
+    tipo: "mrz",
+    intento: lectura.intento,
+    resultado: enmascarar
+      ? enmascararResultadoMrz(lectura.resultado)
+      : lectura.resultado,
+  };
 }

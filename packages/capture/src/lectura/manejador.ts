@@ -1,5 +1,5 @@
 // Manejador puro del Worker lector (OFF-06, OFF-11, OFF-14; design.md, decisión 1). Recibe el ArrayBuffer RGBA
-// transferido, lee con `leerDocumento` y responde solo el resultado enmascarado. Pone a cero los píxeles recibidos en
+// transferido, lee con `leerDocumento` y responde el resultado (enmascarado salvo con `enmascarar: false`, OFF-09). Pone a cero los píxeles recibidos en
 // todas las ramas (los bytes del PDF417 los pone a cero `leerDocumento`). `cancelar` aborta la lectura de ese id.
 import { leerDocumento } from "./leer.js";
 import type { DependenciasLectura, ResultadoLectura } from "./tipos.js";
@@ -26,11 +26,29 @@ export interface RespuestaLector {
   readonly resultado: ResultadoLectura;
 }
 
-function esLeer(m: Record<string, unknown>): m is Record<string, unknown> & MensajeLeer {
-  return m.tipo === "leer" && Number.isInteger(m.id) && Number.isInteger(m.ancho) && Number.isInteger(m.alto) && m.pixeles instanceof ArrayBuffer && typeof m.fechaReferencia === "string";
+function esLeer(
+  m: Record<string, unknown>,
+): m is Record<string, unknown> & MensajeLeer {
+  return (
+    m.tipo === "leer" &&
+    Number.isInteger(m.id) &&
+    Number.isInteger(m.ancho) &&
+    Number.isInteger(m.alto) &&
+    m.pixeles instanceof ArrayBuffer &&
+    typeof m.fechaReferencia === "string"
+  );
 }
 
-export function crearManejadorLector(deps: DependenciasLectura): (mensaje: unknown) => Promise<RespuestaLector | null> {
+export interface OpcionesManejador {
+  /** OFF-09: `false` en la PWA (datos completos); por defecto `true`. */
+  readonly enmascarar?: boolean;
+}
+
+export function crearManejadorLector(
+  deps: DependenciasLectura,
+  opciones: OpcionesManejador = {},
+): (mensaje: unknown) => Promise<RespuestaLector | null> {
+  const enmascarar = opciones.enmascarar ?? true;
   const enCurso = new Map<number, AbortController>();
 
   async function leer(m: MensajeLeer): Promise<RespuestaLector> {
@@ -38,10 +56,21 @@ export function crearManejadorLector(deps: DependenciasLectura): (mensaje: unkno
     const control = new AbortController();
     enCurso.set(m.id, control);
     try {
-      if (m.ancho <= 0 || m.alto <= 0 || data.length !== m.ancho * m.alto * 4) return { tipo: "resultado", id: m.id, resultado: { ok: false, error: "entrada-invalida" } };
-      const resultado = await leerDocumento({ data, width: m.ancho, height: m.alto }, deps, { fechaReferencia: m.fechaReferencia, senal: control.signal }).catch(
-        (): ResultadoLectura => ({ ok: false, error: "motor" }),
-      );
+      if (m.ancho <= 0 || m.alto <= 0 || data.length !== m.ancho * m.alto * 4)
+        return {
+          tipo: "resultado",
+          id: m.id,
+          resultado: { ok: false, error: "entrada-invalida" },
+        };
+      const resultado = await leerDocumento(
+        { data, width: m.ancho, height: m.alto },
+        deps,
+        {
+          fechaReferencia: m.fechaReferencia,
+          senal: control.signal,
+          enmascarar,
+        },
+      ).catch((): ResultadoLectura => ({ ok: false, error: "motor" }));
       return { tipo: "resultado", id: m.id, resultado };
     } finally {
       enCurso.delete(m.id);

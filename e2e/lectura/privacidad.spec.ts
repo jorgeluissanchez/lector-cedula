@@ -28,11 +28,11 @@ test.describe("privacidad (amarilla)", () => {
     });
     await page.goto("/");
     await leer(page);
-    await expect(page.getByText("********56")).toBeVisible();
+    await expect(page.getByText("9999123456")).toBeVisible();
     await page.evaluate(() => (window as unknown as { __visibilidad: (e: string) => void }).__visibilidad("hidden"));
     await page.evaluate(() => (window as unknown as { __visibilidad: (e: string) => void }).__visibilidad("visible"));
     await esperarPantalla(page, "inicio");
-    await expect(page.getByText("********56")).toHaveCount(0);
+    await expect(page.getByText("9999123456")).toHaveCount(0);
     await expect(page.locator("dd[data-campo]")).toHaveCount(0);
   });
 });

@@ -104,8 +104,8 @@ El PDF417 MUST interpretarse con `parsearPdf417Amarilla(bytes, { divipol: buscar
 - **WHEN** se lee la amarilla sintética con `PERSONA_BASE + { departamento: "99", municipio: "999" }`
 - **THEN** `campos.lugarNacimiento` es `null` y `warnings` contiene `lugar-nacimiento-no-resuelto`
 
-### Requirement: OFF-09 Resultado enmascarado
-La PWA MUST mostrar y exponer en `data-resultado` solo el resultado enmascarado con la máscara de la CLI (LPI-06), implementada una sola vez en `packages/capture` e importada por `tools/leer-foto.mjs`: NUIP y serial conservan los 2 últimos caracteres; cada palabra de nombres y apellidos conserva su primera letra; `lineasCorregidas` y `correcciones` son `null`; `digitosControl` conserva solo el `estado` de cada dígito (sin `leido` ni `calculado`, que revelarían dígitos del NUIP y del serial). La PWA MUST NOT ofrecer modo sin máscara.
+### Requirement: OFF-09 Resultado completo en la PWA y máscara en la CLI
+La PWA MUST mostrar los campos sin máscara (decisión del usuario del 2026-10-07): `leerDocumento` y el Worker lector aceptan `enmascarar` (por defecto `true`) y la PWA pasa `false`. Los valores MUST aparecer solo como texto de los `dd` del resultado, nunca en atributos del DOM; las líneas MRZ y las correcciones no se muestran, y OFF-11 sigue igual. La máscara de LPI-06 sigue en `packages/capture`, la usan la CLI (por defecto, con `--sin-mascara`) y el servidor.
 
 #### Scenario: Dígitos de control sin valores
 - **WHEN** se enmascara un resultado MRZ con `digitosControl: { documento: { estado: "valido", leido: "7", calculado: 7 }, … }`
@@ -119,13 +119,17 @@ La PWA MUST mostrar y exponer en `data-resultado` solo el resultado enmascarado 
 - **WHEN** se enmascaran `{ numeroDocumento: "99991234", primerApellido: "MUÑOZ", segundoApellido: null, primerNombre: "ÑANDÚ", segundoNombre: "" }`
 - **THEN** quedan `{ numeroDocumento: "******34", primerApellido: "M****", segundoApellido: null, primerNombre: "Ñ****", segundoNombre: "" }`
 
+#### Scenario: Opción enmascarar
+- **WHEN** se lee la amarilla y la digital sintéticas con `enmascarar: false`, y aparte sin la opción
+- **THEN** con `false` los campos son `numeroDocumento` `9999123456`, `primerApellido` `PRUEBA`, `primerNombre` `FICTICIA`, y `nuip` `9999123456`, `serial` `999912345`, `apellidos` `PRUEBA EJEMPLO`, `nombres` `FICTICIA LUZ`; sin la opción, `********56` y `*******45`
+
 #### Scenario: Pantalla de resultado de la amarilla
 - **WHEN** se completa el flujo con `amarilla-1080p`
-- **THEN** `data-pantalla` vale `resultado`, el elemento "Número de documento" muestra `********56`, el texto visible no contiene `9999123456`, `PRUEBA` ni `FICTICIA`, y `data-tipo` vale `pdf417`
+- **THEN** `data-pantalla` vale `resultado`, `data-tipo` vale `pdf417`, "Número de documento" muestra `9999123456`, "Primer apellido" `PRUEBA`, "Primer nombre" `FICTICIA`, se ven "RH" y "Lugar de nacimiento", y ningún atributo del DOM contiene esos valores
 
 #### Scenario: Pantalla de resultado de la digital
 - **WHEN** se completa el flujo con `digital-1080p`
-- **THEN** `data-tipo` vale `mrz`, "Número de documento" muestra `********56` y "Serial" muestra `*******45`, y el texto visible no contiene `999912345` ni las líneas MRZ
+- **THEN** `data-tipo` vale `mrz`, "Número de documento" muestra `9999123456`, "Serial" `999912345`, "Apellidos" `PRUEBA EJEMPLO` y "Nombres" `FICTICIA LUZ`, y el texto visible no contiene las líneas MRZ
 
 ### Requirement: OFF-10 Lectura girada
 La PWA MUST leer la cédula digital capturada con la tarjeta girada 90° o 270° con el mismo resultado que sin giro, usando el plan de giros existente (LMI-12, LMI-14b).
@@ -297,7 +301,7 @@ Antes de abrir la cámara, `inicio` MUST mostrar el aviso de privacidad corto y 
 - **THEN** 0 violaciones con impacto `serious` o `critical`
 
 ### Requirement: OFF-22 Presencia de documento antes de listo
-El Worker de calidad de la PWA MUST impedir `listo` si en la guía no hay una tarjeta con proporción ID-1 (horizontal o vertical, tolerancia 20 %) y contenido de cédula (patrón PDF417 o franja MRZ con evidencia LMI-14): en ese caso el score queda por debajo del umbral con motivo `acerca` ("Acerca la cédula"). La búsqueda solo corre en frames que ya superan el umbral. Reporte del usuario del 2026-10-07: la captura se disparaba con cualquier escena nítida.
+El Worker de calidad de la PWA MUST impedir `listo` si en la guía no hay una tarjeta con proporción ID-1 (horizontal o vertical, tolerancia 20 %) y contenido de cédula (patrón PDF417 o franja MRZ con evidencia LMI-14): en ese caso el score queda por debajo del umbral con motivo `acerca` ("Acerca la cédula"). La búsqueda solo corre en frames que ya superan el umbral o cuyo único subscore por debajo del umbral es la nitidez con la varianza del Laplaciano >= `LAPLACIANO_MINIMO_GUIADO` (OFF-25). El contenido PDF417 se reconoce por el patrón nítido (bloques de 8x8 con bordes verticales fuertes) o, si no hay MRZ, por el patrón suave: al menos el 8 % de bloques de 8x8 con borde vertical medio >= 1,5, 1,5 veces más energía horizontal que vertical y todas sus filas de píxeles con al menos la mitad de la energía horizontal media (sobrevive a desenfoque, ruido y JPEG; los renglones de texto dejan filas vacías). Los bordes de la tarjeta se buscan con diferencias a 2 píxeles para tolerar un borde desenfocado. Reporte del usuario del 2026-10-07: la captura se disparaba con cualquier escena nítida.
 
 #### Scenario: Escenas sin cédula
 - **WHEN** se evalúa la presencia en frames de análisis de 640x360 nítidos de una cara dibujada, una pared, una hoja en blanco con proporción ID-1 y una hoja con renglones de texto
@@ -306,6 +310,10 @@ El Worker de calidad de la PWA MUST impedir `listo` si en la guía no hay una ta
 #### Scenario: Cédulas sintéticas
 - **WHEN** se evalúa la presencia en la amarilla, la digital y la digital girada 90 grados sintéticas de `PERSONA_BASE` colocadas en la guía
 - **THEN** las tres tienen presencia, con contenido `pdf417` la amarilla y `mrz` las digitales
+
+#### Scenario: Cédulas sintéticas degradadas y escenas degradadas
+- **WHEN** se evalúa la presencia en la amarilla con contraste al 20 %, la digital y la digital girada 90 grados de `PERSONA_BASE` en la guía, degradadas con desenfoque gaussiano (sigma 1, 1,5 y 1 px del frame de análisis), ruido +-4 y JPEG de calidad 50, y en la cara, la pared, la hoja en blanco y la hoja con texto con la misma degradación (sigma 1)
+- **THEN** las tres cédulas tienen presencia y ninguna de las cuatro escenas la tiene
 
 #### Scenario: Coste
 - **WHEN** se mide la evaluación en Node sobre el frame de análisis
@@ -344,3 +352,37 @@ El lector MUST admitir solo cédulas de ciudadanía de mayores de edad; la tarje
 #### Scenario: Tarjeta de identidad en MRZ
 - **WHEN** se parsean líneas MRZ sintéticas cuyo código de documento no es `IC` (p. ej. `IT` o `TI`)
 - **THEN** el parser devuelve `{ ok: false, motivo: "no-es-cedula-digital" }`
+
+### Requirement: OFF-25 Captura guiada por la presencia de la cédula
+Con la presencia activada (OFF-22), el Worker de calidad MUST dar `score` = `umbralListo` y `motivo` `null` a un frame cuyo único subscore bajo el umbral es la nitidez, con varianza del Laplaciano >= `LAPLACIANO_MINIMO_GUIADO` (12) y presencia de cédula; sin presencia, motivo `acerca`; con varianza < 12, `desenfocado`, el único caso que muestra "Desenfocado". CAL-11 no cambia. Motivo: reporte del 2026-10-07 en Android real; calibración en `docs/decisiones/2026-10-07-captura-guiada-nitidez.md`.
+
+#### Scenario: Cédulas degradadas a nivel de celular real
+- **WHEN** el Worker de calidad con presencia analiza la amarilla (contraste 20 %, sigma 1), la digital (sigma 1,5) y la digital girada 90 grados (sigma 1) degradadas como en OFF-22, cuya varianza está entre `LAPLACIANO_MINIMO_GUIADO` y 152
+- **THEN** cada resultado tiene `score` 70 y `motivo` `null`, y sin la presencia activada el motivo es `desenfocado` con `score` < 70
+
+#### Scenario: Escenas sin cédula siguen sin disparar
+- **WHEN** el Worker de calidad con presencia analiza la cara, la pared, la hoja en blanco y la hoja con texto, nítidas y degradadas con sigma 1
+- **THEN** ningún resultado llega a 70 y ninguno con varianza >= `LAPLACIANO_MINIMO_GUIADO` tiene motivo `desenfocado`
+
+#### Scenario: Desenfoque extremo
+- **WHEN** el Worker de calidad con presencia analiza la digital degradada con sigma 3,5 (varianza < `LAPLACIANO_MINIMO_GUIADO`)
+- **THEN** el resultado tiene `score` < 70 y `motivo` `desenfocado`
+
+#### Scenario: Vídeos suaves en E2E
+- **WHEN** se pulsa "Iniciar cámara" con `amarilla-suave-1080p` (contraste de la tarjeta al 20 %, `gblur` sigma 2,5 y ruido) o `digital-suave-1080p` (`gblur` sigma 5 y ruido), cuya varianza en el frame de análisis es < 152
+- **THEN** el historial de pantallas contiene `listo` y `data-pantalla` llega a `resultado`
+
+### Requirement: OFF-26 Reintento silencioso de la lectura
+Si la lectura falla con `no-encontrado`, `no-valido` o `tiempo-agotado` (OFF-13), la PWA MUST volver a `activo` sin mostrar el error y capturar otro frame, hasta 3 lecturas o 20 000 ms desde el inicio de la primera; agotado el tope, muestra `error-lectura` con el último código. `menor-de-edad` y `motor` se muestran sin reintento. Nunca hay más de una lectura en curso. Los botones de la PWA reinician la cuenta.
+
+#### Scenario: Política de reintentos
+- **WHEN** se registran lecturas fallidas `no-valido` en t = 0 y t = 1000 ms y una tercera en t = 2000 ms; aparte, una `no-encontrado` en t = 0 y otra en t = 20 000 ms; aparte, una `menor-de-edad` en t = 0; y aparte, una lectura correcta tras un fallo
+- **THEN** las decisiones son `reintentar`, `reintentar`, `mostrar`; `reintentar`, `mostrar`; `mostrar`; y `mostrar` para la correcta, y un intento nuevo con la cuenta reiniciada vuelve a `reintentar`
+
+#### Scenario: Reductor
+- **WHEN** se aplica el reductor de pantallas a `leyendo` con el evento `reintento`, y a `resultado` con `reintento`
+- **THEN** se obtienen `activo` sin aviso y `resultado` sin cambio
+
+#### Scenario: Tarjeta ilegible
+- **WHEN** se completa el flujo con `tarjeta-ilegible-1080p`
+- **THEN** `leyendo` aparece al menos dos veces en el historial de pantallas, separadas por `activo`, y termina en `error-lectura` con `data-error` `no-encontrado`
