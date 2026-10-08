@@ -5,9 +5,9 @@ El lector admite hoy la cédula de ciudadanía (amarilla PDF417 y digital MRZ TD
 ### Formato de la cédula de extranjería (lo que se sabe y lo que no)
 
 - Resolución UAEMC 0086 de 2017 (https://www.cancilleria.gov.co/normograma/compilacion/docs/resolucion_uaemc_0086_2017.htm, citada en `docs/investigacion/01-formato-cedula-y-repos.md` §4): tarjeta ID-1 (ISO/IEC 7810) conforme a ICAO 9303, reverso con "código de barras bidimensional" y zona MRZ, sin chip. Esto respalda que la MRZ es TD1 (formato de tarjeta ID-1 en ICAO 9303 parte 5), pero la resolución no publica el contenido de los campos.
-- Truora distingue `co_foreign-id` y `co_foreign-id-2025`: hubo un rediseño en 2025 cuyo formato no está documentado públicamente (CE07).
-- Ningún repositorio público decodifica el 2D de la CE; su simbología (PDF417 o QR) no está confirmada (CE04).
-- Este agente no tuvo acceso a la web en esta sesión: la investigación nueva no se pudo ampliar. Todo offset de la CE queda como hipótesis pendiente (CE01 a CE07) y la tarea 1.1 encarga al investigador confirmarlo con especímenes públicos de Migración Colombia.
+- El rediseño de 2025 es la Res. UAEMC 1395 de 2025 (16-05-2025): mantiene MRZ y código 2D en el reverso; las CE de la Res. 2570/2019 siguen válidas hasta vencer. El layout de la MRZ no está publicado (CE07). Ver docs/investigacion/05-cedula-extranjeria-y-ti.md.
+- Las Res. 86/2017, 2570/2019 y 1395/2025 exigen un código de barras bidimensional en el reverso sin publicar su simbología ni contenido; ningún repositorio lo decodifica (CE04).
+- La investigación de 2026-10-08 (docs/investigacion/05-cedula-extranjeria-y-ti.md) no halló espécimen con MRZ legible: los offsets de la CE, T01 y P01 siguen como hipótesis pendientes.
 
 ### TI
 

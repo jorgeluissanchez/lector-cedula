@@ -115,12 +115,12 @@ Todas pendientes. Fuente base: Resolución UAEMC 0086 de 2017 (tarjeta ID-1 conf
 
 | ID | Hipótesis | Fuente | Estado | Evidencia |
 |---|---|---|---|---|
-| CE01 | La MRZ de la CE es TD1 con código de documento `I<` (se aceptan también `ID` e `IE`) y estado emisor `COL` | Res. UAEMC 86/2017 (ICAO 9303, ID-1) | pendiente | Sin espécimen con MRZ legible |
-| CE02 | El campo nacionalidad de la CE es el del titular (distinto de `COL`) | ICAO 9303 parte 5 | pendiente | Sin espécimen |
-| CE03 | El número de la CE (hasta 7 dígitos impresos; los nuevos podrían ser más largos) está en [5,14) de la línea 1, relleno con `<` | Conocimiento general | pendiente | Sin espécimen |
-| CE04 | El código 2D del reverso no tiene formato publicado y puede contener datos cifrados o biométricos; no se decodifica | Res. 86/2017, ausencia de repos | pendiente | Ningún repo lo decodifica |
-| CE05 | Los campos opcionales de la CE en TD1 están vacíos o llevan un dato interno de Migración | ICAO 9303 parte 5 | pendiente | Sin espécimen |
-| CE06 | La línea 3 de la CE lleva apellidos y nombres con la transliteración ICAO (Ñ como N) | ICAO 9303 parte 3 | pendiente | Sin espécimen |
-| CE07 | La CE rediseñada de 2025 mantiene TD1 con el mismo layout | Truora `co_foreign-id-2025` | pendiente | Sin espécimen ni norma |
-| T01 | Una TI con MRZ (si existe) usa código `IT` o `TI` y emisor `COL` | Ninguna confirmada | pendiente | Sin espécimen; puede que la TI no tenga MRZ |
-| P01 | El dato opcional del pasaporte colombiano lleva el NUIP del titular | Conocimiento general | pendiente | Sin espécimen público; el parser lo devuelve como `datoOpcional`, sin interpretarlo |
+| CE01 | La MRZ de la CE es TD1 con código de documento `I<` (se aceptan también `ID` e `IE`) y estado emisor `COL` | Res. UAEMC 86/2017 (ICAO 9303, ID-1) | pendiente | Res. 86/2017, 2570/2019 y 1395/2025 confirman MRZ (zona OCR) en el reverso; el código no se publica (docs/investigacion/05) |
+| CE02 | El campo nacionalidad de la CE es el del titular (distinto de `COL`) | ICAO 9303 parte 5 | pendiente | Ninguna norma ni espécimen público lo detalla (búsqueda 2026-10-08, docs/investigacion/05) |
+| CE03 | El número de la CE (hasta 7 dígitos impresos; los nuevos podrían ser más largos) está en [5,14) de la línea 1, relleno con `<` | Conocimiento general | pendiente | Ninguna norma ni espécimen público lo detalla (búsqueda 2026-10-08, docs/investigacion/05) |
+| CE04 | El código 2D del reverso no tiene formato publicado y puede contener datos cifrados o biométricos; no se decodifica | Res. 86/2017, ausencia de repos | confirmada parcialmente | Las tres resoluciones exigen código 2D en el reverso sin publicar simbología ni contenido; se mantiene no decodificar (docs/investigacion/05) |
+| CE05 | Los campos opcionales de la CE en TD1 están vacíos o llevan un dato interno de Migración | ICAO 9303 parte 5 | pendiente | Ninguna norma ni espécimen público lo detalla (búsqueda 2026-10-08, docs/investigacion/05) |
+| CE06 | La línea 3 de la CE lleva apellidos y nombres con la transliteración ICAO (Ñ como N) | ICAO 9303 parte 3 | pendiente | Ninguna norma ni espécimen público lo detalla (búsqueda 2026-10-08, docs/investigacion/05) |
+| CE07 | La CE rediseñada de 2025 mantiene TD1 con el mismo layout | Truora `co_foreign-id-2025` | confirmada parcialmente | Res. UAEMC 1395/2025 existe y conserva MRZ y 2D en el reverso; layout exacto sin espécimen (docs/investigacion/05) |
+| T01 | Una TI con MRZ (si existe) usa código `IT` o `TI` y emisor `COL` | Ninguna confirmada | pendiente | TI digital con QR y MRZ anunciada por prensa, sin norma ni espécimen; TI azul vigente solo con PDF417 (docs/investigacion/05) |
+| P01 | El dato opcional del pasaporte colombiano lleva el NUIP del titular | Conocimiento general | pendiente | Sin fuente pública del campo opcional; buscado en 2026-10-08 (docs/investigacion/05) |
