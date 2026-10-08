@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { revisarArchivo } from "../privacidad-check.mjs";
 
 describe("revisarArchivo", () => {
@@ -31,7 +33,7 @@ describe("revisarArchivo", () => {
 
   it("respeta la excepción explícita con justificación", () => {
     const codigo = "localStorage.setItem('tema', t); // privacidad-ok: preferencia de UI sin PII\n";
-    expect(revisarArchivo("apps/pwa/src/tema.ts", codigo)).toHaveLength(0);
+    expect(revisarArchivo("apps/otra/src/tema.ts", codigo)).toHaveLength(0);
   });
 
   it("detecta logs del servidor con campos personales", () => {
@@ -47,5 +49,43 @@ describe("revisarArchivo", () => {
 
   it("ignora archivos de documentación de investigación", () => {
     expect(revisarArchivo("docs/investigacion/01.md", "PubDSK_1 cv2.imwrite")).toHaveLength(0);
+  });
+});
+
+describe("OFF-11: nada persiste en la PWA ni en captura", () => {
+  const ACCESOS = [
+    "localStorage.setItem('k', v);",
+    "const n = sessionStorage.length;",
+    "const db = indexedDB.open('lecturas');",
+    "document.cookie = 'nuip=1';",
+    "const c = document.cookie;",
+  ];
+  const RUTAS = ["apps/pwa/src/resultado.ts", "packages/capture/src/lectura/worker-lector.ts", "packages/capture/src/camara.ts"];
+
+  it.each(RUTAS)("detecta cada acceso al almacenamiento en %s", (ruta) => {
+    for (const linea of ACCESOS) {
+      const h = revisarArchivo(ruta, `${linea}\n`);
+      expect(h, linea).toHaveLength(1);
+      expect(h[0].mensaje).toMatch(/OFF-11/);
+    }
+  });
+
+  it("no admite la excepción privacidad-ok en esas rutas", () => {
+    const codigo = "document.cookie = 'x'; // privacidad-ok: intento\n";
+    expect(revisarArchivo("apps/pwa/src/x.ts", codigo)).toHaveLength(1);
+  });
+
+  it("no marca código sin almacenamiento ni identificadores parecidos", () => {
+    const codigo = "const cookieless = true;\nconst miLocalStorageFake = 1;\ndocument.title = 'x';\n";
+    expect(revisarArchivo("apps/pwa/src/x.ts", codigo)).toHaveLength(0);
+    expect(revisarArchivo("packages/parsers/src/x.ts", "document.cookie;\n")).toHaveLength(0);
+  });
+
+  it("el repositorio real cumple OFF-11", () => {
+    const archivos = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "apps/pwa/src", "packages/capture/src"], { encoding: "utf8" })
+      .split(/\r?\n/).filter(Boolean);
+    expect(archivos.length).toBeGreaterThan(0);
+    const hallazgos = archivos.flatMap((r) => revisarArchivo(r, readFileSync(r, "utf8"))).filter((h) => /OFF-11/.test(h.mensaje));
+    expect(hallazgos).toEqual([]);
   });
 });

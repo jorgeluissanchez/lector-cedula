@@ -34,6 +34,11 @@ const REGLAS_LINEA = [
     "payload PDF417 en código de producto (los fixtures van en evals/fixtures/sinteticos o tests marcados)"],
 ];
 
+/** OFF-11 (pwa-lectura-offline): la PWA y la captura no persisten nada; sin excepción privacidad-ok. */
+const OFF11_RUTAS = /^(apps\/pwa\/src|packages\/capture\/src)\//;
+const OFF11_PATRON = /\b(localStorage|sessionStorage|indexedDB)\b|\bdocument\.cookie\b/;
+const OFF11_MENSAJE = "OFF-11: almacenamiento del navegador (localStorage, sessionStorage, indexedDB, document.cookie) prohibido en la PWA y la captura";
+
 /**
  * Revisa un archivo y devuelve hallazgos.
  * @param {string} ruta ruta relativa con '/'
@@ -60,7 +65,12 @@ export function revisarArchivo(ruta, contenido) {
 
   const testMarcado = ES_TEST.test(r) && contenido.includes("fixture-sintetico");
   const lineas = contenido.split(/\r?\n/);
+  const off11 = OFF11_RUTAS.test(r) && !ES_TEST.test(r);
   lineas.forEach((texto, i) => {
+    if (off11 && OFF11_PATRON.test(texto)) {
+      hallazgos.push({ ruta: r, linea: i + 1, mensaje: OFF11_MENSAJE });
+      return;
+    }
     if (texto.includes("privacidad-ok:")) return;
     for (const [patron, aplica, mensaje] of REGLAS_LINEA) {
       if (!aplica.test(r) || !patron.test(texto)) continue;
