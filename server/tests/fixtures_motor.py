@@ -92,6 +92,16 @@ DOCUMENTO_AMARILLA: dict[str, Any] = {
     "warnings": [],
 }
 
+# Con el intérprete real, `place_of_birth` lleva además el nombre vigente del lugar (DC-14).
+DOCUMENTO_AMARILLA_CON_NOMBRES: dict[str, Any] = {
+    **DOCUMENTO_AMARILLA,
+    "place_of_birth": {
+        **DOCUMENTO_AMARILLA["place_of_birth"],
+        "department_name": "BOGOTA D.C",
+        "municipality_name": "BOGOTA, D.C.",
+    },
+}
+
 DOCUMENTO_DIGITAL: dict[str, Any] = {
     "type": "co_national-id-2020",
     "document_number": "9999123456",

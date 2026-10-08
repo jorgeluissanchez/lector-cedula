@@ -17,6 +17,7 @@ from app.motor_real import InterpreteNode, Lectura, MotorReal
 from tests.fixtures_motor import (
     CAMPOS_PDF417_APELLIDO_COMPUESTO,
     DOCUMENTO_AMARILLA,
+    DOCUMENTO_AMARILLA_CON_NOMBRES,
     DOCUMENTO_DIGITAL,
     VALIDACIONES_OK,
     InterpreteFalso,
@@ -53,7 +54,7 @@ def test_MS02_cedula_amarilla_legible() -> None:
         "status": "success",
         "declined_reason": None,
         "checks": checks({"status": "passed", "reasons": []}),
-        "document": DOCUMENTO_AMARILLA,
+        "document": DOCUMENTO_AMARILLA_CON_NOMBRES,
     }
 
 

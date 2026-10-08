@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from app.motor_real import InterpreteNode, MotorReal
-from tests.fixtures_motor import DOCUMENTO_AMARILLA, LectorFalso, lectura_de
+from tests.fixtures_motor import DOCUMENTO_AMARILLA_CON_NOMBRES, LectorFalso, lectura_de
 from tests.imagenes_sinteticas import IMG_JPEG, IMG_PNG
 from tests.utilidades import AUTH_KL, crear, crear_cliente_con, puertos_de_prueba, ruta_de_subida, subir
 
@@ -34,7 +34,7 @@ def test_MS03_flujo_live_completo_con_lector() -> None:
     cuerpo = consulta.json()
     assert cuerpo["status"] == "success"
     assert cuerpo["sandbox"] is False
-    assert cuerpo["document"] == DOCUMENTO_AMARILLA
+    assert cuerpo["document"] == DOCUMENTO_AMARILLA_CON_NOMBRES
 
 
 def test_MS03_sin_lector() -> None:

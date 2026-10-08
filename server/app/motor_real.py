@@ -342,6 +342,18 @@ def _documento(
     }
 
 
+def _nombres_lugar(resuelto: Any, codigo: str) -> dict[str, str]:
+    """DC-14 (divipol-consulados-2018): nombres vigentes del intérprete si resolvió el mismo código."""
+    if not isinstance(resuelto, dict) or resuelto.get("codigo") != codigo:
+        return {}
+    departamento, municipio = resuelto.get("departamento"), resuelto.get("municipio")
+    if not (isinstance(departamento, str) and isinstance(municipio, str)):
+        return {}
+    if not (0 < len(departamento) <= 64 and 0 < len(municipio) <= 64):
+        return {}
+    return {"department_name": departamento, "municipality_name": municipio}
+
+
 def _documento_pdf417(interpretacion: dict[str, Any]) -> dict[str, Any] | None:
     campos = interpretacion.get("campos")
     if not isinstance(campos, dict):
@@ -356,6 +368,8 @@ def _documento_pdf417(interpretacion: dict[str, Any]) -> dict[str, Any] | None:
         and MUNICIPIO.fullmatch(municipio)
         else None
     )
+    if lugar is not None:
+        lugar.update(_nombres_lugar(interpretacion.get("lugar_nacimiento"), departamento + municipio))
     rh = campos.get("rh")
     return _documento(
         AMARILLA,

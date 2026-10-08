@@ -6,7 +6,7 @@
 FROM node:24-bookworm-slim AS fuente
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates  && rm -rf /var/lib/apt/lists/*
 COPY --from=repo_git . /repo.git
-RUN mkdir /fuente && git --git-dir=/repo.git archive HEAD packages/parsers/src packages/capture/src     packages/capture/worker tools/modelos/descargar-mrz.mjs | tar -x -C /fuente
+RUN mkdir /fuente && git --git-dir=/repo.git archive HEAD packages/parsers/src packages/parsers/THIRD_PARTY_NOTICES.md packages/capture/src     packages/capture/worker tools/modelos/descargar-mrz.mjs | tar -x -C /fuente
 
 # Parsers TypeScript compilados desde el código fuente (decisión 4).
 FROM node:24-bookworm-slim AS parsers
@@ -30,7 +30,7 @@ RUN printf '%s' '{"type":"module","private":true,"dependencies":{"zxing-wasm":"3
  && npm install --no-audit --no-fund --ignore-scripts \
  && npm install --no-save --no-audit --no-fund --ignore-scripts typescript@5.9.3 @types/pngjs@6.0.5
 COPY --from=parsers /p/dist ./node_modules/@lector-cedula/parsers/dist
-RUN printf '%s' '{"name":"@lector-cedula/parsers","type":"module","exports":{".":{"types":"./dist/index.d.ts","default":"./dist/index.js"},"./divipola":{"types":"./dist/divipola/index.d.ts","default":"./dist/divipola/index.js"}}}' > node_modules/@lector-cedula/parsers/package.json
+RUN printf '%s' '{"name":"@lector-cedula/parsers","type":"module","exports":{".":{"types":"./dist/index.d.ts","default":"./dist/index.js"},"./divipola":{"types":"./dist/divipola/index.d.ts","default":"./dist/divipola/index.js"},"./divipol-2018":{"types":"./dist/divipol-2018/index.d.ts","default":"./dist/divipol-2018/index.js"}}}' > node_modules/@lector-cedula/parsers/package.json
 COPY --from=fuente /fuente/packages/capture/src ./capture/src
 COPY --from=fuente /fuente/packages/capture/worker ./capture/worker
 RUN npx tsc --rootDir capture/src --outDir node_modules/@lector-cedula/capture/dist --target ES2023 \
@@ -54,6 +54,9 @@ COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
 # Licencia completa de Node con los avisos de terceros (V8, OpenSSL, ICU, c-ares...): condición del
 # revisor de licencias al copiar solo el binario.
 COPY --from=node:24-bookworm-slim /usr/local/LICENSE /srv/licencias/node-LICENSE
+# Los parsers llevan datos CC BY-SA 4.0 (DANE y Registraduría) y el intérprete los usa para el nombre del lugar
+# (divipol-consulados-2018, DC-14): su atribución viaja con la imagen.
+COPY --from=fuente /fuente/packages/parsers/THIRD_PARTY_NOTICES.md /srv/licencias/parsers-THIRD_PARTY_NOTICES.md
 COPY --from=parsers /p/dist /srv/parsers/dist
 COPY --from=lector /l/node_modules /srv/lector/node_modules
 COPY --from=lector /r/models/tesseract /srv/modelos/tesseract

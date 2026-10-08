@@ -39,6 +39,8 @@ def test_MS01_pdf417_sintetico_con_apellido_compuesto() -> None:
         "campos": CAMPOS_PDF417_APELLIDO_COMPUESTO,
         "validaciones": VALIDACIONES_OK,
         "warnings": [],
+        # DC-14 (divipol-consulados-2018): nombre vigente del lugar, fuera de `campos`.
+        "lugar_nacimiento": {"codigo": "16001", "departamento": "BOGOTA D.C", "municipio": "BOGOTA, D.C."},
     }
 
 

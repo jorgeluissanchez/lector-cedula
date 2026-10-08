@@ -3,7 +3,7 @@
  * licencia-check: aplica el principio IV de la constitución.
  *
  * Uso:
- *   node tools/licencia-check.mjs                 # revisa dependencias de producción y models/manifest.json
+ *   node tools/licencia-check.mjs                 # dependencias de producción, models/manifest.json y avisos CC BY-SA (DC-12)
  *   node tools/licencia-check.mjs --package a b   # revisa paquetes npm antes de instalarlos (npm view)
  *   node tools/licencia-check.mjs --pip a b       # revisa nombres de paquetes Python contra la lista negra
  *
@@ -11,7 +11,7 @@
  */
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const PERMITIDAS = new Set([
@@ -70,6 +70,79 @@ export function evaluarManifiestoModelos(modelos) {
       return porLic.ok ? null : { nombre: m.nombre, motivo: porLic.motivo };
     })
     .filter(Boolean);
+}
+
+// DC-12 (divipol-consulados-2018): todo artefacto o consumidor de datos CC BY-SA lleva su aviso.
+export const CODIGO_LEGAL_CC_BY_SA = "https://creativecommons.org/licenses/by-sa/4.0/legalcode.es";
+
+/** Regla 1: el paquete de un `*.generated.ts` con datos CC BY-SA declara y distribuye su aviso. */
+export function evaluarArtefactoCcBySa({ artefacto, paquete, avisos }) {
+  const motivos = [];
+  if (!String(paquete?.license ?? "").includes("CC-BY-SA-4.0")) motivos.push("license sin CC-BY-SA-4.0");
+  if (!(paquete?.files ?? []).includes("THIRD_PARTY_NOTICES.md")) motivos.push("files sin THIRD_PARTY_NOTICES.md");
+  if (typeof avisos !== "string") motivos.push("falta THIRD_PARTY_NOTICES.md");
+  else {
+    if (!avisos.includes(artefacto)) motivos.push("THIRD_PARTY_NOTICES.md no lo nombra");
+    if (!avisos.includes(CODIGO_LEGAL_CC_BY_SA)) motivos.push(`THIRD_PARTY_NOTICES.md sin ${CODIGO_LEGAL_CC_BY_SA}`);
+  }
+  return motivos.length === 0 ? [] : [`${artefacto} (${paquete?.name ?? "?"}): datos CC BY-SA sin aviso: ${motivos.join("; ")}`];
+}
+
+const IMPORTA_CC_BY_SA = /\bconLugarNacimiento\b|["'][^"']*(?:divipola|divipol-2018|lectura\/lugar)[^"']*["']/u;
+
+/** Regla 2: un script que usa datos CC BY-SA contiene el literal `CC BY-SA 4.0`. */
+export function evaluarConsumidorCcBySa(ruta, contenido) {
+  if (!IMPORTA_CC_BY_SA.test(contenido) || contenido.includes("CC BY-SA 4.0")) return null;
+  return `${ruta}: usa datos CC BY-SA sin el aviso "CC BY-SA 4.0"`;
+}
+
+/** Regla 3: una imagen que compila packages/parsers/src copia sus avisos a /srv/licencias/. */
+export function evaluarDockerfileAvisos(contenido) {
+  if (!contenido.includes("packages/parsers/src")) return null;
+  const copia = contenido.split("\n").some((l) => /^\s*COPY\b/u.test(l) && l.includes("THIRD_PARTY_NOTICES") && l.includes("/srv/licencias/"));
+  return copia ? null : "server/Dockerfile: compila packages/parsers/src sin copiar THIRD_PARTY_NOTICES a /srv/licencias/";
+}
+
+function archivosRecursivos(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    if (e.name === "node_modules" || e.name.startsWith(".")) return [];
+    const ruta = join(dir, e.name);
+    return e.isDirectory() ? archivosRecursivos(ruta) : [ruta];
+  });
+}
+
+/** Aplica las tres reglas de DC-12 al repositorio. */
+export function revisarAvisosCcBySa(raiz) {
+  const errores = [];
+  const dirPaquetes = join(raiz, "packages");
+  for (const nombre of existsSync(dirPaquetes) ? readdirSync(dirPaquetes) : []) {
+    const dir = join(dirPaquetes, nombre);
+    if (!existsSync(join(dir, "package.json"))) continue;
+    const generados = archivosRecursivos(join(dir, "src")).filter((r) => r.endsWith(".generated.ts") && readFileSync(r, "utf8").includes("CC-BY-SA"));
+    if (generados.length === 0) continue;
+    const paquete = leerJson(join(dir, "package.json"));
+    const rutaAvisos = join(dir, "THIRD_PARTY_NOTICES.md");
+    const avisos = existsSync(rutaAvisos) ? readFileSync(rutaAvisos, "utf8") : null;
+    for (const g of generados) {
+      const artefacto = relative(dir, g).split(sep).join("/");
+      errores.push(...evaluarArtefactoCcBySa({ artefacto, paquete, avisos }));
+    }
+  }
+  const scripts = [
+    ...(existsSync(join(raiz, "tools")) ? readdirSync(join(raiz, "tools")).map((n) => join(raiz, "tools", n)) : []),
+    ...archivosRecursivos(join(raiz, "server")),
+  ].filter((r) => r.endsWith(".mjs"));
+  for (const s of scripts) {
+    const e = evaluarConsumidorCcBySa(relative(raiz, s).split(sep).join("/"), readFileSync(s, "utf8"));
+    if (e) errores.push(e);
+  }
+  const dockerfile = join(raiz, "server", "Dockerfile");
+  if (existsSync(dockerfile)) {
+    const e = evaluarDockerfileAvisos(readFileSync(dockerfile, "utf8"));
+    if (e) errores.push(e);
+  }
+  return errores;
 }
 
 function leerJson(ruta) {
@@ -138,6 +211,7 @@ function main(argv) {
     errores = argv.slice(1).map((n) => evaluarNombre(n.split(/[=<>~!]/)[0])).filter((r) => !r.ok).map((r) => r.motivo);
   } else {
     errores = revisarDependenciasProduccion(raiz);
+    errores.push(...revisarAvisosCcBySa(raiz));
     const manifiesto = join(raiz, "models", "manifest.json");
     if (existsSync(manifiesto)) {
       errores.push(...evaluarManifiestoModelos(leerJson(manifiesto)).map((e) => `modelo ${e.nombre}: ${e.motivo}`));

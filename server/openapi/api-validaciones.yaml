@@ -1006,7 +1006,10 @@ components:
 
     DivipolPlace:
       type: object
-      description: Lugar codificado con DIVIPOL (departamento y municipio).
+      description: |
+        Lugar codificado con DIVIPOL (departamento y municipio). `department_name` y `municipality_name` son el
+        nombre vigente cuando el código se resuelve (consulados de 2018 incluidos); datos del DANE y de la
+        Registraduría bajo CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/legalcode.es).
       required: [divipol_department, divipol_municipality]
       additionalProperties: false
       properties:
@@ -1016,6 +1019,14 @@ components:
         divipol_municipality:
           type: string
           pattern: "^[0-9]{3}$"
+        department_name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        municipality_name:
+          type: string
+          minLength: 1
+          maxLength: 64
 
     Document:
       type: object

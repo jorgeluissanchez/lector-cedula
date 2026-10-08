@@ -120,3 +120,95 @@ El generador SHALL aplicar solo estas correcciones de erratas, cada una declarad
 #### Scenario: Municipio nacional sin cambios
 - **WHEN** los códigos de nacimiento son `16` y `001`
 - **THEN** el resultado es el de la búsqueda principal y no se consulta el módulo 2018
+
+### Requirement: DC-10 Atribución en la CLI leer-foto
+La CLI `tools/leer-foto.mjs` usa datos CC BY-SA 4.0 al resolver el lugar de nacimiento (DC-08). Con la opción `--licencias` MUST escribir en la salida estándar el contenido íntegro de `packages/parsers/THIRD_PARTY_NOTICES.md` y terminar con código 0 sin leer ninguna imagen ni exigir ruta. Toda salida PDF417 con `ok: true` MUST incluir el campo de primer nivel `fuentes` con el literal `"Datos: DANE y Registraduría, CC BY-SA 4.0; ver --licencias"`. Las demás salidas (errores y MRZ) no cambian.
+
+#### Scenario: Opción --licencias
+- **WHEN** se ejecuta `node tools/leer-foto.mjs --licencias`
+- **THEN** el código es 0, la salida estándar es igual al contenido de `packages/parsers/THIRD_PARTY_NOTICES.md`, contiene `Registraduría Nacional del Estado Civil`, `DANE` y `https://creativecommons.org/licenses/by-sa/4.0/legalcode.es`, y la salida de errores está vacía
+
+#### Scenario: Campo fuentes en la salida PDF417
+- **WHEN** se lee una imagen sintética con PDF417, con o sin máscara
+- **THEN** la salida JSON tiene `fuentes: "Datos: DANE y Registraduría, CC BY-SA 4.0; ver --licencias"`
+
+#### Scenario: Consulado de 2018 en la CLI
+- **WHEN** se lee una imagen sintética con PDF417 cuyo lugar de nacimiento es `88` `690`
+- **THEN** `resultado.campos.lugarNacimiento` es `{ "codigo": "88690", "departamento": "CONSULADOS", "municipio": "VIETNAM" }`
+
+#### Scenario: Errores sin cambios
+- **WHEN** la imagen no contiene documento
+- **THEN** la salida es exactamente `{"ok":false,"error":"documento-no-encontrado"}` sin `fuentes`
+
+### Requirement: DC-11 El principal sigue libre de datos CC BY-SA (DV-17)
+El grafo de importaciones estáticas relativas desde `packages/parsers/src/index.ts` MUST NOT alcanzar ningún módulo bajo `src/divipola/` ni `src/divipol-2018/`. El grafo equivalente desde el compilado `packages/parsers/dist/index.js` MUST NOT alcanzar `dist/divipola/` ni `dist/divipol-2018/`, `dist/index.js` MUST NOT contener `88195`, y ningún archivo de ese grafo MUST contener `AZERBAIYAN`.
+
+#### Scenario: Grafo del fuente
+- **WHEN** se recorre el grafo desde `src/index.ts`
+- **THEN** ninguna ruta empieza por `src/divipola/` ni por `src/divipol-2018/`
+
+#### Scenario: Grafo del compilado
+- **WHEN** se recorre el grafo desde `dist/index.js`
+- **THEN** ninguna ruta empieza por `dist/divipola/` ni por `dist/divipol-2018/`, `dist/index.js` no contiene `88195` y ningún archivo contiene `AZERBAIYAN`
+
+### Requirement: DC-12 licencia-check exige el aviso de cada artefacto CC BY-SA
+`node tools/licencia-check.mjs` (sin argumentos, parte de `npm run check`) MUST fallar con código 1 y nombrar el artefacto si un `*.generated.ts` bajo `packages/*/src/` que contiene `CC-BY-SA` pertenece a un paquete cuyo `license` no incluye `CC-BY-SA-4.0`, cuyo `files` no incluye `THIRD_PARTY_NOTICES.md`, o cuyo `THIRD_PARTY_NOTICES.md` falta, no nombra la ruta del artefacto relativa al paquete o no contiene `https://creativecommons.org/licenses/by-sa/4.0/legalcode.es`.
+
+#### Scenario: Repositorio actual
+- **WHEN** se ejecuta `npm run check:licencias`
+- **THEN** termina con código 0
+
+#### Scenario: Aviso sin el artefacto
+- **WHEN** se evalúa un paquete cuyo `THIRD_PARTY_NOTICES.md` no nombra `src/divipol-2018/consulados.generated.ts`, otro sin `THIRD_PARTY_NOTICES.md` en `files`, otro sin `CC-BY-SA-4.0` en `license`, otro sin el enlace al código legal y otro sin el archivo
+- **THEN** cada caso da una infracción que nombra el artefacto
+
+### Requirement: DC-15 licencia-check exige el aviso de cada consumidor CC BY-SA
+`node tools/licencia-check.mjs` MUST fallar y nombrar el archivo si un `*.mjs` directo de `tools/` o un `*.mjs` bajo `server/` importa `conLugarNacimiento`, o un especificador que contiene `divipola`, `divipol-2018` o `lectura/lugar`, y no contiene el literal `CC BY-SA 4.0`.
+
+#### Scenario: Consumidor sin aviso
+- **WHEN** se evalúa un `.mjs` que importa `conLugarNacimiento`, `@lector-cedula/parsers/divipol-2018` o `.../lectura/lugar.js` sin el literal `CC BY-SA 4.0`
+- **THEN** da una infracción que nombra el archivo; con el literal, o sin importar datos CC BY-SA, no la da
+
+### Requirement: DC-16 licencia-check exige el aviso en la imagen del servidor
+Si `server/Dockerfile` contiene `packages/parsers/src`, `node tools/licencia-check.mjs` MUST fallar salvo que una instrucción `COPY` copie un archivo `THIRD_PARTY_NOTICES` a `/srv/licencias/`.
+
+#### Scenario: Imagen sin aviso
+- **WHEN** se evalúa un Dockerfile que compila `packages/parsers/src` sin copiar avisos a `/srv/licencias/`
+- **THEN** da una infracción; con la copia, o sin compilar los parsers, no la da
+
+### Requirement: DC-13 Contenido de los avisos CC BY-SA
+`packages/parsers/THIRD_PARTY_NOTICES.md` y `tools/divipol/fuentes/LICENSES.md` MUST declarar, para cada fuente CC BY-SA 4.0 (DANE y Registraduría): la fecha de descarga de la instantánea (`2026-10-06` para el DANE y `2026-10-07` para la Registraduría), el enlace `https://creativecommons.org/licenses/by-sa/4.0/legalcode.es`, un indicador explícito de cambios (`Cambios:`), las erratas corregidas como modificaciones del material, y que la mención del DANE o de la Registraduría no implica su aval.
+
+#### Scenario: Elementos de atribución
+- **WHEN** se lee cada sección CC BY-SA de los dos archivos
+- **THEN** contiene `descargado el 2026-10-06` (DANE) o `descargado el 2026-10-07` (Registraduría), el enlace al código legal, `Cambios:`, y `no implica aval`
+- **AND** la sección de la Registraduría declara como `modificaciones` `ARZERBAIYAN`, `REPUBLICA DE SINGAPUR` y `REPUBLICA SOCIALISTA DEVIETNAM`
+
+### Requirement: DC-14 Lugar vigente en el intérprete del servidor
+El intérprete del servidor (`server/interprete/interpretar.mjs`) MUST añadir a la respuesta PDF417 con `ok: true` la clave `lugar_nacimiento` con `{ codigo, departamento, municipio }` resuelta con `conLugarNacimiento` de `packages/capture` (misma resolución que la CLI y la PWA, DC-08), o `null` si no se resuelve. `campos` no cambia. El módulo se carga de `RUTA_LUGAR` (por defecto `/srv/lector/node_modules/@lector-cedula/capture/dist/lectura/lugar.js`).
+
+#### Scenario: Municipio nacional
+- **WHEN** el intérprete recibe el PDF417 de `pdf417-amarilla/apellido-compuesto` (lugar `16` `001`)
+- **THEN** `lugar_nacimiento` es `{ "codigo": "16001", "departamento": "BOGOTA D.C", "municipio": "BOGOTA, D.C." }`
+
+#### Scenario: Consulado de 2018 en el servidor
+- **WHEN** el intérprete recibe ese PDF417 con el lugar cambiado a `88` `690`, a `88` `140` o a `99` `999`
+- **THEN** `lugar_nacimiento` es `{ "codigo": "88690", "departamento": "CONSULADOS", "municipio": "VIETNAM" }`, tiene `municipio` `CURAZAO`, o es `null`, respectivamente
+
+### Requirement: DC-17 Nombre vigente en el documento de la API
+El motor (`server/app/motor_real.py`) MUST añadir a `place_of_birth` `department_name` y `municipality_name` (cadenas de 1 a 64 caracteres) solo cuando `lugar_nacimiento.codigo` del intérprete coincide con el código del documento. El esquema `DivipolPlace` del contrato los declara opcionales.
+
+#### Scenario: Documento con nombres
+- **WHEN** el motor arma el documento de una amarilla con lugar `16` `001` resuelto
+- **THEN** `place_of_birth` es `{ "divipol_department": "16", "divipol_municipality": "001", "department_name": "BOGOTA D.C", "municipality_name": "BOGOTA, D.C." }`
+
+#### Scenario: Sin nombres
+- **WHEN** `lugar_nacimiento` es `null`, tiene otro código, un nombre vacío o no es un objeto
+- **THEN** `place_of_birth` solo tiene los dos códigos
+
+### Requirement: DC-18 Datos y aviso en la imagen del servidor
+La imagen MUST exponer `@lector-cedula/parsers/divipol-2018` al lector de `packages/capture` y copiar `packages/parsers/THIRD_PARTY_NOTICES.md` (de HEAD) a `/srv/licencias/parsers-THIRD_PARTY_NOTICES.md`.
+
+#### Scenario: Aviso en la imagen
+- **WHEN** se inspecciona `/srv/licencias/parsers-THIRD_PARTY_NOTICES.md` en el contenedor
+- **THEN** existe y contiene `CC BY-SA 4.0` y `Registraduría Nacional del Estado Civil`

@@ -20,6 +20,8 @@ const FECHA = "2026-10-06";
 const ENTORNO = {
   LECTOR_CEDULA_RUTA_MODELO_MRZ: join(RAIZ, "models", "tesseract"),
   RUTA_PARSERS: join(RAIZ, "packages", "parsers", "dist", "index.js"),
+  // DC-14 (divipol-consulados-2018): el intérprete resuelve el lugar con conLugarNacimiento de packages/capture.
+  RUTA_LUGAR: join(RAIZ, "packages", "capture", "dist", "lectura", "lugar.js"),
 };
 const TIEMPO_HIJO_MS = 150_000;
 
@@ -77,6 +79,7 @@ describe("MS-16 Equivalencia con la CLI", { timeout: 300_000 }, () => {
     const srv = await servidor("co_national-id-2000", imagenS);
     expect(srv.ok).toBe(true);
     expect(srv.campos).toStrictEqual(camposCli);
+    expect(srv.lugar_nacimiento).toStrictEqual(cli.salida.resultado.campos.lugarNacimiento);
     expect(srv.warnings).toStrictEqual(cli.salida.resultado.warnings.filter((w) => w !== "lugar-nacimiento-no-resuelto"));
   });
 

@@ -1,0 +1,48 @@
+# Servicio de producción para Dokploy (despliegue-produccion, DP-08 y DP-09). Guía: docs/despliegue/README.md.
+# En Dokploy: aplicación de tipo Compose, ruta del compose `server/compose.dokploy.yaml`; el dominio y el HTTPS los
+# pone Traefik de Dokploy (pestaña Domains, servicio `api`, puerto 8000). Ningún puerto se publica en el host.
+# Los secretos se cargan en la pestaña Environment de Dokploy; nunca en este archivo ni en el repositorio.
+services:
+  api:
+    build:
+      context: .
+      target: produccion
+      # Parsers y lector TypeScript compilados desde HEAD con `git archive` (motor-real-servidor, decisión 10).
+      # El .git solo existe en la etapa `fuente` y en la caché local de BuildKit: no exportar la caché con mode=max.
+      additional_contexts:
+        repo_git: ../.git
+    restart: unless-stopped
+    # Sin escritura en disco (principio III): raíz de solo lectura y /tmp en memoria acotado.
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    # tesseract.js (lector live) usa cientos de MB por lectura; un solo worker uvicorn (design.md, decisión 5).
+    mem_limit: 1536m
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    expose: ["8000"]
+    environment:
+      LECTOR_LIVE: node
+      CLAVES_API_JSON: ${CLAVES_API_JSON:?falta CLAVES_API_JSON (lista JSON de sha256 y secreto_webhook)}
+      SECRETO_SUBIDA: ${SECRETO_SUBIDA:?falta SECRETO_SUBIDA (32 bytes aleatorios o más)}
+      URL_PUBLICA: ${URL_PUBLICA:?falta URL_PUBLICA (https://api.tu-dominio)}
+      ORIGENES_CORS: ${ORIGENES_CORS:?falta ORIGENES_CORS (https://tu-app.vercel.app y dominio propio, separados por coma)}
+      LIMITE_PETICIONES_POR_MINUTO: ${LIMITE_PETICIONES_POR_MINUTO:-60}
+      RETENCION_RESULTADOS_S: ${RETENCION_RESULTADOS_S:-86400}
+    healthcheck:
+      test:
+        - CMD
+        - /srv/.venv/bin/python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/salud', timeout=2)"
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    # Registros de la consola acotados en tamaño; el CMD de la imagen ya desactiva el access log.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

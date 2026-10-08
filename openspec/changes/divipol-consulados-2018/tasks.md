@@ -21,3 +21,11 @@
 - [ ] 5.1 `revisor-licencias` sobre la fuente CC BY-SA y su llegada a la PWA y la CLI.
 - [x] 5.2 Mutación de `divipol-lib.mjs` y `src/divipol-2018/index.ts` (`npm run test:mutacion`, >= 85 %).
 - [ ] 5.3 `npm run check` en verde.
+
+## 6. Condiciones del revisor de licencias (C4 a C6) y servidor
+
+- [x] 6.1 CLI `--licencias` y campo `fuentes` (DC-10). Pruebas: integración (proceso hijo). Verificación: `npx vitest run tools/test/leer-foto-licencias.test.mjs tools/test/leer-foto.test.mjs`.
+- [x] 6.2 DV-17 sobre fuente y compilado (DC-11). Pruebas: integridad. Verificación: `npx vitest run packages/parsers/test/divipol-2018.test.ts`.
+- [x] 6.3 Puerta de avisos CC BY-SA en `tools/licencia-check.mjs` (DC-12, DC-15, DC-16). Pruebas: unitaria (cada regla con su caso negativo) e integración (`npm run check:licencias`). Verificación: `npx vitest run tools/test/licencia-check.test.mjs`.
+- [x] 6.4 Avisos completos en `THIRD_PARTY_NOTICES.md` y `LICENSES.md` (DC-13). Pruebas: integridad. Verificación: `npx vitest run tools/test/avisos-cc-by-sa.test.mjs`.
+- [x] 6.5 Nombre vigente del lugar en el servidor y aviso en la imagen (DC-14, DC-17, DC-18). Pruebas: integración en Docker. Verificación: `docker compose -f server/compose.yaml run --rm pruebas`.

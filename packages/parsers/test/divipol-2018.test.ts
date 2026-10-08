@@ -49,6 +49,44 @@ function grafoDeImportaciones(entrada: URL): string[] {
   return [...visitados.values()].map((m) => m.href.slice(RAIZ_PAQUETE.href.length));
 }
 
+/** Grafo del compilado (`dist/*.js`): mismos especificadores relativos, sin reescribir la extensión. */
+function grafoCompilado(entrada: URL): string[] {
+  const relativas = /(?:\bfrom\s*|\bimport\s*\(?\s*)["'](\.{1,2}\/[^"']+)["']/g;
+  const visitados = new Map<string, URL>();
+  const pendientes = [entrada];
+  while (pendientes.length > 0) {
+    const actual = pendientes.pop() as URL;
+    if (visitados.has(actual.href)) continue;
+    visitados.set(actual.href, actual);
+    for (const [, especificador] of readFileSync(actual, "utf8").matchAll(relativas)) {
+      const destino = new URL(especificador ?? "", actual);
+      pendientes.push(existsSync(destino) ? destino : new URL(`${destino.href}/index.js`));
+    }
+  }
+  return [...visitados.values()].map((m) => m.href.slice(RAIZ_PAQUETE.href.length));
+}
+
+describe("DC-11 el principal sigue libre de datos CC BY-SA (DV-17)", () => {
+  it("DC-11 Grafo del fuente", () => {
+    const rutas = grafoDeImportaciones(new URL("src/index.ts", RAIZ_PAQUETE));
+    expect(rutas.length).toBeGreaterThan(3);
+    expect(rutas.filter((r) => r.startsWith("src/divipola/") || r.startsWith("src/divipol-2018/"))).toStrictEqual([]);
+  });
+
+  it("DC-11 Grafo del compilado", () => {
+    const rutas = grafoCompilado(new URL("dist/index.js", RAIZ_PAQUETE));
+    expect(rutas).toContain("dist/divipol/tabla.generated.js");
+    expect(rutas.filter((r) => r.startsWith("dist/divipola/") || r.startsWith("dist/divipol-2018/"))).toStrictEqual([]);
+    expect(readFileSync(new URL("dist/index.js", RAIZ_PAQUETE), "utf8")).not.toContain("88195");
+    expect(rutas.filter((r) => readFileSync(new URL(r, RAIZ_PAQUETE), "utf8").includes("AZERBAIYAN"))).toStrictEqual([]);
+  });
+
+  it("DC-11 el detector sí ve el módulo 2018 desde su propio punto de entrada", () => {
+    const rutas = grafoCompilado(new URL("dist/divipol-2018/index.js", RAIZ_PAQUETE));
+    expect(rutas.some((r) => readFileSync(new URL(r, RAIZ_PAQUETE), "utf8").includes("AZERBAIYAN"))).toBe(true);
+  });
+});
+
 describe("DC-01 punto de entrada separado", () => {
   it("DC-01 Exportación declarada", () => {
     const paquete = JSON.parse(readFileSync(new URL("package.json", RAIZ_PAQUETE), "utf8"));

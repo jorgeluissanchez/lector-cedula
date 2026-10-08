@@ -285,3 +285,28 @@ describe("LPI-07 Privacidad de la CLI y del decodificador", { timeout: 60_000 },
     expect(listado(RAIZ, excluir)).toStrictEqual(antesRepo);
   });
 });
+
+describe("DC-10 Atribución CC BY-SA en la salida PDF417", { timeout: 60_000 }, () => {
+  const FUENTES = "Datos: DANE y Registraduría, CC BY-SA 4.0; ver --licencias";
+
+  it("DC-10 Campo fuentes en la salida PDF417", async () => {
+    for (const args of [[rutaS], ["--sin-mascara", rutaS]]) {
+      const r = await correr(...args);
+      expect(r.status).toBe(0);
+      expect(JSON.parse(r.stdout).fuentes).toBe(FUENTES);
+    }
+  });
+
+  it("DC-10 Consulado de 2018 en la CLI", async () => {
+    const consulado = generarPdf417({ ...PERSONA_BASE, departamento: "88", municipio: "690" }, { semilla: 1 });
+    const ruta = escribir(join(dirTmp, "consulado.png"), await imagenSintetica(consulado.bytes));
+    const r = await correr(ruta);
+    expect(r.status).toBe(0);
+    expect(JSON.parse(r.stdout).resultado.campos.lugarNacimiento).toStrictEqual({ codigo: "88690", departamento: "CONSULADOS", municipio: "VIETNAM" });
+  });
+
+  it("DC-10 Errores sin cambios", async () => {
+    const r = await correr(escribir(join(dirTmp, "blanco-dc10.png"), pngBlanco(800, 600)));
+    expect(r.stdout).toBe('{"ok":false,"error":"documento-no-encontrado"}\n');
+  });
+});

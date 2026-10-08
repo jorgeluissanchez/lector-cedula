@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // Lee la cédula desde una foto local (cambios leer-pdf417-desde-imagen y leer-mrz-desde-imagen, LPI-06 y LPI-07):
 // prueba primero el PDF417 de la amarilla y, si no lo hay, la MRZ TD1 del reverso de la digital.
-// Uso: npm run leer-foto -- [--sin-mascara] [--fecha-referencia AAAA-MM-DD] <ruta>
+// Uso: npm run leer-foto -- [--sin-mascara] [--fecha-referencia AAAA-MM-DD] <ruta> | --licencias
+// Licencias (divipol-consulados-2018, DC-10): el lugar de nacimiento usa datos del DANE y de la Registraduría bajo
+// CC BY-SA 4.0; `--licencias` imprime la atribución completa (packages/parsers/THIRD_PARTY_NOTICES.md).
 // Privacidad (principio III): la imagen solo se lee a memoria; no se escribe nada a disco, no hay telemetría y stdout
 // solo lleva el JSON final. Por defecto enmascara NUIP y nombres. Rechaza rutas del repositorio salvo evals/real/.
+import { readFileSync } from "node:fs";
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +14,9 @@ import { fileURLToPath } from "node:url";
 import { conLugarNacimiento, crearLectorMrz, decodificarPdf417Imagen, enmascararCamposPdf417, enmascararResultadoMrz } from "../packages/capture/dist/index.js";
 import { buscarDivipol, parsearPdf417Amarilla } from "../packages/parsers/dist/index.js";
 
-const USO = "uso: npm run leer-foto -- [--sin-mascara] [--fecha-referencia AAAA-MM-DD] <ruta-de-la-foto>";
+const USO = "uso: npm run leer-foto -- [--sin-mascara] [--fecha-referencia AAAA-MM-DD] <ruta-de-la-foto> | --licencias";
+/** DC-10: atribución de los datos CC BY-SA 4.0 en toda salida PDF417 con ok: true. */
+const FUENTES = "Datos: DANE y Registraduría, CC BY-SA 4.0; ver --licencias";
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Mensajes de error sin la ruta ni el contenido (LPI-06). */
@@ -32,10 +37,11 @@ function hoyEnBogota() {
 
 /** Separa opciones y rutas; devuelve `{ error }` ante uso incorrecto. */
 function leerArgumentos(argv) {
-  const r = { conMascara: true, fechaReferencia: null, rutas: [] };
+  const r = { conMascara: true, fechaReferencia: null, licencias: false, rutas: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--sin-mascara") r.conMascara = false;
+    else if (a === "--licencias") r.licencias = true;
     else if (a === "--fecha-referencia") {
       const f = argv[++i];
       if (typeof f !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(f)) return { error: "fecha-referencia-invalida" };
@@ -43,6 +49,7 @@ function leerArgumentos(argv) {
     } else if (a.startsWith("--")) return { error: "opcion-desconocida" };
     else r.rutas.push(a);
   }
+  if (r.licencias) return r;
   if (r.rutas.length !== 1) return { error: r.rutas.length === 0 ? "falta-ruta" : "demasiadas-rutas" };
   return r;
 }
@@ -74,6 +81,11 @@ async function leerMrz(bytes, fechaReferencia, conMascara) {
 async function principal(argv) {
   const args = leerArgumentos(argv);
   if (args.error) return fallarUso(args.error);
+  if (args.licencias) {
+    process.stdout.write(readFileSync(join(RAIZ, "packages", "parsers", "THIRD_PARTY_NOTICES.md"), "utf8"));
+    process.exitCode = 0;
+    return;
+  }
   const { conMascara, rutas } = args;
 
   let real;
@@ -112,7 +124,7 @@ async function principal(argv) {
   if (!resultado.ok) return emitir({ ok: false, tipo: "pdf417", error: resultado.error }, 2);
   const conLugar = conLugarNacimiento(resultado, buscarDivipol); // LPI-08, compartido con la PWA (OFF-08).
   const salida = conMascara ? { ...conLugar, campos: enmascararCamposPdf417(conLugar.campos) } : conLugar;
-  return emitir({ ok: true, tipo: "pdf417", intento: imagen.intento, enmascarado: conMascara, resultado: salida }, 0);
+  return emitir({ ok: true, tipo: "pdf417", intento: imagen.intento, enmascarado: conMascara, fuentes: FUENTES, resultado: salida }, 0);
 }
 
 await principal(process.argv.slice(2));
