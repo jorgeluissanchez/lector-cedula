@@ -108,3 +108,19 @@ Una cédula amarilla real (expedición 1989, código impreso en 2020) leída loc
 - Formato del NUIP válido y código DIVIPOL existente en la tabla.
 - Los 10 campos extraídos con confianza 1 y sin warnings.
 - Hallazgo de captura: la foto de celular completa (4096x1842, EXIF rotado) no se decodifica sin recortar la zona del código y pasarla a gris (cambio `localizar-pdf417-en-foto`).
+
+## Otros documentos (cambio `otros-documentos`, 2026-10-08)
+
+Todas pendientes. Fuente base: Resolución UAEMC 0086 de 2017 (tarjeta ID-1 conforme a ICAO 9303, MRZ y código 2D en el reverso, sin chip) y la distinción `co_foreign-id` / `co_foreign-id-2025` de Truora. Sin especímenes públicos verificados en esta sesión.
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| CE01 | La MRZ de la CE es TD1 con código de documento `I<` (se aceptan también `ID` e `IE`) y estado emisor `COL` | Res. UAEMC 86/2017 (ICAO 9303, ID-1) | pendiente | Sin espécimen con MRZ legible |
+| CE02 | El campo nacionalidad de la CE es el del titular (distinto de `COL`) | ICAO 9303 parte 5 | pendiente | Sin espécimen |
+| CE03 | El número de la CE (hasta 7 dígitos impresos; los nuevos podrían ser más largos) está en [5,14) de la línea 1, relleno con `<` | Conocimiento general | pendiente | Sin espécimen |
+| CE04 | El código 2D del reverso no tiene formato publicado y puede contener datos cifrados o biométricos; no se decodifica | Res. 86/2017, ausencia de repos | pendiente | Ningún repo lo decodifica |
+| CE05 | Los campos opcionales de la CE en TD1 están vacíos o llevan un dato interno de Migración | ICAO 9303 parte 5 | pendiente | Sin espécimen |
+| CE06 | La línea 3 de la CE lleva apellidos y nombres con la transliteración ICAO (Ñ como N) | ICAO 9303 parte 3 | pendiente | Sin espécimen |
+| CE07 | La CE rediseñada de 2025 mantiene TD1 con el mismo layout | Truora `co_foreign-id-2025` | pendiente | Sin espécimen ni norma |
+| T01 | Una TI con MRZ (si existe) usa código `IT` o `TI` y emisor `COL` | Ninguna confirmada | pendiente | Sin espécimen; puede que la TI no tenga MRZ |
+| P01 | El dato opcional del pasaporte colombiano lleva el NUIP del titular | Conocimiento general | pendiente | Sin espécimen público; el parser lo devuelve como `datoOpcional`, sin interpretarlo |
