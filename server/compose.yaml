@@ -1,6 +1,11 @@
 services:
   pruebas:
-    build: { context: ., target: dev }
+    build:
+      context: .
+      target: dev
+      # Parsers TypeScript compilados en la imagen (motor-real-servidor, decisión 4).
+      additional_contexts:
+        fuente_parsers: ../packages/parsers/src
     # --frozen: usa el uv.lock montado tal cual (nunca lo reescribe).
     command: >-
       sh -c "uv run --frozen ruff check . && uv run --frozen ruff format --check .
@@ -9,6 +14,9 @@ services:
       - ./app:/srv/app:ro
       - ./tests:/srv/tests:ro
       - ./openapi:/srv/openapi:ro
+      - ./interprete:/srv/interprete:ro
+      # MS-01 a MS-15: fixtures sintéticos de los parsers (personas ficticias, números 9999...).
+      - ../evals/fixtures/sinteticos:/srv/fixtures_sinteticos:ro
       - ./pyproject.toml:/srv/pyproject.toml:ro
       - ./uv.lock:/srv/uv.lock:ro
       # AV-30: la prueba de configuración lee `read_only` de este archivo.
@@ -17,7 +25,12 @@ services:
       - ../docs/decisiones/hipotesis-formato.md:/srv/docs/decisiones/hipotesis-formato.md:ro
 
   api:
-    build: { context: ., target: produccion }
+    build:
+      context: .
+      target: produccion
+      # Parsers TypeScript compilados en la imagen (motor-real-servidor, decisión 4).
+      additional_contexts:
+        fuente_parsers: ../packages/parsers/src
     ports: ["8000:8000"]
     read_only: true
     tmpfs: ["/tmp"]
@@ -25,7 +38,12 @@ services:
   # Misma imagen que `api`, con claves sintéticas, para Schemathesis, ZAP y Locust (decisión 16).
   # Ninguna clave ni secreto de este servicio es real (skill fixture-sintetico).
   api-pruebas:
-    build: { context: ., target: produccion }
+    build:
+      context: .
+      target: produccion
+      # Parsers TypeScript compilados en la imagen (motor-real-servidor, decisión 4).
+      additional_contexts:
+        fuente_parsers: ../packages/parsers/src
     command:
       - /srv/.venv/bin/uvicorn
       - app.main:app

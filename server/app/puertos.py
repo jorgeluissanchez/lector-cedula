@@ -77,8 +77,9 @@ class Puertos:
     # `None`: planificador de asyncio sobre `reloj`.
     planificador: Planificador | None = None
     motor_sandbox: Motor = field(default_factory=MotorSandbox)
-    # Modo live: sin motor real todavía; la subida responde 503 (AV-22).
+    # Modo live: con `lector`, `MotorReal` (motor-real-servidor, MS-03); sin lector, 503 (AV-22).
     motor_live: Motor | None = None
+    lector: Any = None
     # Recibe cada validación que llega a un estado terminal (los webhooks se enchufan aquí).
     transporte: Transporte = field(default_factory=TransporteHttpx)
     resolvedor: Resolvedor = field(default_factory=ResolvedorSistema)
@@ -90,3 +91,7 @@ class Puertos:
     def __post_init__(self) -> None:
         if self.planificador is None:
             self.planificador = PlanificadorAsyncio(self.reloj)
+        if self.lector is not None and self.motor_live is None:
+            from app.motor_real import InterpreteNode, MotorReal
+
+            self.motor_live = MotorReal(self.lector, InterpreteNode(), self.reloj)
