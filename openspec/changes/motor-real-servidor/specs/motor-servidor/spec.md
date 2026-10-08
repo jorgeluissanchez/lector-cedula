@@ -159,6 +159,10 @@ Los lectores del servidor MUST usar solo dependencias ya aprobadas de `packages/
 - **WHEN** se lee `/srv/licencias/node-LICENSE` en la imagen del servidor
 - **THEN** existe, empieza por `Node.js is licensed for use as follows:` y contiene los avisos de V8, OpenSSL, ICU y c-ares (condición del revisor de licencias)
 
+#### Scenario: La imagen no contiene el repositorio git
+- **WHEN** se busca en la imagen del servidor
+- **THEN** no existe `/repo.git` ni ningún directorio `.git` bajo `/srv`, `/usr/local` ni `/root` (el `.git` solo entra en la etapa de compilación `fuente`)
+
 #### Scenario: Sin dependencias no aprobadas
 - **WHEN** se inspeccionan `server/pyproject.toml` y `server/uv.lock`
 - **THEN** no contienen `zxing` ni `rapidocr`
@@ -183,11 +187,15 @@ El lector del servidor SHALL ser el de `packages/capture` (`decodificarPdf417Ima
 - **THEN** los campos interpretados por el servidor son iguales a los de la CLI (`resultado.campos` del PDF417 sin `lugarNacimiento`, y los campos de la MRZ que proyecta el intérprete)
 
 ### Requirement: MS-17 Aislamiento del proceso lector
-El proceso lector MUST recibir las imágenes solo por la entrada estándar, con argumentos fijos y salida de errores descartada, MUST poner a cero sus copias de las imágenes tras leerlas y MUST NOT usar la red en ejecución. Si falla, el motor MUST lanzar una excepción sin datos (vía de error interno de AV-29).
+El proceso lector MUST recibir las imágenes solo por la entrada estándar, con argumentos fijos y salida de errores descartada, MUST poner a cero sus copias de las imágenes tras leerlas y MUST NOT usar la red en ejecución. En Python solo se sueltan las referencias (design.md, decisión 11). Si falla, el motor MUST lanzar una excepción sin datos (vía de error interno de AV-29).
 
 #### Scenario: Imágenes solo por la entrada estándar
 - **WHEN** el lector Node lee una subida con el lanzador de procesos instrumentado
 - **THEN** el proceso se lanza con los argumentos `("/usr/local/bin/node", "/srv/lector/leer.mjs")`, entrada por tubería, salida de errores descartada, y la entrada tiene exactamente las claves `tipo`, `fecha_referencia` e `imagenes_b64`, con `back` primero
+
+#### Scenario: Entrada con dos partes máximas
+- **WHEN** se lee `MAX_ENTRADA` de `server/lector/leer.mjs` y se envía al lector real una petición con dos imágenes de `LIMITE_PARTE` (8 388 608) bytes
+- **THEN** `MAX_ENTRADA` es al menos 2 x 4/3 x `LIMITE_PARTE` + 4096 y la respuesta no es `entrada-no-valida`
 
 #### Scenario: Fallo del lector
 - **WHEN** el proceso lector termina con código 1, escribe `[]`, responde `{"ok": false, "motivo": "modelo-no-disponible"}` o excede el tiempo límite

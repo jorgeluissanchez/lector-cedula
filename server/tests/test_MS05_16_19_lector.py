@@ -226,3 +226,41 @@ def test_MS19_compose_activa_el_lector() -> None:
     servicios = yaml.safe_load((RAIZ_SERVIDOR / "compose.yaml").read_text(encoding="utf-8"))["services"]
     assert servicios["api"]["environment"]["LECTOR_LIVE"] == "node"
     assert servicios["api-pruebas"]["environment"]["LECTOR_LIVE"] == "node"
+
+
+def test_MS17_max_entrada_admite_dos_partes_maximas() -> None:
+    """MAX_ENTRADA de leer.mjs >= 2 x 4/3 x LIMITE_PARTE + margen; y el lector real acepta esa entrada."""
+    import re
+
+    from app.multipart import LIMITE_PARTE
+
+    texto = Path("/srv/lector/leer.mjs").read_text(encoding="utf-8")
+    coincidencia = re.search(r"const MAX_ENTRADA = ([0-9_ *]+);", texto)
+    assert coincidencia is not None
+    max_entrada = 1
+    for factor in coincidencia.group(1).split("*"):
+        max_entrada *= int(factor.strip().replace("_", ""))
+    assert max_entrada >= 2 * (LIMITE_PARTE * 4 + 2) // 3 + 4096
+
+    parte = base64.b64encode(b"\x89PNG\r\n\x1a\n" + bytes(LIMITE_PARTE - 8)).decode()
+    peticion = {
+        "tipo": "co_national-id-2000",
+        "fecha_referencia": "2026-10-06",
+        "imagenes_b64": [parte, parte],
+    }
+    proceso = subprocess.run(  # noqa: S603 - argumentos fijos, sin shell
+        [NODE, "/srv/lector/leer.mjs"],
+        input=json.dumps(peticion).encode(),
+        capture_output=True,
+        timeout=120,
+        check=False,
+    )
+    assert json.loads(proceso.stdout)["motivo"] != "entrada-no-valida"
+
+
+def test_MS05_la_imagen_no_contiene_git() -> None:
+    """Ni /repo.git ni ningún directorio .git en la imagen (el .git solo existe en la etapa `fuente`)."""
+    assert not Path("/repo.git").exists()
+    for raiz in (Path("/srv"), Path("/usr/local"), Path("/root")):
+        if raiz.exists():
+            assert not [p for p in raiz.rglob(".git") if p.is_dir()], raiz

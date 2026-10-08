@@ -1,7 +1,8 @@
 # Imagen del servidor de respaldo. Sin volúmenes de escritura: procesa solo en memoria (principio III).
 # Código TypeScript del repositorio tomado de lo commiteado (HEAD), no del árbol de trabajo: el trabajo en curso
 # de otros cambios no entra en la imagen (motor-real-servidor, decisión 10). El contexto adicional `repo_git` es
-# el .git del repositorio (server/compose.yaml); git solo existe en esta etapa.
+# el .git del repositorio (server/compose.yaml); git solo existe en esta etapa. El .git queda en la caché local de
+# BuildKit: no exportar la caché con mode=max (design.md, decisión 10).
 FROM node:24-bookworm-slim AS fuente
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates  && rm -rf /var/lib/apt/lists/*
 COPY --from=repo_git . /repo.git
