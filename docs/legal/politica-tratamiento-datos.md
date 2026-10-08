@@ -62,7 +62,7 @@ Usted no está obligado a autorizar el tratamiento de datos sensibles (art. 6 de
    - *Opción A (la aplicación no nos envía nada):* el resultado no sale de su teléfono. Usted lo usa en el trámite de [NOMBRE DEL TRÁMITE] mostrándolo o copiándolo cuando se lo pidamos.
    - *Opción B (el trámite recibe el resultado):* con su autorización, el resultado se envía cifrado (TLS) a [SISTEMA DEL TRÁMITE] y se conserva [PLAZO DE CONSERVACIÓN DEL RESULTADO EN EL TRÁMITE].
 4. **Servidor de respaldo (opcional).** Si su teléfono no logra leer el documento y usted lo acepta, las imágenes se envían cifradas a nuestro servidor de respaldo. Allí se procesan solo en memoria, sin escribirse en disco ni en registros, y se descartan al terminar. El resultado se conserva un máximo de 24 horas para entregarlo al trámite y luego se elimina [AJUSTAR SI SE CAMBIA EL PLAZO].
-5. **Prueba de su autorización.** Conservamos un registro de que usted dio su autorización: versión del texto aceptado, fecha y hora, y casillas marcadas. Ese registro no contiene los datos de su documento ni imágenes. Lo conservamos durante [PLAZO DE CONSERVACIÓN DE LA PRUEBA] (art. 8 del Decreto 1377 de 2013).
+5. **Prueba de su autorización.** En la opción A la lectura ocurre íntegramente en su teléfono: no recibimos ni conservamos datos suyos, nada persiste en el dispositivo y la casilla documenta su autorización en cada sesión. En la opción B, el sistema de [NOMBRE DEL TRÁMITE] conserva un registro de su autorización: versión del texto aceptado, fecha y hora e identificador de la sesión del trámite. Ese registro no contiene los datos de su documento ni imágenes. Lo conservamos durante [PLAZO DE CONSERVACIÓN DE LA PRUEBA] (art. 8 del Decreto 1377 de 2013).
 
 ## 7. Carácter de la lectura
 
@@ -73,13 +73,13 @@ La lectura **no es una verificación oficial**. No consulta a la Registraduría 
 De acuerdo con el art. 8 de la Ley 1581 de 2012, usted tiene derecho a:
 
 a) Conocer, actualizar y rectificar sus datos.
-b) Solicitar prueba de la autorización que nos dio.
+b) Solicitar prueba de la autorización que nos dio, cuando el resultado se haya usado en el trámite (opción B); en la opción A no conservamos datos ni registros suyos.
 c) Ser informado, previa solicitud, del uso que hemos dado a sus datos.
 d) Presentar quejas ante la Superintendencia de Industria y Comercio (SIC) por infracciones, después de agotar el trámite de consulta o reclamo ante nosotros (art. 16).
 e) Revocar la autorización o pedir la supresión de sus datos cuando no se respeten los principios, derechos y garantías constitucionales y legales.
 f) Acceder gratuitamente a sus datos.
 
-Los menores de edad no pueden usar la aplicación: solo lee cédulas de ciudadanía.
+**Menores de edad.** Solo se leen cédulas de ciudadanía de personas mayores de edad. La tarjeta de identidad no se admite y se rechaza, igual que cualquier documento con fecha de nacimiento de menos de 18 años (Ley 1581 de 2012, art. 7; Decreto 1377 de 2013, art. 12). [SI UNA INSTANCIA QUISIERA ADMITIR TARJETA DE IDENTIDAD: se requeriría autorización del representante legal, escuchar la opinión del menor según su madurez y asegurar el respeto de su interés superior y sus derechos fundamentales (Decreto 1377 art. 12), con un cambio previo en el software y revisión jurídica.]
 
 ## 9. Encargados y transmisión internacional de datos
 

@@ -12,6 +12,8 @@ Estos términos distinguen dos cosas: (a) la **licencia del software**, que es l
 
 La aplicación lee con la cámara de su teléfono los datos codificados en su cédula de ciudadanía colombiana (el código de barras PDF417 de la cédula amarilla y la zona de lectura mecánica de la cédula digital) para verificar su identidad en el trámite de [NOMBRE DEL TRÁMITE].
 
+**Solo mayores de edad.** Solo se leen cédulas de ciudadanía de personas mayores de edad. La tarjeta de identidad no se admite y se rechaza, igual que cualquier documento con fecha de nacimiento de menos de 18 años (Ley 1581 de 2012, art. 7; Decreto 1377 de 2013, art. 12).
+
 ## 2. Lo que la aplicación no es
 
 1. **No es una verificación oficial.** No consulta a la Registraduría Nacional del Estado Civil ni a ninguna base de datos oficial. No certifica que el documento sea auténtico ni que esté vigente, ni que pertenezca a quien lo presenta.

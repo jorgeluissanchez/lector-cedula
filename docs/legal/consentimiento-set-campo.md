@@ -36,6 +36,6 @@ Firma: ____________________ Documento: ______ Fecha: __________
 - Registro del set: identificador anónimo por documento, versión (amarilla, digital, TI, CE, blanca, café), modelo de celular y condiciones de luz. Sin nombres ni números en el registro.
 - Etiquetas (ground truth) verificadas por dos personas y guardadas cifradas junto a las imágenes.
 - Las evals con este set se ejecutan fuera del repositorio y solo publican métricas agregadas.
-- Los formularios firmados se guardan aparte de las imágenes, por **[PLAZO]** (prueba de la autorización, art. 7 Decreto 1377).
+- Los formularios firmados se guardan aparte de las imágenes, por **[PLAZO]** (prueba de la autorización, art. 8 Decreto 1377).
 - Acta de eliminación al vencer la fecha.
 - Meta mínima de la Fase 1: 30 amarillas, 30 digitales, 10 tarjetas de identidad, 10 cédulas de extranjería y 5 blancas o cafés, en 5 modelos de celular.

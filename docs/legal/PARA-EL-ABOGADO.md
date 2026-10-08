@@ -32,7 +32,7 @@ Set de campo (solo desarrollo): fotos reales con consentimiento firmado, cifrada
 | D3 | **Base legal** y finalidad tipo | Autorización (art. 9 Ley 1581) o excepción del art. 10 (p. ej. entidades con obligación legal, SARLAFT). |
 | D4 | ¿La **cédula y sus datos** son dato sensible? ¿Y el **grupo sanguíneo y RH** (¿dato de salud?)? | Hoy la autorización lo deja como pregunta. |
 | D5 | **Comparación facial** como dato biométrico sensible: requisitos si se activa (autorización explícita, alternativa no biométrica, evaluación de impacto). | Desactivada hoy; la API ya separa la casilla `sensibles`. |
-| D6 | **Menores / tarjeta de identidad**: ¿se admite? ¿cómo se acredita la representación legal en un flujo digital? | Hoy solo cédula de ciudadanía. |
+| D6 | **Menores / tarjeta de identidad**: ¿se admite? ¿cómo se acredita la representación legal en un flujo digital? | Decisión: solo cédula de ciudadanía de mayores; TI y edad < 18 se rechazan (Ley 1581 art. 7; Decreto 1377 art. 12). Si una instancia quisiera admitir TI: autorización del representante legal, opinión del menor e interés superior. ¿Es suficiente el rechazo por fecha de nacimiento? |
 | D7 | **Conservación del registro de autorización**: plazo y contenido mínimo para probarla (art. 8 Decreto 1377; el art. 7 regula el modo de obtenerla). | Hoy: id, casillas, versión del texto, fechas, motivo de supresión. |
 | D8 | **Transferencias / transmisiones internacionales** si el servidor está en la nube fuera de Colombia: contrato de transmisión, país adecuado, declaración de conformidad. | Depende del integrador. |
 | D9 | **Set de campo**: base, fotografía del anverso (dato sensible), plazo, almacenamiento. | Ver `consentimiento-set-campo.md`. |
@@ -49,9 +49,11 @@ Set de campo (solo desarrollo): fotos reales con consentimiento firmado, cifrada
 5. **Transferencia internacional** no declarada si el servidor corre en una nube extranjera.
 6. **Exactitud:** el formato del PDF417 no es público; errores de lectura afectan el principio de veracidad (art. 4 lit. d).
 7. **Atribución CC BY-SA**: la pantalla "Acerca de y licencias" ya existe en la PWA (OFF-20), pendiente de commit.
-8. **Prueba de la autorización** en la variante solo PWA: hoy no se registra nada.
+8. **Prueba de la autorización** en la variante solo PWA: no se registra nada por diseño (OFF-11); el responsable no recibe datos. En la variante B la conserva el sistema del trámite.
 
 ## 5. Preguntas concretas
+
+0. **PRIORITARIA. Prueba de la autorización (Decreto 1377 art. 8).** En la variante solo PWA la lectura ocurre íntegramente en el dispositivo del titular, el responsable no recibe ni conserva datos y la casilla documenta la autorización frente al titular en cada sesión, sin registro. En la variante B, el sistema del trámite del responsable/integrador registra versión del texto, fecha y hora e identificador de sesión del trámite, sin datos de la cédula. ¿Es suficiente este reparto? ¿Hace falta algún registro en la variante solo PWA?
 
 1. ¿Quién es responsable en cada variante (PWA sola, PWA más servidor del integrador, servidor operado por nosotros)?
 2. En la PWA sin transmisión ni almacenamiento, ¿basta el aviso corto o se requiere autorización expresa con casilla y registro?

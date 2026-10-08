@@ -25,11 +25,13 @@ Yo, titular de la cédula que voy a leer, autorizo de manera **previa, expresa e
 
 **Cómo se tratan.** La lectura ocurre en mi teléfono. [SOLO SI SE USA EL SERVIDOR DE RESPALDO: Si mi teléfono no logra leer el documento y yo lo acepto, las imágenes se envían cifradas a un servidor de [RAZÓN SOCIAL] alojado por Hostinger en [PAÍS DEL SERVIDOR], se procesan solo en memoria y se descartan; el resultado se elimina a más tardar en 24 horas.]
 
-**Prueba.** Se conserva prueba de esta autorización (versión del texto, fecha y casillas marcadas), sin los datos de mi cédula.
+**Prueba.** [VARIANTE SOLO PWA: La lectura ocurre íntegramente en mi teléfono; [RAZÓN SOCIAL] no recibe ni conserva mis datos, y esta casilla documenta mi autorización en cada sesión.] [VARIANTE B: Como el resultado se usa en el trámite, el sistema del trámite de [RAZÓN SOCIAL] conserva prueba de esta autorización (versión del texto, fecha y hora e identificador de la sesión del trámite), sin los datos de mi cédula.]
+
+**Menores.** Solo se leen cédulas de ciudadanía de personas mayores de edad. La tarjeta de identidad no se admite y se rechaza, igual que cualquier documento con fecha de nacimiento de menos de 18 años (Ley 1581 de 2012, art. 7; Decreto 1377 de 2013, art. 12).
 
 **Carácter de la lectura.** No es una verificación oficial de la Registraduría Nacional del Estado Civil.
 
-**Mis derechos** (art. 8 de la Ley 1581 de 2012): conocer, actualizar, rectificar y suprimir mis datos; pedir prueba de esta autorización; ser informado del uso de mis datos; revocar la autorización; acceder gratis a mis datos y quejarme ante la Superintendencia de Industria y Comercio después de acudir al responsable. Contacto: **[CORREO DE ATENCIÓN]**, **[TELÉFONO]**. Política: **[URL DE LA POLÍTICA]**.
+**Mis derechos** (art. 8 de la Ley 1581 de 2012): conocer, actualizar, rectificar y suprimir mis datos; pedir prueba de esta autorización al responsable del trámite cuando el resultado se use en él; ser informado del uso de mis datos; revocar la autorización; acceder gratis a mis datos y quejarme ante la Superintendencia de Industria y Comercio después de acudir al responsable. Contacto: **[CORREO DE ATENCIÓN]**, **[TELÉFONO]**. Política: **[URL DE LA POLÍTICA]**.
 
 - [ ] **Autorizo el tratamiento de mis datos personales para la finalidad indicada.** (Obligatoria para continuar. Desmarcada por defecto.)
 
@@ -46,5 +48,5 @@ Solo se mostrará si se activa la comparación facial u otra función biométric
 | La casilla de datos personales se muestra antes de abrir la cámara y viene desmarcada | Ley 1581 art. 9; Decreto 1377 art. 7 | Pendiente en la PWA |
 | Sin casilla marcada no se abre la cámara | Ley 1581 art. 9 | Pendiente en la PWA. En el servidor, la API rechaza con 422 si `autorizacion.datos` no es `true` (especificado) |
 | La casilla de sensibles es independiente | Decreto 1377 art. 6 | La API separa `autorizacion.sensibles`; la comparación facial está desactivada (MS-13) |
-| Se conserva prueba: versión del texto, fecha y hora, casillas | Decreto 1377 art. 8; Ley 1581 art. 12 parágrafo | Servidor: especificado (`version_texto`, `otorgada_en`). PWA sola: hoy no se registra nada (ver el checklist) |
+| Se conserva prueba: versión del texto, fecha y hora, casillas | Decreto 1377 art. 8; Ley 1581 art. 12 parágrafo | Servidor: especificado (`version_texto`, `otorgada_en`). PWA sola: el responsable no recibe datos y nada persiste en el dispositivo; la casilla documenta la autorización en la sesión. Variante B: la prueba (versión, fecha y hora, id de sesión del trámite, sin datos de la cédula) la conserva el sistema del trámite del integrador |
 | Cambio de finalidad: nueva autorización | Decreto 1377 art. 5 | Cambiar la versión del texto obliga a aceptarlo de nuevo |

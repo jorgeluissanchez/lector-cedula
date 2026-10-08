@@ -14,6 +14,6 @@
 | 4. Mecanismos para conocer la política y sus cambios | Enlace a la política |
 | Si hay datos sensibles: carácter facultativo | Hoy no se piden datos sensibles; se anuncia el grupo sanguíneo y RH como dato que se lee |
 
-El aviso no exime de publicar la política completa (art. 15, inciso final). Hay que poder demostrar que se puso a disposición (art. 16): la versión del aviso queda en el registro de prueba.
+El aviso no exime de publicar la política completa (art. 15, inciso final). Hay que poder demostrar que se puso a disposición (art. 16): en la variante solo PWA, la versión del aviso queda fijada en la versión publicada de la aplicación (historial del repositorio); en la variante B, además, en el registro de prueba del sistema del trámite.
 
 Fuente: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646

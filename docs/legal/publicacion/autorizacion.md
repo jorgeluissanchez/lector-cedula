@@ -10,7 +10,8 @@
 Reglas de implementación (no se muestran):
 1. La casilla viene DESMARCADA. Sin ella no se abre la cámara (Ley 1581 art. 9; Decreto 1377 art. 7: el silencio no es autorización).
 2. Se muestra ANTES de abrir la cámara, junto al aviso de privacidad.
-3. Se guarda prueba: versión del texto, fecha y hora, casilla marcada; nunca los datos de la cédula (Decreto 1377 art. 8).
+3. Variante solo PWA: la lectura ocurre íntegramente en el dispositivo del titular y el responsable no recibe ni conserva datos; la casilla documenta la autorización frente al titular en cada sesión y nada persiste en el dispositivo (OFF-11). Variante B (el resultado se usa en un trámite): la prueba de la autorización (Decreto 1377 art. 8) la conserva el sistema del trámite del responsable o integrador, con versión del texto, fecha y hora e identificador de sesión del trámite, SIN datos de la cédula.
+6. Menores: solo cédulas de ciudadanía de mayores de edad; la tarjeta de identidad y toda fecha de nacimiento de menos de 18 años se rechazan (Ley 1581 art. 7; Decreto 1377 art. 12).
 4. Casilla de datos SENSIBLES: hoy NO se muestra (no hay comparación facial). Si se activa, va en una casilla aparte, opcional, desmarcada, con alternativa no biométrica:
    "[ ] Autorizo de forma explícita el tratamiento de mi imagen facial (dato biométrico sensible) para compararla con la foto de mi cédula. Sé que no estoy obligado a autorizarlo; si no lo hago, puedo [ALTERNATIVA]."
 5. Si se usa el servidor de respaldo, antes de enviar imágenes se pregunta:
