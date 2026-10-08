@@ -213,7 +213,10 @@ export function localizarConEvidencia(pixeles: unknown): { candidatos: Candidato
 /** Una columna es fondo (p. ej. madera al lado de la tarjeta) si tiene tinta en al menos esta fracción de filas. */
 const FRACCION_COLUMNA_FONDO = 0.8;
 /** Salto mínimo de luminancia que cuenta como borde, y fracción de columnas con borde para que una fila sea texto. */
-const UMBRAL_BORDE = 40;
+const UMBRAL_BORDE_MAXIMO = 40;
+const UMBRAL_BORDE_MINIMO = 12;
+const FACTOR_UMBRAL = 0.5;
+const PERCENTIL_UMBRAL = 0.99;
 const FRACCION_BORDES_FILA = 0.03;
 
 /**
@@ -221,18 +224,46 @@ const FRACCION_BORDES_FILA = 0.03;
  * más bajo y ajusta la caja a él (con margen de medio alto de línea). Si no lo hay, devuelve la franja tal cual.
  */
 function ajustarFranja(luma: Uint8Array, w: number, f: CandidatoMrz): { candidato: CandidatoMrz; medidas: MedidasTrio | null } {
+  const { candidato, medidas } = analizarVentana(luma, w, f);
+  return { candidato, medidas };
+}
+
+/** Diagnóstico de una ventana de LMI-11 (solo números): umbral de borde, bandas encontradas y motivo si no hay trío. */
+export interface AnalisisVentana {
+  readonly candidato: CandidatoMrz;
+  readonly medidas: MedidasTrio | null;
+  readonly umbral: number;
+  readonly bandas: number;
+  readonly motivo: "trio" | "sin-columnas-utiles" | "menos-de-3-bandas" | "sin-trio-valido";
+}
+
+/** Percentil (0-1) de los saltos horizontales de luminancia de la ventana. */
+function percentilSaltos(local: Uint8Array, w: number, hf: number, p: number): number {
+  const hist = new Uint32Array(256);
+  for (let y = 0; y < hf; y++) for (let x = 0; x + 1 < w; x++) { const d = Math.abs((local[y * w + x] as number) - (local[y * w + x + 1] as number)); hist[d] = (hist[d] as number) + 1; }
+  const objetivo = p * hf * (w - 1);
+  let acumulado = 0;
+  for (let v = 0; v < 256; v++) {
+    acumulado += hist[v] as number;
+    if (acumulado >= objetivo) return v;
+  }
+  return 255;
+}
+
+export function analizarVentana(luma: Uint8Array, w: number, f: CandidatoMrz): AnalisisVentana {
   const { y: y0, alto: hf } = f.caja;
   const local = luma.subarray(y0 * w, (y0 + hf) * w);
-  // Borde fuerte: salto de luminancia >= UMBRAL_BORDE entre vecinos horizontales. El texto OCR-B produce muchos; la
+  const umbral = Math.min(UMBRAL_BORDE_MAXIMO, Math.max(UMBRAL_BORDE_MINIMO, Math.round(FACTOR_UMBRAL * percentilSaltos(local, w, hf, PERCENTIL_UMBRAL))));
+  // Borde fuerte (LMI-11e): salto de luminancia >= umbral de la ventana entre vecinos horizontales. El texto OCR-B produce muchos; la
   // madera y el fondo impreso de la tarjeta, pocos.
   const borde = (x: number, y: number): boolean =>
-    x + 1 < w && Math.abs((local[y * w + x] as number) - (local[y * w + x + 1] as number)) >= UMBRAL_BORDE;
+    x + 1 < w && Math.abs((local[y * w + x] as number) - (local[y * w + x + 1] as number)) >= umbral;
   const bordeCol = new Uint32Array(w);
   for (let y = 0; y < hf; y++) for (let x = 0; x < w; x++) if (borde(x, y)) bordeCol[x] = (bordeCol[x] as number) + 1;
   const util = (x: number): boolean => (bordeCol[x] as number) < FRACCION_COLUMNA_FONDO * hf;
   let utiles = 0;
   for (let x = 0; x < w; x++) if (util(x)) utiles++;
-  if (utiles === 0) return { candidato: f, medidas: null };
+  if (utiles === 0) return { candidato: f, medidas: null, umbral, bandas: 0, motivo: "sin-columnas-utiles" };
   const conteos = new Uint32Array(hf);
   for (let y = 0; y < hf; y++) {
     let n = 0;
@@ -272,9 +303,12 @@ function ajustarFranja(luma: Uint8Array, w: number, f: CandidatoMrz): { candidat
     return {
       candidato: { metodo: "franja", caja: { x: izq, y: y0 + arriba, ancho: der - izq, alto: abajo - arriba } },
       medidas: { tramos, altoMedio: (alto(a) + alto(b) + alto(c)) / 3, ancho: x1 - x0 + 1 },
+      umbral,
+      bandas: encontradas.length,
+      motivo: "trio",
     };
   }
-  return { candidato: f, medidas: null };
+  return { candidato: f, medidas: null, umbral, bandas: encontradas.length, motivo: encontradas.length < 3 ? "menos-de-3-bandas" : "sin-trio-valido" };
 }
 
 /**

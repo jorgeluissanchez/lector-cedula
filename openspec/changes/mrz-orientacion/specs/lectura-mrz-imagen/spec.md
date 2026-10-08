@@ -66,3 +66,29 @@ Al ajustar un trío (LMI-11b), los límites en x MUST tomarse del grupo de colum
 #### Scenario: Tarjeta grande girada con JPEG fuerte y una mano
 - **WHEN** se lee una foto sintética 899x1599 con madera, R girado 90° horario a 829 px de ancho en (50, 220) (MRZ en x de 8 % a 29 % e y de 17 % a 80 %, como la foto real), una elipse color piel centrada en (820, 1100) de semiejes 160 y 420, codificada en JPEG de calidad 40; o su espejo: R girado 90° antihorario a 829 px en (20, 65) y la elipse centrada en (80, 1100)
 - **THEN** el lector devuelve las líneas de R con los 4 dígitos de control válidos, `intento` terminado en `"@270"` (en el espejo, `"@90"`), y el OCR se llamó como mucho 12 veces
+
+### Requirement: LMI-11e Umbral de borde relativo a la ventana
+El umbral de borde de LMI-11b MUST ser, en cada ventana, `min(40, max(12, round(0,5 * p99)))`, con p99 el percentil 99 de los saltos horizontales de luminancia de la ventana (en lugar de 40 fijo). Con texto nítido el umbral sigue en 40; con texto borroso y de poco contraste (foto real de WhatsApp: 45 de 45 ventanas sin 3 bandas en las 3 vistas) baja hasta separar las líneas.
+
+#### Scenario: Líneas de poco contraste
+- **WHEN** el lienzo de LMI-11b tiene rectángulos de luminancia 225 sobre fondo 255 (saltos de 30, por debajo de 40)
+- **THEN** el primer candidato `"franja"` es `{ x: 91, y: 892, ancho: 807, alto: 91 }`
+
+#### Scenario: Réplica borrosa de la foto real
+- **WHEN** se lee la réplica de LMI-11d (horaria) suavizada con 2 pasadas de media 3x3, con el contraste reducido a 0,6 alrededor de 128 y codificada en JPEG de calidad 50
+- **THEN** el lector devuelve las líneas de R con los 4 dígitos de control válidos, `intento` terminado en `"@270"`, y el OCR se llamó como mucho 12 veces
+
+### Requirement: LMI-11f Diagnóstico numérico de una ventana
+`analizarVentana(luma, ancho, ventana)` MUST devolver `{ candidato, medidas, umbral, bandas, motivo }`: el ajuste de LMI-11b, el umbral de borde usado (LMI-11e), el número de bandas y el motivo (`"trio"`, `"sin-columnas-utiles"`, `"menos-de-3-bandas"` o `"sin-trio-valido"`). Solo números y cajas: nunca píxeles ni texto.
+
+#### Scenario: Ventana con trío de poco contraste
+- **WHEN** se analiza la ventana `{ x: 0, y: 850, ancho: 1000, alto: 150 }` del lienzo de rectángulos de luminancia 225 de LMI-11e
+- **THEN** el umbral es 15 y el motivo `"trio"`
+
+#### Scenario: Texto nítido conserva el umbral
+- **WHEN** se analiza esa ventana en el lienzo de LMI-11b con rectángulos negros
+- **THEN** el umbral es 40, el motivo `"trio"` y hay 3 bandas
+
+#### Scenario: Ventana sin tinta
+- **WHEN** se analiza esa ventana en un lienzo blanco de 1000x1000
+- **THEN** el umbral es 12, el motivo `"menos-de-3-bandas"`, 0 bandas y `medidas` es null

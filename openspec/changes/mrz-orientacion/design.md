@@ -22,6 +22,10 @@ Al probar la tarjeta grande antihoraria apareció una lectura con 4 dígitos vá
 
 Prueba con la foto real (899x1599, JPEG de WhatsApp, MRZ en x 8-29 %, y 17-80 %): `documento-no-encontrado` en 76 s. Fixture sintético equivalente (R girado a 829 px, mano, JPEG 40): la vista `@270` iba primera (LMI-14 puntúa bien con JPEG), pero Tesseract leía el borde de la tarjeta como una `E` pegada al principio o al final de cada línea (`EICCOL...<< E`) y LMI-03 descartaba las líneas de 31 o más caracteres: 40 llamadas sin lectura. La franja ajustada tomaba x de todas las columnas con borde, incluido el borde de la tarjeta. Ahora toma el grupo de columnas más poblado, separado por huecos de más de un alto de línea (en la MRZ no hay huecos: `<` también tiene tinta). Resultado: 3 llamadas. No se relaja LMI-03 (quitar caracteres de los extremos podría producir lecturas falsas de la línea de nombres, que no tiene dígito de control).
 
+## Decisión: umbral de borde relativo (LMI-11e) y diagnóstico (LMI-11f)
+
+Con LMI-11d la foto real seguía sin leerse (67 s). El script de diagnóstico (solo números) sobre la foto real mostró: sin EXIF, evidencia nula en las 3 vistas y 45 de 45 ventanas por vista sin 3 bandas. El texto de la foto (WhatsApp, borroso, poco contraste) casi no da saltos de 40 entre píxeles vecinos. Réplica sintética: la de LMI-11d con 2 pasadas de media 3x3, contraste 0,6 y JPEG 50 reproduce el 45 de 45. El umbral pasa a ser `min(40, max(12, round(0,5 * p99)))` por ventana: con texto nítido sigue en 40 (no cambia ninguna caja literal anterior), con la réplica borrosa baja y la vista `@270` se lee en 3 llamadas. `analizarVentana` expone umbral, bandas y motivo para que el diagnóstico use la función real y no una copia.
+
 ## Pruebas
 
 | Requisito | Tipo | Herramienta | Comando | Umbral |
@@ -34,4 +38,7 @@ Prueba con la foto real (899x1599, JPEG de WhatsApp, MRZ en x 8-29 %, y 17-80 %)
 | LMI-11c | Unitaria (ventana que corta la tercera línea: caja ajustada y ventana literal) | Vitest | `npx vitest run packages/capture/test/mrz` | cajas literales del escenario |
 | LMI-11d | Unitaria (barra vertical junto a las líneas) | Vitest | `npx vitest run packages/capture/test/mrz` | caja literal del escenario |
 | LMI-11d | Integración con OCR real sobre la réplica sintética de la foto real (JPEG 40, mano) y su espejo | Vitest + Tesseract.js | `npx vitest run packages/capture/test/mrz` | líneas de R exactas, `@270` / `@90`, <= 12 llamadas (antes 40 sin lectura) |
-| LMI-11c, LMI-11d, LMI-14, LMI-14b | Regresión del eval | `npm run eval:mrz-imagen` | 0 falsas, umbrales de LMI-06 |
+| LMI-11e | Unitaria (rectángulos de luminancia 225: falla con umbral fijo 40) | Vitest | `npx vitest run packages/capture/test/mrz` | caja literal del escenario |
+| LMI-11e | Integración con OCR real sobre la réplica borrosa | Vitest + Tesseract.js | `npx vitest run packages/capture/test/mrz` | líneas de R exactas, `@270`, <= 12 llamadas |
+| LMI-11f | Unitaria (umbral, motivo y bandas literales) | Vitest | `npx vitest run packages/capture/test/mrz` | escenarios en verde |
+| LMI-11c, LMI-11d, LMI-11e, LMI-14, LMI-14b | Regresión del eval | `npm run eval:mrz-imagen` | 0 falsas, umbrales de LMI-06 |

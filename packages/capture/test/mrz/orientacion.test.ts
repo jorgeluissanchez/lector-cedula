@@ -5,7 +5,7 @@ import { PNG } from "pngjs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
 import { crearLectorMrz, planIntentosMrz, type WorkerOcr } from "../../src/mrz/lector.js";
-import { esTrioMrzHorizontal, girar, localizarConEvidencia, localizarFranjaMrz, type PixelesRgba } from "../../src/mrz/localizar.js";
+import { analizarVentana, esTrioMrzHorizontal, girar, localizarConEvidencia, localizarFranjaMrz, luminancias, type PixelesRgba } from "../../src/mrz/localizar.js";
 
 const REF = { fechaReferencia: "2026-10-06" };
 const P = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
@@ -128,5 +128,26 @@ describe("LMI-11d Recorte horizontal de la franja al bloque de texto", { timeout
     for (let y = 900; y <= 975; y++) for (let x = 40; x <= 45; x++) p.data.fill(0, (y * 1000 + x) * 4, (y * 1000 + x) * 4 + 3);
     const franja = localizarFranjaMrz(p).find((c) => c.metodo === "franja");
     expect(franja?.caja).toStrictEqual({ x: 91, y: 892, ancho: 807, alto: 91 });
+  });
+});
+
+describe("LMI-11e y LMI-11f Umbral de borde relativo y diagnóstico de ventana", { timeout: 60_000 }, () => {
+  it("LMI-11e Líneas de poco contraste", () => {
+    const p = rectangulos();
+    for (let i = 0; i < p.data.length; i += 4) if (p.data[i] === 0) p.data.fill(225, i, i + 3);
+    const franja = localizarFranjaMrz(p).find((c) => c.metodo === "franja");
+    expect(franja?.caja).toStrictEqual({ x: 91, y: 892, ancho: 807, alto: 91 });
+    const r = analizarVentana(luminancias(p), 1000, { metodo: "franja", caja: { x: 0, y: 850, ancho: 1000, alto: 150 } });
+    expect([r.umbral, r.motivo]).toStrictEqual([15, "trio"]);
+  });
+
+  it("LMI-11f Texto nítido conserva el umbral", () => {
+    const r = analizarVentana(luminancias(rectangulos()), 1000, { metodo: "franja", caja: { x: 0, y: 850, ancho: 1000, alto: 150 } });
+    expect([r.umbral, r.motivo, r.bandas]).toStrictEqual([40, "trio", 3]);
+  });
+
+  it("LMI-11f Ventana sin tinta", () => {
+    const r = analizarVentana(luminancias(blanco()), 1000, { metodo: "franja", caja: { x: 0, y: 850, ancho: 1000, alto: 150 } });
+    expect([r.umbral, r.motivo, r.bandas, r.medidas]).toStrictEqual([12, "menos-de-3-bandas", 0, null]);
   });
 });

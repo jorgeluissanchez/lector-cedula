@@ -39,6 +39,8 @@ let H7: Uint8Array;
 /** Como la foto real (LMI-11d): 899x1599, madera, R girado a 829 px, mano color piel y JPEG de calidad 40. */
 let J: Uint8Array;
 let K: Uint8Array;
+/** J suavizada (2 pasadas de media 3x3), contraste 0,6 y JPEG 50: sin bordes de 40 en ninguna ventana (LMI-11e). */
+let B: Uint8Array;
 let lector: LectorMrz;
 
 /** Textura de madera determinista: vetas casi verticales con ondulación y grano (sin azar). */
@@ -73,6 +75,24 @@ function mano(png: PNG, cx: number): void {
       png.data[o + 2] = 130 + n;
     }
   }
+}
+
+/** Media 3x3 `pasadas` veces y contraste reducido alrededor de 128 (canales RGB). */
+function suavizar(png: PNG, pasadas: number, contraste: number): void {
+  const { width: w, height: h } = png;
+  for (let p = 0; p < pasadas; p++) {
+    const src = Buffer.from(png.data);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        for (let k = 0; k < 3; k++) {
+          let t = 0;
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) t += src[((y + dy) * w + x + dx) * 4 + k] as number;
+          png.data[(y * w + x) * 4 + k] = t / 9;
+        }
+      }
+    }
+  }
+  for (let i = 0; i < w * h * 4; i++) if (i % 4 !== 3) png.data[i] = 128 + ((png.data[i] as number) - 128) * contraste;
 }
 
 /** Pega `fuente` escalada (bilineal) a `ancho` px en `destino`, centrada salvo que se dé la esquina `en`. */
@@ -167,6 +187,11 @@ beforeAll(async () => {
   pegarEscalada(j, girar(rgba, 90), 829, { x: 50, y: 220 });
   mano(j, 820);
   J = new Uint8Array(jpeg.encode({ width: j.width, height: j.height, data: j.data }, 40).data);
+  const bl = madera(899, 1599);
+  pegarEscalada(bl, girar(rgba, 90), 829, { x: 50, y: 220 });
+  mano(bl, 820);
+  suavizar(bl, 2, 0.6);
+  B = new Uint8Array(jpeg.encode({ width: bl.width, height: bl.height, data: bl.data }, 50).data);
   const k = madera(899, 1599);
   pegarEscalada(k, girar(rgba, 270), 829, { x: 20, y: 65 });
   mano(k, 80);
@@ -329,6 +354,13 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
       expect(llamadas).toBeLessThanOrEqual(12);
     }
   }, 600_000);
+
+  it("LMI-11e Réplica borrosa de la foto real", async () => {
+    const { r, llamadas } = await leerContando(B);
+    lecturaCorrecta(r);
+    expect(r.ok && r.intento.endsWith("@270")).toBe(true);
+    expect(llamadas).toBeLessThanOrEqual(12);
+  }, 300_000);
 
   it("LMI-14b Vista derecha primero cuando tiene evidencia (madera con R centrado)", () => {
     const giros = [...new Set(planIntentosMrz(PNG.sync.read(Buffer.from(T))).map((i) => i.giro))];
