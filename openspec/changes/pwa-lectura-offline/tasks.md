@@ -21,9 +21,9 @@ Reglas para todas las tareas: TDD (principio II): la prueba se escribe y se ve f
 
 ## 4. Precaché con integridad
 
-- [ ] 4.1 Escribir las unitarias y la propiedad de `verificarEntrada` (OFF-02) y la prueba de navegador con `crypto.subtle`; verlas fallar; implementar `apps/pwa/src/precache/verificar.ts`. Cubre OFF-02. Tipos de prueba: **unitaria**, **propiedad**, **unitaria en navegador**. Verificación: `U` y `B` en verde.
-- [ ] 4.2 Escribir las unitarias de "Lista de precarga", "Manifiesto coherente" y "Presupuesto de bytes" sobre `apps/pwa/dist`, y la de ausencia de URLs de CDN/`tessdata`; verlas fallar; ampliar `plugin-pwa.ts` para emitir los recursos de lectura con hash y el manifiesto con `sha256` y `bytes`. Cubre OFF-01, OFF-02, OFF-04 (estático), OFF-16. Tipos de prueba: **unitaria**, **seguridad estática**. Verificación: `npm run build -w apps/pwa` y `U` en verde; suma <= 20971520.
-- [ ] 4.3 Reescribir `sw.ts` con instalación verificada en caché pendiente, activación y respuesta a `estado-precache` (design.md, decisiones 7, 9, 10). Añadir `src/precache/**` a `mutate`. Cubre OFF-01, OFF-02, OFF-03, OFF-05, OFF-16, OFF-17. Tipos de prueba: **unitaria**, **mutación**. Verificación: `U` y `M` (>= 85 %) en verde.
+- [x] 4.1 Escribir las unitarias y la propiedad de `verificarEntrada` (OFF-02) y la prueba de navegador con `crypto.subtle`; verlas fallar; implementar `apps/pwa/src/precache/verificar.ts`. Cubre OFF-02. Tipos de prueba: **unitaria**, **propiedad**, **unitaria en navegador**. Verificación: `U` y `B` en verde.
+- [x] 4.2 Escribir las unitarias de "Lista de precarga", "Manifiesto coherente" y "Presupuesto de bytes" sobre `apps/pwa/dist`, y la de ausencia de URLs de CDN/`tessdata`; verlas fallar; ampliar `plugin-pwa.ts` para emitir los recursos de lectura con hash y el manifiesto con `sha256` y `bytes`. Cubre OFF-01, OFF-02, OFF-04 (estático), OFF-16. Tipos de prueba: **unitaria**, **seguridad estática**. Verificación: `npm run build -w apps/pwa` y `U` en verde; suma <= 20971520.
+- [x] 4.3 Reescribir `sw.ts` con instalación verificada en caché pendiente, activación y respuesta a `estado-precache` (design.md, decisiones 7, 9, 10). Añadir `src/precache/**` a `mutate`. Cubre OFF-01, OFF-02, OFF-03, OFF-05, OFF-16, OFF-17. Tipos de prueba: **unitaria**, **mutación**. Verificación: `U` y `M` (>= 85 %) en verde.
 
 ## 5. Integración en la PWA
 

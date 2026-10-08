@@ -2,6 +2,7 @@
 import { calcularGuia, guiaEnPantalla, TEXTOS_ENTORNO, TEXTOS_ERROR_CAMARA, type Caja } from "@lector-cedula/capture";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "preact/hooks";
 import { ESTADO_INICIAL, reducir, type CodigoError } from "./estado";
+import { iniciarIndicador, TEXTOS_OFFLINE, type EstadoOffline } from "./precache/indicador";
 import { crearSesion } from "./sesion";
 
 const TEXTOS_ERROR: Readonly<Record<CodigoError, string>> = { ...TEXTOS_ERROR_CAMARA, ...TEXTOS_ENTORNO };
@@ -43,7 +44,16 @@ export function App() {
   const [feedback, setFeedback] = useState("");
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
   const sesion = useMemo(() => crearSesion({ evento: despachar, feedback: setFeedback }), []);
+  const [offline, setOffline] = useState<EstadoOffline>("pendiente");
   const pantallaRef = useRef(estado.pantalla);
+
+  // CAM-01, OFF-03 y OFF-16: registro del service worker tras comprobar la cuota (solo en producción; en desarrollo no
+  // existe sw.js) e indicador de disponibilidad sin conexión.
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    const sw = "serviceWorker" in navigator ? navigator.serviceWorker : undefined;
+    void iniciarIndicador({ serviceWorker: sw, storage: navigator.storage }, setOffline);
+  }, []);
   pantallaRef.current = estado.pantalla;
 
   useEffect(() => {
@@ -86,6 +96,9 @@ export function App() {
           <>
             <h1>Lector de cédula</h1>
             <p>Ubica la cédula frente a la cámara trasera. La imagen no sale de tu dispositivo.</p>
+            <p class="offline" role="status" data-offline={offline}>
+              {TEXTOS_OFFLINE[offline]}
+            </p>
           </>
         )}
         <p class="estado" role="status" aria-live="polite">

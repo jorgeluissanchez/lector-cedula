@@ -1,8 +1,13 @@
 /**
- * Service worker de la PWA (CAM-01; design.md, decisión 10). Precarga en `install` la lista fija de recursos
- * estáticos, borra cachés viejas en `activate` y en `fetch` solo responde desde caché a GET del mismo origen cuya
- * ruta está en la lista. Todo lo demás va a la red sin tocar la caché: no hay caché en tiempo de ejecución.
+ * Service worker de la PWA (CAM-01; pwa-lectura-offline, OFF-01 a OFF-05 y OFF-17; design.md, decisiones 7, 9 y 10).
+ * El manifiesto de precaché (rutas, bytes y SHA-256) se inyecta al compilar (`__MANIFIESTO__`, sin petición extra).
+ * `install`: precaché completa y verificada; si algo falla, no se activa. `activate`: borra las demás cachés.
+ * `fetch`: solo GET del mismo origen con ruta del manifiesto, desde la caché; nada se guarda en tiempo de ejecución.
+ * `message` `estado-precache`: responde `lista` o `pendiente` (OFF-03). Toda la lógica está en `precache/instalar.ts`.
  */
+import { activar, estadoPrecache, instalar, responderFetch, type AlmacenCaches } from "./precache/instalar";
+import type { ManifiestoPrecache } from "./precache/manifiesto";
+
 interface EventoExtensible extends Event {
   waitUntil(p: Promise<unknown>): void;
 }
@@ -10,43 +15,47 @@ interface EventoFetch extends EventoExtensible {
   readonly request: Request;
   respondWith(r: Promise<Response>): void;
 }
+interface EventoMensaje extends EventoExtensible {
+  readonly data: unknown;
+  readonly source: { postMessage(m: unknown): void } | null;
+}
 interface AlcanceSw {
   readonly location: Location;
   skipWaiting(): Promise<void>;
   readonly clients: { claim(): Promise<void> };
   addEventListener(tipo: "install" | "activate", f: (e: EventoExtensible) => void): void;
   addEventListener(tipo: "fetch", f: (e: EventoFetch) => void): void;
+  addEventListener(tipo: "message", f: (e: EventoMensaje) => void): void;
 }
 
-declare const __RECURSOS__: readonly string[];
-declare const __VERSION__: string;
+declare const __MANIFIESTO__: ManifiestoPrecache;
 
 const alcance = self as unknown as AlcanceSw;
-const RECURSOS: readonly string[] = __RECURSOS__;
-const CACHE = `shell-${__VERSION__}`;
+const MANIFIESTO: ManifiestoPrecache = __MANIFIESTO__;
+const RUTAS: ReadonlySet<string> = new Set(MANIFIESTO.entradas.map((e) => e.ruta));
+const almacen = caches as unknown as AlmacenCaches;
 
 alcance.addEventListener("install", (e) => {
   e.waitUntil(
-    caches
-      .open(CACHE)
-      .then((c) => c.addAll([...RECURSOS]))
-      .then(() => alcance.skipWaiting()),
+    instalar(MANIFIESTO, {
+      almacen,
+      descargar: (ruta, opciones) => fetch(ruta, opciones),
+      // Solo el motivo y la ruta, nunca el contenido (OFF-02).
+      registrar: (motivo, ruta) => console.error(motivo, ruta),
+    }).then(() => alcance.skipWaiting()),
   );
 });
 
 alcance.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches
-      .keys()
-      .then((claves) => Promise.all(claves.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => alcance.clients.claim()),
-  );
+  e.waitUntil(activar(MANIFIESTO, almacen).then(() => alcance.clients.claim()));
 });
 
 alcance.addEventListener("fetch", (e) => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.origin !== alcance.location.origin || !RECURSOS.includes(url.pathname)) return;
-  e.respondWith(
-    caches.open(CACHE).then(async (c) => (await c.match(url.pathname)) ?? fetch(e.request)),
-  );
+  const respuesta = responderFetch(e.request, alcance.location.origin, RUTAS, almacen, MANIFIESTO.version, (ruta) => fetch(ruta));
+  if (respuesta !== null) e.respondWith(respuesta);
+});
+
+alcance.addEventListener("message", (e) => {
+  if ((e.data as { tipo?: unknown } | null)?.tipo !== "estado-precache") return;
+  e.waitUntil(estadoPrecache(MANIFIESTO, almacen).then((estado) => e.source?.postMessage({ tipo: "estado-precache", estado })));
 });

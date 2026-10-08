@@ -1,12 +1,15 @@
 /**
  * Plugin de compilación de la PWA (design.md, decisión 10): emite los iconos 192 y 512 (generados aquí, sin datos ni
- * imágenes versionadas) y sustituye en `sw.js` los marcadores `__RECURSOS__` y `__VERSION__` por la lista de recursos
- * estáticos emitidos y su huella.
+ * imágenes versionadas), neutraliza las URLs de CDN (OFF-04), enlaza cada core de tesseract.js con su .wasm con hash y
+ * genera el manifiesto de precaché con SHA-256 y tamaño (pwa-lectura-offline, OFF-01, OFF-02; decisión 7), que se
+ * emite como `assets/precache-manifest.<hash>.json` y se inyecta en `sw.js` (`__MANIFIESTO__`, `__VERSION__`).
  */
 import { createHash } from "node:crypto";
 import { crc32, deflateSync } from "node:zlib";
+import { readFileSync } from "node:fs";
+import type { OutputBundle } from "rollup";
 import type { Plugin } from "vite";
-import { listaRecursos } from "./src/recursos";
+import { construirManifiesto } from "./src/precache/manifiesto";
 
 function trozo(tipo: string, datos: Buffer): Buffer {
   const largo = Buffer.alloc(4);
@@ -49,18 +52,75 @@ export function iconoPng(lado: number): Buffer {
   ]);
 }
 
+/** Prefijos de CDN de tesseract.js y zxing-wasm: se neutraliza para que ninguna ruta por defecto salga del origen (OFF-04). */
+const CDN = /https:\/\/([a-z]+\.)?jsdelivr\.net\/npm\//gu;
+const SIN_CDN = "/sin-cdn/";
+const CORE = /^assets\/tesseract-core-(simd-lstm|lstm)-[^/]+\.js$/u;
+
+type Archivo = OutputBundle[string];
+
+function texto(a: Archivo): string | null {
+  if (a.type === "chunk") return a.code;
+  return typeof a.source === "string" ? a.source : /\.(js|json|html|css|webmanifest)$/u.test(a.fileName) ? Buffer.from(a.source).toString("utf8") : null;
+}
+
+function fijarTexto(a: Archivo, t: string): void {
+  if (a.type === "chunk") a.code = t;
+  else a.source = t;
+}
+
+function datos(a: Archivo): Uint8Array {
+  if (a.type === "chunk") return Buffer.from(a.code, "utf8");
+  return typeof a.source === "string" ? Buffer.from(a.source, "utf8") : a.source;
+}
+
+export const sha256Hex = (d: Uint8Array): string => createHash("sha256").update(d).digest("hex");
+
+/** Nombres de los recursos de lectura (OFF-01): el worker de tesseract.js se emite como `tesseract-worker-<hash>.js`. */
+export function nombreRecurso(info: { readonly names?: readonly string[] | undefined; readonly name?: string | undefined }): string {
+  const nombre = info.names?.[0] ?? info.name ?? "";
+  return nombre === "worker.min.js" ? "assets/tesseract-worker-[hash][extname]" : "assets/[name]-[hash][extname]";
+}
+
+/** La tabla DIVIPOL va en su propio chunk, importado solo por el Worker lector (design.md, decisión 6). */
+export function chunkDivipol(id: string): string | undefined {
+  return /[\\/]parsers[\\/](src|dist)[\\/]divipol[\\/]tabla\.generated\.[jt]s$/u.test(id) ? "divipol" : undefined;
+}
+
 export function pluginPwa(): Plugin {
   return {
     name: "lector-cedula-pwa",
     apply: "build",
+    enforce: "post",
     generateBundle(_opciones, bundle) {
       for (const lado of [192, 512]) this.emitFile({ type: "asset", fileName: `iconos/icono-${lado}.png`, source: iconoPng(lado) });
-      const emitidos = [...Object.keys(bundle), "iconos/icono-192.png", "iconos/icono-512.png", "manifest.webmanifest"];
-      const recursos = listaRecursos(emitidos);
+      // Chunks .js vacíos (la tabla DIVIPOL que el Worker de calidad descarta por tree-shaking): nadie los importa.
+      for (const [nombre, a] of Object.entries(bundle)) if (nombre.endsWith(".js") && (texto(a) ?? "x").trim() === "") Reflect.deleteProperty(bundle, nombre);
+      // OFF-04: sin URLs de CDN en ningún archivo emitido.
+      for (const a of Object.values(bundle)) {
+        const t = texto(a);
+        if (t !== null && CDN.test(t)) fijarTexto(a, t.replace(CDN, SIN_CDN));
+        CDN.lastIndex = 0;
+      }
+      // Cada core de tesseract.js carga su .wasm por nombre: se reescribe al nombre con hash.
+      for (const a of Object.values(bundle)) {
+        const variante = CORE.exec(a.fileName)?.[1];
+        if (variante === undefined) continue;
+        const wasm = Object.keys(bundle).find((n) => new RegExp(`^assets/tesseract-core-${variante}-[^/]+\\.wasm$`, "u").test(n));
+        if (wasm === undefined) throw new Error(`falta el wasm de tesseract-core-${variante}`);
+        fijarTexto(a, (texto(a) ?? "").replaceAll(`tesseract-core-${variante}.wasm`, wasm.slice("assets/".length)));
+      }
       const sw = bundle["sw.js"];
       if (sw === undefined || sw.type !== "chunk") throw new Error("sw.js no se emitió");
-      const version = createHash("sha256").update(recursos.join("\n")).update(Object.keys(bundle).sort().join("\n")).digest("hex").slice(0, 12);
-      sw.code = sw.code.replaceAll("__RECURSOS__", JSON.stringify(recursos)).replaceAll("__VERSION__", JSON.stringify(version));
+      const archivos = Object.values(bundle)
+        .filter((a) => a.fileName !== "sw.js")
+        .map((a) => ({ nombre: a.fileName, datos: datos(a) }));
+      // public/ lo copia Vite tal cual fuera del bundle.
+      archivos.push({ nombre: "manifest.webmanifest", datos: readFileSync(new URL("./public/manifest.webmanifest", import.meta.url)) });
+      const manifiesto = construirManifiesto(archivos, sha256Hex);
+      const json = JSON.stringify(manifiesto);
+      this.emitFile({ type: "asset", fileName: `assets/precache-manifest.${sha256Hex(Buffer.from(json)).slice(0, 12)}.json`, source: json });
+      sw.code = sw.code.replaceAll("__MANIFIESTO__", json).replaceAll("__VERSION__", JSON.stringify(manifiesto.version));
     },
   };
 }

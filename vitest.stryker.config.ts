@@ -8,7 +8,7 @@ export default mergeConfig(
   base,
   defineConfig({
     test: {
-      exclude: [...configDefaults.exclude, "tools/test/eval-campo.test.mjs", "tools/test/hooks.test.mjs", "tools/test/divipol-cli.test.mjs", "tools/test/leer-foto.test.mjs", "packages/capture/test/mrz/lector-real.test.ts", "packages/capture/test/lectura/off-08-diferencial.test.ts"],
+      exclude: [...configDefaults.exclude, "tools/test/eval-campo.test.mjs", "tools/test/hooks.test.mjs", "tools/test/divipol-cli.test.mjs", "tools/test/divipol-cli-consulados-2018.test.mjs", "tools/test/leer-foto.test.mjs", "packages/capture/test/mrz/lector-real.test.ts", "packages/capture/test/lectura/off-08-diferencial.test.ts", "apps/pwa/test/off-01-02-16-manifiesto.test.ts"],
     },
   }),
 );

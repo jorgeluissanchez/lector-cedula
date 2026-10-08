@@ -6,7 +6,7 @@
 export default {
   testRunner: "vitest",
   vitest: { configFile: "vitest.stryker.config.ts" },
-  mutate: ["packages/parsers/src/**/*.ts", "!packages/parsers/src/index.ts", "!packages/parsers/src/**/*.generated.ts", "packages/fixtures/src/**/*.ts", "!packages/fixtures/src/index.ts", "evals/runners/metricas.mjs", "evals/runners/adaptadores/**/*.mjs", "tools/divipol/divipol-lib.mjs", "packages/capture/src/pdf417/**/*.ts", "packages/capture/src/calidad/**/*.ts", "packages/capture/src/flujo/**/*.ts", "packages/capture/src/mrz/**/*.ts", "packages/capture/src/lectura/**/*.ts", "evals/runners/mrz-imagen.mjs", "tools/modelos/descargar-mrz.mjs"],
+  mutate: ["packages/parsers/src/**/*.ts", "!packages/parsers/src/index.ts", "!packages/parsers/src/**/*.generated.ts", "packages/fixtures/src/**/*.ts", "!packages/fixtures/src/index.ts", "evals/runners/metricas.mjs", "evals/runners/adaptadores/**/*.mjs", "tools/divipol/divipol-lib.mjs", "packages/capture/src/pdf417/**/*.ts", "packages/capture/src/calidad/**/*.ts", "packages/capture/src/flujo/**/*.ts", "packages/capture/src/mrz/**/*.ts", "packages/capture/src/lectura/**/*.ts", "apps/pwa/src/precache/**/*.ts", "evals/runners/mrz-imagen.mjs", "tools/modelos/descargar-mrz.mjs"],
   coverageAnalysis: "perTest",
   thresholds: { high: 95, low: 85, break: 85 },
   reporters: ["clear-text", "progress", "html"],

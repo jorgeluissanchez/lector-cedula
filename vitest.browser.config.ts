@@ -5,7 +5,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ["packages/*/test-browser/**/*.browser.test.ts"],
+    include: ["packages/*/test-browser/**/*.browser.test.ts", "apps/*/test-browser/**/*.browser.test.ts"],
     browser: {
       enabled: true,
       provider: "playwright",

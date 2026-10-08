@@ -20,8 +20,11 @@ import {
   type CapturaAceptada,
   type ClienteCalidad,
   type Cuadrilatero,
+  type ResultadoLectura,
 } from "@lector-cedula/capture";
 import type { Evento } from "./estado";
+import { conLienzoTemporal } from "./lienzo";
+import { crearClienteLector, nuevoWorkerLector, type ClienteLector } from "./lectura";
 
 export interface Observador {
   evento(e: Evento): void;
@@ -39,10 +42,16 @@ export interface Sesion {
   cancelar(): void;
   /** Página oculta o `pagehide`. */
   ocultar(): void;
+  /**
+   * Lee la captura aceptada en el Worker lector (pwa-lectura-offline, OFF-06) y la libera al terminar (OFF-11).
+   * Devuelve `null` si no hay captura. Aún no la invoca ninguna pantalla (tarea 5.1).
+   */
+  leer(fechaReferencia: string, senal?: AbortSignal): Promise<ResultadoLectura | null>;
 }
 
 export function crearSesion(obs: Observador): Sesion {
   let cliente: ClienteCalidad | null = null;
+  let lector: ClienteLector | null = null;
   let camara: Camara | null = null;
   let video: HTMLVideoElement | null = null;
   let captura: CapturaAceptada | null = null;
@@ -56,6 +65,12 @@ export function crearSesion(obs: Observador): Sesion {
     // CAM-12: el Worker se descarga solo después de pulsar "Iniciar cámara".
     cliente ??= crearClienteCalidad(new Worker(new URL("./calidad.worker.ts", import.meta.url), { type: "module" }));
     return cliente;
+  }
+
+  function obtenerLector(): ClienteLector {
+    // pwa-lectura-offline (OFF-06): el Worker lector se crea en la primera lectura y se reutiliza.
+    lector ??= crearClienteLector(nuevoWorkerLector());
+    return lector;
   }
 
   function liberarCaptura(): void {
@@ -82,10 +97,8 @@ export function crearSesion(obs: Observador): Sesion {
 
   async function revalidar(v: HTMLVideoElement, c: ClienteCalidad, gen: number): Promise<void> {
     const completo = tomarFrameCaptura(v);
-    const lienzo = new OffscreenCanvas(completo.ancho, completo.alto);
-    const ctx = lienzo.getContext("2d") as OffscreenCanvasRenderingContext2D;
-    ctx.putImageData(new ImageData(completo.pixeles as Uint8ClampedArray<ArrayBuffer>, completo.ancho, completo.alto), 0, 0);
-    const r = await c.analizar(tomarFrameAnalisis(lienzo, completo.ancho, completo.alto));
+    // El lienzo se vacía en todas las ramas (hallazgo del revisor de privacidad).
+    const r = await conLienzoTemporal(completo, (lienzo) => c.analizar(tomarFrameAnalisis(lienzo, completo.ancho, completo.alto)));
     if (gen !== generacion) return completo.pixeles.fill(0), undefined;
     if (!r.ok) return completo.pixeles.fill(0), fallar();
     const paso = autocaptura.revalidar(r.resultado);
@@ -172,6 +185,16 @@ export function crearSesion(obs: Observador): Sesion {
       detener();
       liberarCaptura();
       obs.evento({ tipo: "oculta" });
+    },
+    async leer(fechaReferencia, senal) {
+      const c = captura;
+      if (c === null) return null;
+      try {
+        return await obtenerLector().leer({ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles }, fechaReferencia, senal);
+      } finally {
+        if (captura === c) liberarCaptura();
+        else c.liberar();
+      }
     },
   };
 }
