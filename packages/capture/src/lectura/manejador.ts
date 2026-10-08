@@ -58,6 +58,7 @@ export function crearManejadorLector(deps: DependenciasLectura): (mensaje: unkno
     }
     if (esLeer(m)) return leer(m);
     // Un mensaje mal formado también pudo transferir píxeles: se ponen a cero antes de descartarlo (OFF-11).
+    // Stryker disable next-line ConditionalExpression: equivalente; sobre otro valor, `new Uint8Array` crea una copia y no toca el original.
     if (m.pixeles instanceof ArrayBuffer) new Uint8Array(m.pixeles).fill(0);
     return null;
   };

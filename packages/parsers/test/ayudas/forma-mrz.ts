@@ -15,6 +15,7 @@ const CODIGOS_ERROR = [
   "nacionalidad-invalida",
   "nuip-invalido",
   "nombre-no-alfabetico",
+  "apellidos-vacios",
 ];
 const CLAVES_CAMPOS = [
   "apellidos",

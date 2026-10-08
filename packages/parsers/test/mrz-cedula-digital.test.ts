@@ -1091,3 +1091,37 @@ describe("casos que dejó al descubierto la mutación (tarea 4.4)", () => {
     expect(r.digitosControl.nacimiento.leido).toBe("A");
   });
 });
+
+describe("MZ-23 Apellidos obligatorios", () => {
+  function campos(l3: string) {
+    const r = parsearB({ l3 });
+    if (!r.ok) throw new Error("rechazo inesperado");
+    return r;
+  }
+
+  it("MZ-23 Línea 3 solo de relleno", () => {
+    const r = campos("<".repeat(30));
+    expect([r.campos.apellidos, r.campos.nombres, r.errores, r.valido]).toStrictEqual(["", "", ["apellidos-vacios"], false]);
+  });
+
+  it("MZ-23 Línea 3 que empieza por el separador", () => {
+    const r = campos("<<FICTICIO<<<<<<<<<<<<<<<<<<<<");
+    expect([r.campos.apellidos, r.campos.nombres, r.errores, r.valido]).toStrictEqual(["", "FICTICIO", ["apellidos-vacios"], false]);
+  });
+
+  it("MZ-23 Junto con la cifra en el nombre", () => {
+    expect(campos("<<AN4<<<<<<<<<<<<<<<<<<<<<<<<<").errores).toStrictEqual(["nombre-no-alfabetico", "apellidos-vacios"]);
+  });
+
+  it("MZ-23 un apellido de una letra sigue siendo válido", () => {
+    expect(campos("X<<ANA<<<<<<<<<<<<<<<<<<<<<<<<").valido).toBe(true);
+  });
+});
+
+describe("OFF-24 Tarjeta de identidad en MRZ (pwa-lectura-offline)", () => {
+  it("OFF-24 un código de documento distinto de IC se rechaza como no-es-cedula-digital", () => {
+    for (const codigo of ["IT", "TI", "ID"]) {
+      expect(parsearB({ l1: codigo + B1.slice(2) })).toStrictEqual(rechazo("no-es-cedula-digital"));
+    }
+  });
+});

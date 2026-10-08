@@ -41,6 +41,7 @@ export async function leerDocumento(pixeles: Pixeles, deps: DependenciasLectura,
   if (!lectura.ok) return { ok: false, tipo: "mrz", error: lectura.error };
   if (!lectura.resultado.valido) return { ok: false, tipo: "mrz", error: "mrz-no-valida" };
   const nacimiento = lectura.resultado.campos.fechaNacimiento;
+  // Stryker disable next-line ConditionalExpression: equivalente; con `valido` la fecha nunca es null (MZ-17), se comprueba para estrechar el tipo.
   if (nacimiento === null || !esMayorDeEdad(nacimiento, fechaReferencia)) return { ok: false, tipo: "mrz", error: "menor-de-edad" };
   return { ok: true, tipo: "mrz", intento: lectura.intento, resultado: enmascararResultadoMrz(lectura.resultado) };
 }

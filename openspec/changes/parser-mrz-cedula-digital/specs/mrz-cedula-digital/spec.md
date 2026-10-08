@@ -340,7 +340,7 @@ El parser SHALL leer la línea 3 sin corrección OCR: quitar los `<` finales, pa
 - **THEN** `campos.apellidos` es `"FICTICI0 EJEMPLO"`, `correcciones` es `[]`, `errores` es `["nombre-no-alfabetico"]` y `valido` es `false`
 
 ### Requirement: MZ-17 Errores de campo y validez global
-`errores` SHALL listar sin repetir, en este orden, los códigos que apliquen de `serial-invalido`, `fecha-nacimiento-invalida`, `sexo-invalido`, `fecha-vencimiento-invalida`, `nacionalidad-invalida`, `nuip-invalido` y `nombre-no-alfabetico`. `valido` MUST ser `true` si y solo si `errores` está vacío, nacimiento, vencimiento y compuesto tienen estado `valido` y el serial `valido` o `ausente`. Los campos MUST devolverse aunque `valido` sea `false`.
+`errores` SHALL listar sin repetir, en este orden, los códigos que apliquen de `serial-invalido`, `fecha-nacimiento-invalida`, `sexo-invalido`, `fecha-vencimiento-invalida`, `nacionalidad-invalida`, `nuip-invalido`, `nombre-no-alfabetico` y `apellidos-vacios` (MZ-23). `valido` MUST ser `true` si y solo si `errores` está vacío, nacimiento, vencimiento y compuesto tienen estado `valido` y el serial `valido` o `ausente`. Los campos MUST devolverse aunque `valido` sea `false`.
 
 #### Scenario: Varios errores en orden fijo
 - **WHEN** se parsea `[B1, "9002306H3407150VEN9999<<<<<<<0", "FICTICI0<EJEMPLO<<ANA<MARIA<<<"]` con `REF`
@@ -404,3 +404,18 @@ El parser SHALL registrarse en las evals como tipo `mrz-cedula-digital`, con fix
 #### Scenario: Eval rápida del tipo
 - **WHEN** se ejecuta `npm run eval:quick`
 - **THEN** `evals/reports/latest.json` contiene `metricas["mrz-cedula-digital"]`, cada campo tiene `exact_match` 1 y `cer` 0, `n` del campo `valido` es al menos 20 y `excepciones` es 0
+
+### Requirement: MZ-23 Apellidos obligatorios
+Con `ok: true`, si `campos.apellidos` queda vacío (línea 3 solo de `<` o que empieza por `<<`), el parser MUST añadir el error `apellidos-vacios` al final de `errores` y `valido` MUST ser `false`; los campos se devuelven igual (MZ-16), sin mover el texto entre apellidos y nombres. Un `nombres` vacío sigue siendo válido ("Solo apellido", MZ-16). Hallazgo del verificador del 2026-10-07: una cédula sin apellido se aceptaba como válida.
+
+#### Scenario: Línea 3 solo de relleno
+- **WHEN** se parsea B con L3 = `"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"`
+- **THEN** `campos.apellidos` es `""`, `campos.nombres` es `""`, `errores` es `["apellidos-vacios"]` y `valido` es `false`
+
+#### Scenario: Línea 3 que empieza por el separador
+- **WHEN** se parsea B con L3 = `"<<FICTICIO<<<<<<<<<<<<<<<<<<<<"`
+- **THEN** `campos.apellidos` es `""`, `campos.nombres` es `"FICTICIO"`, `errores` es `["apellidos-vacios"]` y `valido` es `false`
+
+#### Scenario: Junto con la cifra en el nombre
+- **WHEN** se parsea B con L3 = `"<<AN4<<<<<<<<<<<<<<<<<<<<<<<<<"`
+- **THEN** `errores` es `["nombre-no-alfabetico", "apellidos-vacios"]`

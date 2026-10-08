@@ -17,7 +17,7 @@ Estados: **pendiente**, **confirmada**, **refutada**. La evidencia de confirmaci
 | H07 | Existe una variante sin `PubDSK` con índices desplazados una posición | fgardila 2020, pmogollons, Yeison07 | pendiente | Sin payload real público |
 | H08 | Existe una variante "fecha primero" (`02` + YYYYMMDD + sexo ... RH) | fgardila 2026 | pendiente | Solo fixtures sintéticos |
 | H09 | Todo byte posterior al RH es biométrico | Registraduría, Eitol | pendiente | |
-| H10 | La tarjeta de identidad usa el mismo layout | Yeison07, Eitol | pendiente | Nadie lo documenta con payloads |
+| H10 | La tarjeta de identidad usa el mismo layout | Yeison07, Eitol | pendiente | Nadie lo documenta con payloads. Como no hay forma fiable de distinguir una TI en el PDF417, el lector (solo cédulas de ciudadanía de mayores de edad, decisión del 2026-10-07) la rechaza por la regla de edad: menor de 18 años a la fecha de referencia = `menor-de-edad` (OFF-24 de `pwa-lectura-offline`) |
 | H11 | La primera letra no indica original/duplicado/rectificación (P/A/R) | Todos los payloads reales muestran `0M`/`0F` | pendiente (probable refutación de Macorreag) | |
 
 ## MRZ TD1 (cédula digital)

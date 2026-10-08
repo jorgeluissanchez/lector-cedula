@@ -1,7 +1,7 @@
 /**
  * Parser de la MRZ TD1 de la cédula digital colombiana a partir de las tres líneas de texto de un OCR.
  *
- * Contrato: openspec/changes/parser-mrz-cedula-digital/specs/mrz-cedula-digital/spec.md (MZ-01 a MZ-20);
+ * Contrato: openspec/changes/parser-mrz-cedula-digital/specs/mrz-cedula-digital/spec.md (MZ-01 a MZ-23);
  * decisiones en design.md del mismo cambio, incluidas las tomadas tras la evidencia de
  * docs/decisiones/2026-10-06-evidencia-hipotesis-formato.md: M01 confirmada, M02 confirmada con corrección
  * (NUIP de 10 cifras y relleno), M03 pendiente (código DIVIPOL de expedición o de nacimiento), que se
@@ -56,7 +56,8 @@ export type CodigoErrorCampoMrz =
   | "fecha-vencimiento-invalida"
   | "nacionalidad-invalida"
   | "nuip-invalido"
-  | "nombre-no-alfabetico";
+  | "nombre-no-alfabetico"
+  | "apellidos-vacios";
 
 export interface CamposMrzCedulaDigital {
   /** Serial del documento, 9 cifras con ceros a la izquierda (M01). */
@@ -347,6 +348,8 @@ function leerCampos(normalizadas: Lineas, fechaReferencia: string): ResultadoMrz
   const nacionalidad = anotar(l2.slice(15, 18) === PAIS ? PAIS : null, "nacionalidad-invalida");
   const nuip = anotar(leerNuip(l2.slice(18, 29)), "nuip-invalido");
   if (ALGUNA_CIFRA.test(l3)) errores.push("nombre-no-alfabetico");
+  const nombre = leerNombre(l3);
+  if (nombre.apellidos === "") errores.push("apellidos-vacios");
 
   const digitosControl = calcularDigitos(l1, l2);
   return {
@@ -361,7 +364,7 @@ function leerCampos(normalizadas: Lineas, fechaReferencia: string): ResultadoMrz
       nacionalidad,
       nuip: nuip?.numero ?? null,
       nuipTipoProbable: nuip?.tipoProbable ?? null,
-      ...leerNombre(l3),
+      ...nombre,
     },
     digitosControl,
     correcciones,
