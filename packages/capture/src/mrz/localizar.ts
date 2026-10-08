@@ -189,8 +189,8 @@ export function esTrioMrzHorizontal(m: MedidasTrio): boolean {
  * LMI-14a: candidatos de localizarFranjaMrz y evidencia de orientación: el mayor centro vertical relativo de las
  * franjas ajustadas cuyo trío es MRZ horizontal, o null.
  */
-export function localizarConEvidencia(pixeles: unknown): { candidatos: CandidatoMrz[]; evidencia: number | null } {
-  if (!esPixelesRgba(pixeles)) return { candidatos: [], evidencia: null };
+export function localizarConEvidencia(pixeles: unknown): { candidatos: CandidatoMrz[]; evidencia: number | null; ventanasMrz: number } {
+  if (!esPixelesRgba(pixeles)) return { candidatos: [], evidencia: null, ventanasMrz: 0 };
   const { width: w, height: h } = pixeles;
   const y = Math.round((1 - FRACCION_INFERIOR) * h);
   const inferior: CandidatoMrz = { metodo: "recorte-inferior", caja: { x: 0, y, ancho: w, alto: h - y } };
@@ -199,15 +199,17 @@ export function localizarConEvidencia(pixeles: unknown): { candidatos: Candidato
   const base = proyeccion === null ? [inferior, completa] : [proyeccion, inferior, completa];
   const luma = luminancias(pixeles);
   let evidencia: number | null = null;
+  let ventanasMrz = 0;
   const franjas = ventanasFranja(w, h).map((f) => {
     const { candidato, medidas } = ajustarFranja(luma, w, f);
     if (medidas !== null && esTrioMrzHorizontal(medidas)) {
+      ventanasMrz++;
       const centro = (candidato.caja.y + candidato.caja.alto / 2) / h;
       if (evidencia === null || centro > evidencia) evidencia = centro;
     }
     return candidato;
   });
-  return { candidatos: [...base, ...franjas], evidencia };
+  return { candidatos: [...base, ...franjas], evidencia, ventanasMrz };
 }
 
 /** Una columna es fondo (p. ej. madera al lado de la tarjeta) si tiene tinta en al menos esta fracción de filas. */
@@ -278,9 +280,21 @@ export function analizarVentana(luma: Uint8Array, w: number, f: CandidatoMrz): A
     if ((a.inicio === 0 && y0 > 0) || (c.fin === hf - 1 && y0 + hf < luma.length / w)) continue;
     // LMI-11d: límites en x del grupo de columnas con borde más poblado (huecos de más de un alto de línea separan
     // grupos), para dejar fuera el borde de la tarjeta o el fondo junto a la MRZ.
+    // LMI-11g: columna de texto si tiene bordes en las líneas y, en los huecos entre líneas, como mucho la mitad de
+    // densidad: lo que cruza líneas y huecos (borde de la tarjeta, dedos, vetas) no extiende la caja.
+    const filasLineas = alto(a) + alto(b) + alto(c);
+    const filasHuecos = c.fin - a.inicio + 1 - filasLineas;
+    const enLinea = (y: number): boolean => (y >= a.inicio && y <= a.fin) || (y >= b.inicio && y <= b.fin) || (y >= c.inicio && y <= c.fin);
     const columna = (x: number): boolean => {
-      for (let y = a.inicio; y <= c.fin; y++) if (util(x) && borde(x, y)) return true;
-      return false;
+      if (!util(x)) return false;
+      let lineas = 0;
+      let huecos = 0;
+      for (let y = a.inicio; y <= c.fin; y++) {
+        if (!borde(x, y)) continue;
+        if (enLinea(y)) lineas++;
+        else huecos++;
+      }
+      return lineas > 0 && huecos * filasLineas <= 0.5 * lineas * filasHuecos;
     };
     const { x0, x1 } = grupoMayor(columna, w, (alto(a) + alto(b) + alto(c)) / 3);
     const margen = Math.round(((alto(a) + alto(b) + alto(c)) / 3) * 0.5);

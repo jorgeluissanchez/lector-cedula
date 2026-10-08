@@ -8,6 +8,7 @@ Prueba con una foto real (2026-10-07, 899x1599): tarjeta girada 90° (líneas MR
 - LMI-11c (ADDED): el ajuste de franjas descarta tríos con una línea pegada a un borde interior de la ventana. Con el nuevo orden, R girado antihorario a 700 px se leía en 3 llamadas pero con la línea de nombres cortada (también ocurría con el orden anterior, en la llamada 18).
 - LMI-11d (ADDED): la franja ajustada recorta en x al grupo de columnas de texto más poblado, sin el borde de la tarjeta ni el fondo (foto real 899x1599 en JPEG de WhatsApp: el OCR leía el borde como una `E` pegada a cada línea).
 - LMI-11e y LMI-11f (ADDED): umbral de borde relativo a cada ventana (la foto real, borrosa, no daba ningún trío) y diagnóstico numérico de una ventana.
+- LMI-14b revisado y LMI-11g (ADDED): orden de vistas por número de ventanas con MRZ (una evidencia espuria en la vista derecha ya no la adelanta) y columnas de texto por densidad de bordes en líneas frente a huecos (la caja ya no llega al borde de la vista).
 - Se descarta Tesseract OSD: exige `osd.traineddata` y el motor legacy (otro modelo y otro core WASM); la estimación por bordes basta y no añade dependencias ni modelos.
 
 ## Impact

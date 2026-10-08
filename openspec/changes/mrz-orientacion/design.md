@@ -26,6 +26,13 @@ Prueba con la foto real (899x1599, JPEG de WhatsApp, MRZ en x 8-29 %, y 17-80 %)
 
 Con LMI-11d la foto real seguía sin leerse (67 s). El script de diagnóstico (solo números) sobre la foto real mostró: sin EXIF, evidencia nula en las 3 vistas y 45 de 45 ventanas por vista sin 3 bandas. El texto de la foto (WhatsApp, borroso, poco contraste) casi no da saltos de 40 entre píxeles vecinos. Réplica sintética: la de LMI-11d con 2 pasadas de media 3x3, contraste 0,6 y JPEG 50 reproduce el 45 de 45. El umbral pasa a ser `min(40, max(12, round(0,5 * p99)))` por ventana: con texto nítido sigue en 40 (no cambia ninguna caja literal anterior), con la réplica borrosa baja y la vista `@270` se lee en 3 llamadas. `analizarVentana` expone umbral, bandas y motivo para que el diagnóstico use la función real y no una copia.
 
+## Decisión: orden por número de ventanas (LMI-14b revisado) y columnas de texto (LMI-11g)
+
+Segundo diagnóstico de la foto real (solo números): la vista 270 tenía evidencia 0,81 en 6 ventanas, pero la vista derecha tenía una evidencia espuria (1 ventana, bloque de 190 px junto al borde) y, como la derecha con evidencia iba primero, se gastaban 9 llamadas en ella. Además, en 270 la caja ajustada llegaba al borde derecho (ancho 1318 frente a ~1007 de la MRZ) y el OCR daba 36 a 41 caracteres por línea.
+
+- LMI-14b: se calculan siempre las tres vistas (cuesta girar y localizar dos vistas más, cientos de ms, frente a segundos por llamada de OCR) y se ordenan por número de ventanas con MRZ horizontal, luego por evidencia, luego derecha, 90, 270. Con R, T y el lienzo blanco el orden no cambia.
+- LMI-11g: una columna solo cuenta para el recorte en x si su densidad de bordes en los huecos entre líneas es como mucho la mitad que en las líneas. Réplica: líneas oscuras de 2 px cada 20 px a la derecha de la MRZ en la vista 270, suavizadas: la caja llegaba a x = 100 % y ahora termina en 81 %.
+
 ## Pruebas
 
 | Requisito | Tipo | Herramienta | Comando | Umbral |
@@ -41,4 +48,7 @@ Con LMI-11d la foto real seguía sin leerse (67 s). El script de diagnóstico (s
 | LMI-11e | Unitaria (rectángulos de luminancia 225: falla con umbral fijo 40) | Vitest | `npx vitest run packages/capture/test/mrz` | caja literal del escenario |
 | LMI-11e | Integración con OCR real sobre la réplica borrosa | Vitest + Tesseract.js | `npx vitest run packages/capture/test/mrz` | líneas de R exactas, `@270`, <= 12 llamadas |
 | LMI-11f | Unitaria (umbral, motivo y bandas literales) | Vitest | `npx vitest run packages/capture/test/mrz` | escenarios en verde |
-| LMI-11c, LMI-11d, LMI-11e, LMI-14, LMI-14b | Regresión del eval | `npm run eval:mrz-imagen` | 0 falsas, umbrales de LMI-06 |
+| LMI-14b | Unitaria (orden puro con los números de la foto real y casos sin evidencia y con derecha mayor) | Vitest | `npx vitest run packages/capture/test/mrz` | órdenes literales |
+| LMI-11g | Unitaria (líneas verticales finas junto a las líneas) | Vitest | `npx vitest run packages/capture/test/mrz` | caja literal del escenario |
+| LMI-11g | Integración con OCR real sobre la réplica con estructuras a la derecha | Vitest + Tesseract.js | `npx vitest run packages/capture/test/mrz` | líneas de R exactas, `@270`, <= 12 llamadas |
+| LMI-11c a LMI-11g, LMI-14, LMI-14b | Regresión del eval | `npm run eval:mrz-imagen` | 0 falsas, umbrales de LMI-06 |

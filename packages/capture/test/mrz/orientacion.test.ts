@@ -4,7 +4,7 @@ import { PERSONA_BASE, generarMrzTd1 } from "@lector-cedula/fixtures";
 import { PNG } from "pngjs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
-import { crearLectorMrz, planIntentosMrz, type WorkerOcr } from "../../src/mrz/lector.js";
+import { crearLectorMrz, ordenVistasPorEvidencia, planIntentosMrz, type WorkerOcr } from "../../src/mrz/lector.js";
 import { analizarVentana, esTrioMrzHorizontal, girar, localizarConEvidencia, localizarFranjaMrz, luminancias, type PixelesRgba } from "../../src/mrz/localizar.js";
 
 const REF = { fechaReferencia: "2026-10-06" };
@@ -67,7 +67,7 @@ describe("LMI-14a Evidencia de orientación por vista", { timeout: 60_000 }, () 
   it("LMI-14a Sin evidencia", () => {
     expect(localizarConEvidencia(blanco()).evidencia).toBeNull();
     expect(localizarConEvidencia(girar(rectangulos(), 90)).evidencia).toBeNull();
-    expect(localizarConEvidencia(null)).toStrictEqual({ candidatos: [], evidencia: null });
+    expect(localizarConEvidencia(null)).toStrictEqual({ candidatos: [], evidencia: null, ventanasMrz: 0 });
   });
 });
 
@@ -149,5 +149,46 @@ describe("LMI-11e y LMI-11f Umbral de borde relativo y diagnóstico de ventana",
   it("LMI-11f Ventana sin tinta", () => {
     const r = analizarVentana(luminancias(blanco()), 1000, { metodo: "franja", caja: { x: 0, y: 850, ancho: 1000, alto: 150 } });
     expect([r.umbral, r.motivo, r.bandas, r.medidas]).toStrictEqual([12, "menos-de-3-bandas", 0, null]);
+  });
+});
+
+describe("LMI-14b Orden por número de ventanas con MRZ", { timeout: 60_000 }, () => {
+  it("LMI-14b Evidencia espuria en la vista derecha (foto real)", () => {
+    expect(
+      ordenVistasPorEvidencia([
+        { giro: 0, ventanasMrz: 1, evidencia: 0.41 },
+        { giro: 90, ventanasMrz: 6, evidencia: 0.19 },
+        { giro: 270, ventanasMrz: 6, evidencia: 0.81 },
+      ]),
+    ).toStrictEqual([270, 90, 0]);
+  });
+
+  it("LMI-14b Sin evidencia en ninguna vista", () => {
+    const v = [0, 90, 270].map((giro) => ({ giro, ventanasMrz: 0, evidencia: null }));
+    expect(ordenVistasPorEvidencia(v)).toStrictEqual([0, 90, 270]);
+  });
+
+  it("LMI-14b Vista derecha con más ventanas", () => {
+    expect(
+      ordenVistasPorEvidencia([
+        { giro: 0, ventanasMrz: 2, evidencia: 0.87 },
+        { giro: 90, ventanasMrz: 0, evidencia: null },
+        { giro: 270, ventanasMrz: 1, evidencia: 0.9 },
+      ]),
+    ).toStrictEqual([0, 270, 90]);
+  });
+
+  it("LMI-14a ventanasMrz cuenta las ventanas con trío MRZ horizontal", () => {
+    expect(localizarConEvidencia(rectangulos()).ventanasMrz).toBeGreaterThan(0);
+    expect(localizarConEvidencia(blanco()).ventanasMrz).toBe(0);
+  });
+});
+
+describe("LMI-11g Columnas de texto por densidad de bordes en líneas y huecos", { timeout: 60_000 }, () => {
+  it("LMI-11g Líneas verticales finas junto a las líneas", () => {
+    const p = rectangulos();
+    for (let x = 900; x <= 990; x += 10) for (let y = 900; y <= 975; y++) p.data.fill(0, (y * 1000 + x) * 4, (y * 1000 + x) * 4 + 3);
+    const franja = localizarFranjaMrz(p).find((c) => c.metodo === "franja");
+    expect(franja?.caja).toStrictEqual({ x: 91, y: 892, ancho: 807, alto: 91 });
   });
 });

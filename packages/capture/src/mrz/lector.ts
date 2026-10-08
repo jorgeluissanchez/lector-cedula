@@ -132,6 +132,7 @@ interface Vista {
   readonly imagen: PixelesRgba;
   readonly candidatos: CandidatoMrz[];
   readonly evidencia: number | null;
+  readonly ventanasMrz: number;
 }
 
 function vista(pixeles: PixelesRgba, giro: 0 | Giro): Vista {
@@ -139,26 +140,32 @@ function vista(pixeles: PixelesRgba, giro: 0 | Giro): Vista {
   return { giro, imagen, ...localizarConEvidencia(imagen) };
 }
 
+/** LMI-14b: evidencia de una vista para ordenarla. */
+export interface EvidenciaVista {
+  readonly giro: 0 | Giro;
+  readonly ventanasMrz: number;
+  readonly evidencia: number | null;
+}
+
 /**
- * LMI-14b: vistas en orden de prueba. Con evidencia en la derecha, derecha, 90 y 270, girando solo al llegar a cada
- * una. Si no, primero las vistas con evidencia (mayor evidencia antes; empate, 90 antes que 270) y luego el resto.
+ * LMI-14b: giros en orden de prueba: más ventanas con MRZ horizontal primero; empate, mayor evidencia (null al final);
+ * empate, el orden de entrada (derecha, 90, 270).
  */
-function* ordenVistas(pixeles: PixelesRgba): Generator<Vista> {
-  const derecha = vista(pixeles, 0);
-  if (derecha.evidencia !== null) {
-    yield derecha;
-    for (const giro of GIROS) yield vista(pixeles, giro);
-    return;
-  }
-  const todas = [derecha, ...GIROS.map((g) => vista(pixeles, g))];
-  // sort es estable: el empate conserva el orden derecha, 90, 270.
-  yield* todas.sort((a, b) => (b.evidencia ?? -1) - (a.evidencia ?? -1));
+export function ordenVistasPorEvidencia(vistas: readonly EvidenciaVista[]): (0 | Giro)[] {
+  // sort es estable: el último empate conserva el orden de entrada.
+  return [...vistas].sort((a, b) => b.ventanasMrz - a.ventanasMrz || (b.evidencia ?? -1) - (a.evidencia ?? -1)).map((v) => v.giro);
+}
+
+/** LMI-14b: las tres vistas, calculadas siempre, en el orden de ordenVistasPorEvidencia. */
+function ordenVistas(pixeles: PixelesRgba): Vista[] {
+  const todas = [vista(pixeles, 0), ...GIROS.map((g) => vista(pixeles, g))];
+  return ordenVistasPorEvidencia(todas).map((g) => todas.find((v) => v.giro === g) as Vista);
 }
 
 /**
  * LMI-12b: intentos en dos pasadas sobre las vistas (derecha, 90, 270), sin cajas repetidas dentro de una vista. La
  * pasada 1 lleva los candidatos que no son ventanas literales de LMI-11; la pasada 2, las ventanas literales. Las
- * vistas giradas se calculan al recorrer el generador, solo cuando la pasada 1 las alcanza.
+ * vistas van en el orden de LMI-14b.
  */
 export function* intentosMrz(pixeles: PixelesRgba): Generator<IntentoPlan & { readonly imagen: PixelesRgba }> {
   const vistas: { giro: 0 | Giro; imagen: PixelesRgba; literales: CandidatoMrz[]; vistas: Set<string> }[] = [];

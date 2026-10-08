@@ -41,6 +41,8 @@ let J: Uint8Array;
 let K: Uint8Array;
 /** J suavizada (2 pasadas de media 3x3), contraste 0,6 y JPEG 50: sin bordes de 40 en ninguna ventana (LMI-11e). */
 let B: Uint8Array;
+/** B con líneas horizontales de 2 px (oscurecidas 120, cada 20 px) en x 60-270, y 1290-1599: a la derecha de la MRZ en @270 (LMI-11g). */
+let D: Uint8Array;
 let lector: LectorMrz;
 
 /** Textura de madera determinista: vetas casi verticales con ondulación y grano (sin azar). */
@@ -192,6 +194,16 @@ beforeAll(async () => {
   mano(bl, 820);
   suavizar(bl, 2, 0.6);
   B = new Uint8Array(jpeg.encode({ width: bl.width, height: bl.height, data: bl.data }, 50).data);
+  const dl = madera(899, 1599);
+  pegarEscalada(dl, girar(rgba, 90), 829, { x: 50, y: 220 });
+  mano(dl, 820);
+  for (let y = 1290; y < 1599; y += 20) {
+    for (let yy = y; yy < Math.min(1599, y + 2); yy++) {
+      for (let x = 60; x < 270; x++) for (let k = 0; k < 3; k++) dl.data[(yy * 899 + x) * 4 + k] = Math.max(0, (dl.data[(yy * 899 + x) * 4 + k] as number) - 120);
+    }
+  }
+  suavizar(dl, 2, 0.6);
+  D = new Uint8Array(jpeg.encode({ width: dl.width, height: dl.height, data: dl.data }, 50).data);
   const k = madera(899, 1599);
   pegarEscalada(k, girar(rgba, 270), 829, { x: 20, y: 65 });
   mano(k, 80);
@@ -357,6 +369,13 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
 
   it("LMI-11e Réplica borrosa de la foto real", async () => {
     const { r, llamadas } = await leerContando(B);
+    lecturaCorrecta(r);
+    expect(r.ok && r.intento.endsWith("@270")).toBe(true);
+    expect(llamadas).toBeLessThanOrEqual(12);
+  }, 300_000);
+
+  it("LMI-11g Réplica con estructuras a la derecha de la MRZ", async () => {
+    const { r, llamadas } = await leerContando(D);
     lecturaCorrecta(r);
     expect(r.ok && r.intento.endsWith("@270")).toBe(true);
     expect(llamadas).toBeLessThanOrEqual(12);
