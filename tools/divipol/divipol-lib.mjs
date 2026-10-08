@@ -242,7 +242,7 @@ const BOGOTA = Object.freeze({ historico: "15001", vigente: "16001", divipola: "
 /**
  * Códigos DANE que admiten exactamente dos códigos DIVIPOL (DV-16): Bogotá y Barrancominas (94343), creado por la
  * Ordenanza 248 de 2019 de Guainía al unir las áreas no municipalizadas de Barranco Minas (50070) y Mapiripana
- * (50050). Corrección indicada por el coordinador el 2026-10-07; la aprobación humana queda pendiente de registrar.
+ * (50050). Corrección aprobada por el usuario el 2026-10-07 (design.md de divipol-registraduria).
  */
 const DUPLICADOS_DANE = Object.freeze({
   [BOGOTA.divipola]: `${BOGOTA.historico},${BOGOTA.vigente}`,

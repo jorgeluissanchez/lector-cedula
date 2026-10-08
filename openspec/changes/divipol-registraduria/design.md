@@ -22,7 +22,7 @@ Fuentes evaluadas (licencia leída con `gh api repos/<repo>` y `gh api repos/<re
 
 Correcciones a `docs/investigacion/01-formato-cedula-y-repos.md`, sección 5: la tabla de Eitol tiene 1.190 filas, no 1.122 (1.122 es el número de filas de DIVIPOLA del DANE). Además, en DIVIPOLA el código de departamento 88 es San Andrés, lo que choca con los consulados 88 de DIVIPOL.
 
-Prototipo del join (mismas fuentes, normalización de DV-16): 1.042 por nombre exacto, 48 sin paréntesis, 33 manuales (32 con código y 1 sin equivalente), 0 ambigüedades, 0 códigos DANE repetidos salvo `11001`; único código DANE sin pareja: `27493` (NUEVO BELÉN DE BAJIRÁ, ausente de Eitol).
+Prototipo del join (mismas fuentes, normalización de DV-16): 1.042 por nombre exacto, 48 sin paréntesis, 33 manuales (32 con código y 1 sin equivalente), 0 ambigüedades, 0 códigos DANE repetidos salvo `11001`; único código DANE sin pareja: `27493` (NUEVO BELÉN DE BAJIRÁ, ausente de Eitol). (Registro histórico del prototipo; tras la corrección de Mapiripana del 2026-10-07 son 33 con código, 0 sin equivalente, y `11001` y `94343` dobles; ver decisión 5.)
 
 ## Goals / Non-Goals
 
