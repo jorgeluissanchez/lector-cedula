@@ -1,61 +1,126 @@
-# Política de tratamiento de datos personales: plantilla para el integrador (BORRADOR)
+# Política de tratamiento de datos personales
 
-> **BORRADOR pendiente de revisión por un abogado colombiano de protección de datos.** Plantilla para quien despliega el lector (el integrador), que es quien la adopta como responsable. Los `[..]` los completa el responsable. El proyecto de software no es responsable del tratamiento que hagan los integradores (ver `terminos-de-uso.md`).
+**Versión 1.0, vigente desde [FECHA DE PUBLICACIÓN]. Sujeta a revisión jurídica.**
 
-## Fuentes normativas
+> Nota interna (no publicar este recuadro): el equipo técnico preparó este texto, pero no es abogado. Lo revisará un abogado colombiano especializado en protección de datos (ver `PARA-EL-ABOGADO.md`). Los marcadores entre corchetes se dejan visibles hasta que el responsable los complete. Las citas de la Ley 1581 de 2012 y del Decreto 1377 de 2013 se cotejaron con el texto oficial el 2026-10-07 (ver la sección 14).
 
-- Ley 1581 de 2012 (en especial arts. 4, 5, 6, 7, 8, 9, 12, 14, 15, 17, 18, 25, 26): https://www.secretariasenado.gov.co/senado/basedoc/ley_1581_2012.html
-- Decreto 1377 de 2013, art. 13 (contenido mínimo de la política) y arts. 14-16 (aviso de privacidad); compilado en el Decreto 1074 de 2015, arts. 2.2.2.25.3.1 y ss.: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646 · https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=76608
-- Decreto 886 de 2014 (Registro Nacional de Bases de Datos), compilado en el Decreto 1074 de 2015; Circular Única de la SIC, título V: https://www.sic.gov.co/
-- Ley 2300 de 2023 (canales y horarios de contacto con consumidores): aplica solo si el integrador usa los datos para cobranza o gestión comercial. https://www.funcionpublica.gov.co/ [E: verificar URL exacta]
-- Ley 1266 de 2008 (habeas data financiero): aplica solo si el resultado se usa o reporta con fines de riesgo crediticio. https://www.secretariasenado.gov.co/senado/basedoc/ley_1266_2008.html
+## 1. Responsable del tratamiento
 
-## 1. Identificación del responsable
+| Dato | Valor |
+|---|---|
+| Razón social | [RAZÓN SOCIAL] |
+| NIT | [NIT] |
+| Domicilio y dirección | [DOMICILIO] |
+| Correo de atención | [CORREO DE ATENCIÓN] |
+| Teléfono | [TELÉFONO] |
+| Área o persona que atiende consultas y reclamos | [ÁREA O PERSONA RESPONSABLE] |
 
-Razón social: **[..]** · NIT: **[..]** · Domicilio y dirección: **[..]** · Correo: **[..]** · Teléfono: **[..]** · Área encargada de peticiones, consultas y reclamos: **[..]**
+En esta política, "nosotros" significa [RAZÓN SOCIAL], y "usted" o "el titular" significa la persona cuyos datos se tratan.
 
 ## 2. Alcance
 
-Aplica a los datos personales obtenidos al leer documentos de identidad con el lector de cédula **[nombre comercial]** en **[canales: app, web, oficina]**.
+Esta política se aplica a los datos personales que se obtienen cuando usted lee su cédula de ciudadanía con la aplicación web [NOMBRE DE LA APLICACIÓN] (en adelante, "la aplicación") y, si se usa, con su servidor de respaldo. Se aplica a nosotros y a los encargados que traten datos por cuenta nuestra.
 
-## 3. Tratamiento y finalidades
+## 3. Finalidad
 
-Datos tratados: los de `autorizacion-tratamiento.md` (número, nombres, apellidos, sexo, fecha y lugar de nacimiento, grupo sanguíneo y RH; en la cédula digital, vencimiento, nacionalidad y serie).
+Tratamos sus datos con una sola finalidad: **verificar su identidad dentro del trámite de [NOMBRE DEL TRÁMITE] que usted adelanta con nosotros.**
 
-Finalidades: **[enumerar, p. ej.: verificar identidad para vinculación; prevenir suplantación; cumplir obligaciones SARLAFT]**. Ninguna finalidad distinta sin nueva autorización.
+No usamos sus datos para publicidad, perfiles comerciales, cobranza, reportes a centrales de riesgo ni ninguna otra finalidad. Si quisiéramos usarlos para otra finalidad, le pediremos una nueva autorización (art. 5 del Decreto 1377 de 2013).
 
-Lo que el software no hace y el integrador no debe activar sin revisar esta política: guardar imágenes; leer la huella o datos AFIS del PDF417; decodificar el QR de la cédula digital; comparar rostros.
+## 4. Datos que se tratan
 
-## 4. Datos sensibles y de menores
+**Cédula amarilla con hologramas (código de barras PDF417 del reverso):** número de cédula, apellidos, nombres, sexo, fecha de nacimiento, lugar de nacimiento (código de departamento y municipio, que la aplicación traduce a nombre) y grupo sanguíneo y factor RH.
 
-- Datos sensibles **[grupo sanguíneo y RH, si así se califican; imagen facial, si se activa la comparación]**: autorización explícita y opcional, informando que no es obligatoria (art. 6 Ley 1581; art. 6 Decreto 1377).
-- Menores: solo con autorización del representante legal y respetando el interés superior (art. 7 Ley 1581; art. 12 Decreto 1377). **[Indicar si se leen tarjetas de identidad.]**
+**Cédula digital (zona de lectura mecánica del reverso):** número de cédula, apellidos, nombres, sexo, fecha de nacimiento, fecha de vencimiento, nacionalidad y número de serie del documento.
 
-## 5. Derechos de los titulares
+**Datos que no se leen ni se conservan:**
+- La información de huella dactilar y los códigos de control (AFIS) del código de barras de la cédula amarilla: la aplicación los descarta sin interpretarlos.
+- El código QR de la cédula digital: nunca se decodifica.
+- Su rostro: la aplicación no compara rostros ni hace pruebas de vida.
+- Las imágenes de la cámara: no se guardan (ver la sección 6).
 
-Los del art. 8 de la Ley 1581: conocer, actualizar, rectificar, suprimir, revocar, solicitar prueba de la autorización, ser informado del uso, acceder gratis y acudir a la SIC.
+**Datos técnicos de la conexión:** al descargar la aplicación, el proveedor de alojamiento web registra, como cualquier sitio web, la dirección IP y datos técnicos del navegador (ver la sección 9).
 
-## 6. Procedimiento de consultas y reclamos
+## 5. Datos sensibles
 
-- Consultas: respuesta en máximo 10 días hábiles, prorrogables 5 (art. 14 Ley 1581).
-- Reclamos: 15 días hábiles, prorrogables 8 (art. 15 Ley 1581).
-- Canal: **[..]**. Requisito de procedibilidad ante la SIC: agotar el trámite ante el responsable (art. 16).
+La Ley 1581 de 2012 califica como sensibles, entre otros, los datos relativos a la salud y los datos biométricos (art. 5).
 
-## 7. Seguridad y conservación
+- **Grupo sanguíneo y RH.** Viene impreso y codificado en la cédula amarilla. Lo tratamos con la misma protección que un dato sensible: se muestra en pantalla y no se usa para ninguna decisión. [DECISIÓN PENDIENTE DEL ABOGADO: si el trámite no lo necesita, conviene no mostrarlo ni entregarlo.]
+- **Datos biométricos.** La versión actual de la aplicación no trata datos biométricos: no lee la huella del código de barras ni compara rostros. Si algún día se activara esa función, le pediríamos una autorización aparte, explícita y opcional. Le informaríamos que no está obligado a darla y le ofreceríamos una alternativa (arts. 5 y 6 de la Ley 1581 de 2012 y art. 6 del Decreto 1377 de 2013).
 
-- Imágenes: no se conservan; en el dispositivo se borran tras leer; en el servidor de respaldo se procesan solo en memoria.
-- Resultado en servidor: **[24 h por defecto, o el plazo definido]**, luego se elimina.
-- Registro de prueba de la autorización (sin datos del documento): **[PLAZO]**.
-- Medidas: **[cifrado en tránsito TLS, control de acceso, registros sin datos personales, etc.]**
+Usted no está obligado a autorizar el tratamiento de datos sensibles (art. 6 del Decreto 1377 de 2013).
 
-## 8. Encargados y transferencias o transmisiones internacionales
+## 6. Cómo se tratan los datos
 
-Encargados: **[proveedor de alojamiento del servidor, si lo hay]**, con contrato de transmisión (art. 25 Decreto 1377). Si el servidor está fuera de Colombia: **[país]**, con base en **[art. 26 Ley 1581 y la lista de países con nivel adecuado de la SIC, o declaración de conformidad / contrato de transmisión]**. Si se usa solo la PWA, no hay transmisión.
+1. **Lectura en su teléfono.** La aplicación lee el documento dentro de su navegador, también sin conexión a internet. Las imágenes de la cámara permanecen solo en la memoria del teléfono y se borran al terminar la lectura. La aplicación no usa cookies, `localStorage` ni otra base de datos del navegador para guardar imágenes o resultados.
+2. **Resultado en pantalla.** El resultado se muestra parcialmente oculto y se borra cuando usted pulsa "Leer otra" o sale de la aplicación.
+3. **Uso en el trámite.** [ELEGIR UNA OPCIÓN Y BORRAR LA OTRA]
+   - *Opción A (la aplicación no nos envía nada):* el resultado no sale de su teléfono. Usted lo usa en el trámite de [NOMBRE DEL TRÁMITE] mostrándolo o copiándolo cuando se lo pidamos.
+   - *Opción B (el trámite recibe el resultado):* con su autorización, el resultado se envía cifrado (TLS) a [SISTEMA DEL TRÁMITE] y se conserva [PLAZO DE CONSERVACIÓN DEL RESULTADO EN EL TRÁMITE].
+4. **Servidor de respaldo (opcional).** Si su teléfono no logra leer el documento y usted lo acepta, las imágenes se envían cifradas a nuestro servidor de respaldo. Allí se procesan solo en memoria, sin escribirse en disco ni en registros, y se descartan al terminar. El resultado se conserva un máximo de 24 horas para entregarlo al trámite y luego se elimina [AJUSTAR SI SE CAMBIA EL PLAZO].
+5. **Prueba de su autorización.** Conservamos un registro de que usted dio su autorización: versión del texto aceptado, fecha y hora, y casillas marcadas. Ese registro no contiene los datos de su documento ni imágenes. Lo conservamos durante [PLAZO DE CONSERVACIÓN DE LA PRUEBA] (art. 8 del Decreto 1377 de 2013).
 
-## 9. Registro Nacional de Bases de Datos
+## 7. Carácter de la lectura
 
-**[Indicar si la base debe inscribirse en el RNBD según los umbrales vigentes: verificar con el abogado.]**
+La lectura **no es una verificación oficial**. No consulta a la Registraduría Nacional del Estado Civil, no certifica que el documento sea auténtico ni que esté vigente, y puede tener errores. Si un dato leído es incorrecto, usted puede pedir que se corrija (sección 10).
 
-## 10. Vigencia
+## 8. Derechos del titular
 
-Desde **[FECHA]**. Las bases se conservan mientras dure la finalidad. Cambios sustanciales se comunican antes de aplicarse (art. 5 Decreto 1377).
+De acuerdo con el art. 8 de la Ley 1581 de 2012, usted tiene derecho a:
+
+a) Conocer, actualizar y rectificar sus datos.
+b) Solicitar prueba de la autorización que nos dio.
+c) Ser informado, previa solicitud, del uso que hemos dado a sus datos.
+d) Presentar quejas ante la Superintendencia de Industria y Comercio (SIC) por infracciones, después de agotar el trámite de consulta o reclamo ante nosotros (art. 16).
+e) Revocar la autorización o pedir la supresión de sus datos cuando no se respeten los principios, derechos y garantías constitucionales y legales.
+f) Acceder gratuitamente a sus datos.
+
+Los menores de edad no pueden usar la aplicación: solo lee cédulas de ciudadanía.
+
+## 9. Encargados y transmisión internacional de datos
+
+Para operar la aplicación usamos estos proveedores, que actúan como encargados del tratamiento:
+
+| Proveedor | Qué hace | Qué datos ve | Ubicación |
+|---|---|---|---|
+| Vercel Inc. | Aloja y distribuye por su red global (CDN) los archivos de la aplicación. | No recibe datos del documento: la aplicación no le envía imágenes ni resultados. Registra la dirección IP y datos técnicos de quien descarga la aplicación. | Estados Unidos y nodos de su red en otros países. |
+| Hostinger (con el panel Dokploy, software que nosotros operamos) | Aloja el servidor de respaldo opcional. | Las imágenes y el resultado, solo cuando usted usa el servidor de respaldo (sección 6, numeral 4). | [PAÍS DEL SERVIDOR] |
+
+Como estos proveedores están fuera de Colombia, el envío de datos a ellos es una **transmisión internacional** de datos personales: un encargado trata los datos por cuenta nuestra y no puede usarlos para fines propios. Según el art. 24 del Decreto 1377 de 2013, la transmisión internacional a un encargado no requiere informarle a usted ni pedir su consentimiento si existe un contrato de transmisión con el contenido del art. 25. Aun así se lo informamos por transparencia. Con cada encargado tenemos [CONTRATO DE TRANSMISIÓN O ACUERDO DE TRATAMIENTO DE DATOS, CON FECHA], que lo obliga a tratar los datos según esta política y solo para la finalidad autorizada, a proteger su seguridad y a guardar confidencialidad.
+
+No transferimos sus datos a terceros que los usen como responsables propios. Una transferencia internacional así solo se haría a un país con nivel adecuado de protección o en los casos del art. 26 de la Ley 1581 de 2012.
+
+## 10. Procedimiento de consultas y reclamos
+
+**Canal:** [CORREO DE ATENCIÓN], [TELÉFONO] o por escrito en [DOMICILIO]. Atiende [ÁREA O PERSONA RESPONSABLE] (art. 23 del Decreto 1377 de 2013).
+
+**Consultas** (art. 14 de la Ley 1581 de 2012): se responden en un máximo de diez (10) días hábiles desde que las recibimos. Si no es posible en ese plazo, le informaremos el motivo y la nueva fecha, que no superará cinco (5) días hábiles adicionales.
+
+**Reclamos** de corrección, actualización o supresión, o por presunto incumplimiento (art. 15 de la Ley 1581 de 2012):
+1. Indique su identificación, la descripción de los hechos, su dirección y los documentos que quiera aportar.
+2. Si el reclamo está incompleto, le pediremos completarlo dentro de los cinco (5) días siguientes a recibirlo. Si pasan dos (2) meses sin respuesta suya, se entenderá que desistió.
+3. Si no somos competentes para resolverlo, lo trasladaremos en un máximo de dos (2) días hábiles a quien corresponda y le informaremos.
+4. En un máximo de dos (2) días hábiles después de recibir el reclamo completo, marcaremos el dato con la leyenda "reclamo en trámite" hasta decidirlo.
+5. Responderemos en un máximo de quince (15) días hábiles desde el día siguiente a recibirlo, prorrogables hasta ocho (8) días hábiles más si le informamos el motivo.
+
+**Queja ante la SIC:** solo después de agotar este trámite (art. 16 de la Ley 1581 de 2012).
+
+Como no guardamos imágenes ni resultados en la aplicación, es posible que no tengamos ningún dato suyo que consultar o suprimir. En ese caso se lo informaremos por escrito.
+
+## 11. Seguridad
+
+Aplicamos, entre otras, estas medidas: lectura en el dispositivo; ningún almacenamiento de imágenes; borrado de la memoria al terminar; cifrado TLS en toda comunicación; registros técnicos sin datos personales; eliminación automática del resultado en el servidor de respaldo; código abierto y revisable; acceso restringido al servidor. [COMPLETAR: controles de acceso, copias de seguridad y gestión de incidentes del responsable.] Si ocurre un incidente de seguridad que afecte datos personales, lo reportaremos a la SIC según sus instrucciones (art. 17, lit. n, de la Ley 1581 de 2012).
+
+## 12. Vigencia y cambios
+
+Esta política rige desde [FECHA DE PUBLICACIÓN]. Las bases de datos estarán vigentes mientras dure la finalidad descrita. Si cambiamos la identificación del responsable o la finalidad, se lo comunicaremos antes de aplicar el cambio o, a más tardar, al aplicarlo. Si cambia la finalidad, le pediremos una nueva autorización (art. 5 y art. 13 del Decreto 1377 de 2013).
+
+## 13. Registro Nacional de Bases de Datos
+
+[ELEGIR] Esta base de datos está inscrita en el Registro Nacional de Bases de Datos de la SIC con el número [NÚMERO] / [RAZÓN SOCIAL] no está obligada a inscribirla porque sus activos totales no superan 100.000 UVT (Decreto 090 de 2018).
+
+## 14. Normas aplicables
+
+- Ley 1581 de 2012 (texto cotejado el 2026-10-07): https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981 (copia oficial también en https://www.secretariasenado.gov.co/senado/basedoc/ley_1581_2012.html)
+- Decreto 1377 de 2013 (texto cotejado el 2026-10-07), compilado en el Decreto 1074 de 2015, capítulo 25: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646 · https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=76608
+- Decreto 090 de 2018 (Registro Nacional de Bases de Datos): https://www.funcionpublica.gov.co/eva/gestornormativo/norma_pdf.php?i=85039

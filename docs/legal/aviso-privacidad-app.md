@@ -1,24 +1,19 @@
-# Aviso de privacidad corto para la pantalla de la app (BORRADOR)
+# Aviso de privacidad
 
-> **BORRADOR pendiente de revisión por un abogado colombiano de protección de datos.** Aviso según el art. 15 del Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015), que debe informar al menos: responsable, tratamiento y finalidad, derechos, y cómo consultar la política. https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646
->
-> Diseñado para caber en una pantalla de celular (aprox. 90 palabras). Los `[..]` los completa el integrador. La pantalla debe mostrarse **antes** de abrir la cámara.
+**Versión 1.0, vigente desde [FECHA DE PUBLICACIÓN]. Sujeta a revisión jurídica.**
 
-## Texto (variante PWA sola)
+> Nota interna: el texto que se publica en la aplicación está en `publicacion/aviso-privacidad.md`. Este archivo justifica su contenido.
 
-**Tu privacidad**
+## Contenido mínimo exigido (art. 15 del Decreto 1377 de 2013, cotejado el 2026-10-07)
 
-**[RAZÓN SOCIAL]** usa esta app para leer tu documento de identidad. La lectura ocurre **solo en este teléfono**, también sin internet. No guardamos fotos ni resultados: se borran al terminar. No leemos la huella del código de barras ni el código QR. El resultado se muestra parcialmente oculto. Puedes conocer, actualizar, rectificar y suprimir tus datos y revocar tu autorización en **[CORREO]**. Política completa: **[URL]**. Licencias de datos y software: *Acerca de / Licencias*.
+| Exigencia | Dónde queda en el aviso |
+|---|---|
+| 1. Nombre o razón social y datos de contacto del responsable | [RAZÓN SOCIAL], [NIT], [CORREO DE ATENCIÓN], [TELÉFONO] |
+| 2. Tratamiento y finalidad | "Verificar su identidad en el trámite de [NOMBRE DEL TRÁMITE]", lectura en el teléfono |
+| 3. Derechos del titular | Párrafo "Sus derechos" |
+| 4. Mecanismos para conocer la política y sus cambios | Enlace a la política |
+| Si hay datos sensibles: carácter facultativo | Hoy no se piden datos sensibles; se anuncia el grupo sanguíneo y RH como dato que se lee |
 
-[Continuar] [Cancelar]
+El aviso no exime de publicar la política completa (art. 15, inciso final). Hay que poder demostrar que se puso a disposición (art. 16): la versión del aviso queda en el registro de prueba.
 
-## Texto (variante con servidor de respaldo)
-
-Igual que la anterior, sustituyendo la tercera y cuarta frase por:
-
-> La lectura ocurre en este teléfono. Si no es posible, las fotos se envían cifradas a nuestro servidor en **[PAÍS]**, se procesan en memoria y no se guardan. El resultado se conserva **[24 horas]**.
-
-## Notas para implementación (no son texto legal)
-
-- El enlace *Acerca de / Licencias* aún no existe en `apps/pwa` [V: búsqueda en `apps/pwa/src` el 2026-10-07]; ver `licencias-terceros-usuarios.md`.
-- Si la autorización debe ser expresa (variante B), el botón "Continuar" no basta: se requieren las casillas de `autorizacion-tratamiento.md`.
+Fuente: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646

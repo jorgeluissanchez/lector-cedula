@@ -1,6 +1,6 @@
-# Para el abogado: paquete de revisión (BORRADOR)
+# Para el abogado: paquete de revisión
 
-> **BORRADOR.** Preparado por el equipo técnico, que no es abogado. Todo el contenido de `docs/legal/` es borrador hasta su aprobación escrita por un abogado colombiano de protección de datos. Fecha: 2026-10-07.
+> Preparado por el equipo técnico, que no es abogado. Por decisión del usuario (2026-10-07), los textos se publican como **Versión 1.0, sujeta a revisión jurídica**, con marcadores visibles para los datos del responsable. Finalidad declarada: verificar la identidad del usuario en un trámite del integrador. Despliegue: PWA en Vercel; servidor de respaldo opcional en Hostinger con Dokploy. Ver `CHECKLIST-CUMPLIMIENTO.md`.
 
 ## 1. El producto en una página
 
@@ -33,7 +33,7 @@ Set de campo (solo desarrollo): fotos reales con consentimiento firmado, cifrada
 | D4 | ¿La **cédula y sus datos** son dato sensible? ¿Y el **grupo sanguíneo y RH** (¿dato de salud?)? | Hoy la autorización lo deja como pregunta. |
 | D5 | **Comparación facial** como dato biométrico sensible: requisitos si se activa (autorización explícita, alternativa no biométrica, evaluación de impacto). | Desactivada hoy; la API ya separa la casilla `sensibles`. |
 | D6 | **Menores / tarjeta de identidad**: ¿se admite? ¿cómo se acredita la representación legal en un flujo digital? | Hoy solo cédula de ciudadanía. |
-| D7 | **Conservación del registro de autorización**: plazo y contenido mínimo para probarla (art. 7 Decreto 1377). | Hoy: id, casillas, versión del texto, fechas, motivo de supresión. |
+| D7 | **Conservación del registro de autorización**: plazo y contenido mínimo para probarla (art. 8 Decreto 1377; el art. 7 regula el modo de obtenerla). | Hoy: id, casillas, versión del texto, fechas, motivo de supresión. |
 | D8 | **Transferencias / transmisiones internacionales** si el servidor está en la nube fuera de Colombia: contrato de transmisión, país adecuado, declaración de conformidad. | Depende del integrador. |
 | D9 | **Set de campo**: base, fotografía del anverso (dato sensible), plazo, almacenamiento. | Ver `consentimiento-set-campo.md`. |
 | D10 | ¿Aplica **RNBD**, **Ley 1266 de 2008** o **Ley 2300 de 2023**? | Solo si el integrador usa los datos con fines crediticios o de cobranza/contacto comercial. |
@@ -48,7 +48,7 @@ Set de campo (solo desarrollo): fotos reales con consentimiento firmado, cifrada
 4. **Datos de menores** si alguien presenta una tarjeta de identidad.
 5. **Transferencia internacional** no declarada si el servidor corre en una nube extranjera.
 6. **Exactitud:** el formato del PDF417 no es público; errores de lectura afectan el principio de veracidad (art. 4 lit. d).
-7. **Atribución CC BY-SA** omitida en la PWA (la pantalla "Acerca de / Licencias" aún no existe).
+7. **Atribución CC BY-SA**: la pantalla "Acerca de y licencias" ya existe en la PWA (OFF-20), pendiente de commit.
 8. **Prueba de la autorización** en la variante solo PWA: hoy no se registra nada.
 
 ## 5. Preguntas concretas
@@ -67,7 +67,9 @@ Set de campo (solo desarrollo): fotos reales con consentimiento firmado, cifrada
 ## 6. Archivos del paquete
 
 - `autorizacion-tratamiento.md`: texto de autorización (variantes A y B) y requisitos técnicos ya especificados.
-- `aviso-privacidad-app.md`: aviso corto para la pantalla.
+- `aviso-privacidad-app.md`: justificación del aviso.
+- `publicacion/`: textos cortos que van en la app (aviso, casilla, descargo y enlaces, licencias).
+- `CHECKLIST-CUMPLIMIENTO.md`: estado frente a la Ley 1581 y el Decreto 1377.
 - `politica-tratamiento-datos.md`: plantilla de política para el integrador.
 - `terminos-de-uso.md`: términos y descargo (no es verificación oficial).
 - `licencias-terceros-usuarios.md`: texto de "Acerca de / Licencias".
@@ -83,4 +85,4 @@ Set de campo (solo desarrollo): fotos reales con consentimiento firmado, cifrada
 - Pronunciamiento SIC reciente: datos biométricos (reconocimiento facial, huella) son sensibles y no pueden exigirse como condición de acceso; debe ofrecerse alternativa (agosto de 2026, reportado en prensa): https://www.eltiempo.com/justicia/servicios/la-sic-prohibe-a-las-administraciones-exigir-datos-biometricos-para-ingresar-a-conjuntos-residenciales-3575752 [E: ubicar la resolución original en sic.gov.co]
 - Ley 2300 de 2023 [E: confirmar URL en funcionpublica.gov.co].
 
-Las URL de normas se citan por su ubicación habitual en los portales oficiales; no se descargó su texto en esta revisión [E]. El abogado debe confirmar vigencia y artículos.
+Ley 1581 y Decreto 1377 cotejados el 2026-10-07 con el texto de funcionpublica.gov.co (Ley 1581: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981). Corrección: la prueba de la autorización es el art. 8 del Decreto 1377, no el 7. Quedan [E] la resolución SIC sobre biometría y la Ley 2300.

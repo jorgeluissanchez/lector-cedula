@@ -1,59 +1,50 @@
-# Autorización para el tratamiento de datos personales (BORRADOR)
+# Autorización para el tratamiento de datos personales
 
-> **BORRADOR técnico pendiente de revisión y aprobación por un abogado colombiano especializado en protección de datos.** No usar en producción hasta su aprobación. Los campos entre corchetes `[..]` los completa el responsable del tratamiento (el integrador que despliega el lector). Ver `docs/legal/PARA-EL-ABOGADO.md`.
->
-> Actualizado al producto del 2026-10-07: PWA con lectura 100 % en el dispositivo y sin conexión (`openspec/changes/pwa-lectura-offline`), servidor de respaldo opcional (`openspec/changes/motor-real-servidor`, `api-validaciones-contrato`).
+**Versión 1.0, vigente desde [FECHA DE PUBLICACIÓN]. Sujeta a revisión jurídica.**
 
-## Normas de referencia
+> Nota interna (no publicar este recuadro): este documento contiene el texto completo y la justificación. El texto corto que se muestra en la aplicación está en `publicacion/autorizacion.md`. Las citas se cotejaron con el texto oficial el 2026-10-07.
 
-- Ley 1581 de 2012, arts. 4 (principios), 5-7 (datos sensibles y de menores), 9 (autorización), 12 (deber de informar), 8 (derechos): https://www.secretariasenado.gov.co/senado/basedoc/ley_1581_2012.html
-- Decreto 1377 de 2013, arts. 5-7 (modo de obtener la autorización y prueba de ella), 6 (datos sensibles), 12 (menores); compilado en el Decreto 1074 de 2015, libro 2, parte 2, título 2, capítulo 25: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646 y https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=76608
-- Sentencia C-748 de 2011 (control previo de la Ley 1581).
+## Fundamento
 
-## Variante A: solo la PWA (lectura en el dispositivo)
+- Ley 1581 de 2012, art. 9: la autorización debe ser **previa e informada** y obtenerse por un medio que permita consultarla después.
+- Ley 1581 de 2012, art. 12: al pedir la autorización se informa el tratamiento y la finalidad, el carácter facultativo de las respuestas sobre datos sensibles, los derechos del titular y la identificación, dirección y teléfono del responsable. El parágrafo exige conservar prueba de haber informado.
+- Decreto 1377 de 2013, art. 5: se pide a más tardar al recolectar los datos e informa los datos recolectados y todas las finalidades específicas.
+- Decreto 1377 de 2013, art. 6: los datos sensibles requieren autorización explícita, informando que no es obligatoria y cuáles datos son sensibles.
+- Decreto 1377 de 2013, art. 7: vale la autorización escrita, oral o por conducta inequívoca; **el silencio nunca es conducta inequívoca**. Por eso la casilla viene desmarcada.
+- Decreto 1377 de 2013, art. 8: el responsable conserva prueba de la autorización.
 
-Úsese cuando el integrador despliega únicamente la PWA y el resultado no sale del dispositivo. **[DECISIÓN DEL ABOGADO: si en esta variante, sin recolección ni transmisión por parte del integrador, existe "tratamiento" por un responsable distinto del propio titular o del operador que sostiene el teléfono, y si se necesita autorización o basta un aviso. Ver PARA-EL-ABOGADO.md, D1.]**
+Fuentes: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=49981 · https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646
 
-> Esta aplicación lee tu documento de identidad **solo en este dispositivo**. Las imágenes de la cámara no se envían a ningún servidor, no se guardan y se borran de la memoria al terminar la lectura. El resultado se muestra parcialmente oculto y desaparece al pulsar "Leer otra" o al salir de la aplicación. **[RAZÓN SOCIAL]** **[no recibe / recibe, para la finalidad X,]** los datos leídos. Más información: **[URL de la política]**.
+## Texto de la autorización (se muestra antes de abrir la cámara)
 
-## Variante B: con integración o servidor de respaldo
+Yo, titular de la cédula que voy a leer, autorizo de manera **previa, expresa e informada** a **[RAZÓN SOCIAL]**, NIT **[NIT]**, con domicilio en **[DOMICILIO]**, para tratar los datos personales de mi cédula con una única finalidad: **verificar mi identidad en el trámite de [NOMBRE DEL TRÁMITE]**.
 
-### Texto que ve el titular antes de escanear su documento
+**Datos que se leen.** Cédula amarilla: número, apellidos, nombres, sexo, fecha y lugar de nacimiento, grupo sanguíneo y RH. Cédula digital: número, apellidos, nombres, sexo, fecha de nacimiento, fecha de vencimiento, nacionalidad y número de serie.
 
-Al continuar, autorizo de manera previa, expresa e informada a **[RAZÓN SOCIAL DEL RESPONSABLE]**, identificado con NIT **[NIT]**, domiciliado en **[DIRECCIÓN]**, para que trate los datos personales contenidos en mi documento de identidad con la finalidad de **[FINALIDAD CONCRETA, p. ej.: verificar mi identidad para abrir una cuenta]**, conforme a la Ley 1581 de 2012 y al Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015).
+**Datos que no se leen.** No se lee la huella del código de barras ni se decodifica el código QR. No se compara mi rostro. No se guardan imágenes.
 
-**Datos que se leen del documento:**
-- Cédula amarilla (código PDF417 del reverso): número de identificación, apellidos, nombres, sexo, fecha de nacimiento, lugar de nacimiento (código de departamento y municipio), grupo sanguíneo y RH.
-- Cédula digital (zona de lectura mecánica del reverso): número de identificación, apellidos, nombres, sexo, fecha de nacimiento, fecha de vencimiento, nacionalidad y número de serie del documento.
+**Cómo se tratan.** La lectura ocurre en mi teléfono. [SOLO SI SE USA EL SERVIDOR DE RESPALDO: Si mi teléfono no logra leer el documento y yo lo acepto, las imágenes se envían cifradas a un servidor de [RAZÓN SOCIAL] alojado por Hostinger en [PAÍS DEL SERVIDOR], se procesan solo en memoria y se descartan; el resultado se elimina a más tardar en 24 horas.]
 
-**Datos que NO se leen ni se conservan:**
-- El código de barras de la cédula amarilla contiene información de huella dactilar y códigos de control (AFIS, tarjeta decadactilar). El software los descarta sin interpretarlos.
-- El código QR de la cédula digital nunca se decodifica.
-- Las imágenes del documento no se guardan. La lectura se hace en mi dispositivo. **[Solo si se usa el servidor de respaldo:]** si mi dispositivo no puede leer el documento, las imágenes se envían cifradas a un servidor de **[RESPONSABLE / ENCARGADO]** ubicado en **[PAÍS / PROVEEDOR]**, se procesan solo en memoria, no se escriben en disco ni en registros, y se descartan al terminar.
+**Prueba.** Se conserva prueba de esta autorización (versión del texto, fecha y casillas marcadas), sin los datos de mi cédula.
 
-**Conservación del resultado.** **[Solo con servidor:]** El resultado de la lectura se conserva por **[24 horas, valor por defecto del software, o el plazo que fije el responsable]** y luego se elimina. Se conserva un registro de que otorgué esta autorización (versión del texto, fecha y casillas marcadas), sin los datos de mi documento, por **[PLAZO]**.
+**Carácter de la lectura.** No es una verificación oficial de la Registraduría Nacional del Estado Civil.
 
-**Datos sensibles.** **[Solo si se activa la comparación facial o la prueba de vida; la versión actual del servidor NO compara rostros.]** El grupo sanguíneo y RH **[DECISIÓN DEL ABOGADO: ¿dato de salud y, por tanto, sensible?]**. Para comparar mi rostro con la foto del documento se trataría mi imagen facial, que es un dato biométrico sensible. **No estoy obligado a autorizar el tratamiento de datos sensibles.** Si no lo autorizo, se ofrecerá **[ALTERNATIVA, p. ej.: verificación presencial]**.
+**Mis derechos** (art. 8 de la Ley 1581 de 2012): conocer, actualizar, rectificar y suprimir mis datos; pedir prueba de esta autorización; ser informado del uso de mis datos; revocar la autorización; acceder gratis a mis datos y quejarme ante la Superintendencia de Industria y Comercio después de acudir al responsable. Contacto: **[CORREO DE ATENCIÓN]**, **[TELÉFONO]**. Política: **[URL DE LA POLÍTICA]**.
 
-**Menores de edad.** **[Si se admite la tarjeta de identidad; la versión actual lee cédulas de ciudadanía.]** El tratamiento de datos de niños, niñas y adolescentes requiere la autorización de su representante legal, respeta su interés superior y sus derechos fundamentales, y considera la opinión del menor según su madurez (art. 7 Ley 1581; art. 12 Decreto 1377).
+- [ ] **Autorizo el tratamiento de mis datos personales para la finalidad indicada.** (Obligatoria para continuar. Desmarcada por defecto.)
 
-**Carácter de la lectura.** La lectura no es una consulta ni una certificación ante la Registraduría Nacional del Estado Civil y no acredita que el documento sea auténtico o esté vigente.
+### Casilla de datos sensibles (NO se muestra en la versión actual)
 
-**Mis derechos (art. 8 Ley 1581):** conocer, actualizar, rectificar y suprimir mis datos; revocar esta autorización; solicitar prueba de ella; ser informado del uso que se da a mis datos; presentar quejas ante la Superintendencia de Industria y Comercio tras agotar el trámite de consulta o reclamo ante el responsable. Canal de atención: **[CORREO Y TELÉFONO]**. Política de tratamiento: **[URL]**.
+Solo se mostrará si se activa la comparación facial u otra función biométrica. Debe ir **separada** de la anterior, ser **opcional**, venir **desmarcada** y ofrecer una alternativa:
 
-- [ ] Autorizo el tratamiento de mis datos personales para la finalidad indicada.
-- [ ] Autorizo el tratamiento de mis datos sensibles (**[imagen facial / grupo sanguíneo]**). *Casilla independiente, opcional y desmarcada por defecto.*
+- [ ] Autorizo de forma explícita el tratamiento de mi imagen facial, que es un dato biométrico sensible, para compararla con la foto de mi cédula. Sé que **no estoy obligado** a autorizarlo. Si no lo autorizo, puedo [ALTERNATIVA NO BIOMÉTRICA].
 
-## Requisitos técnicos ya implementados en las specs (para que el abogado los valide)
+## Requisitos de implementación
 
-| Requisito | Dónde | Estado |
+| Requisito | Fundamento | Estado técnico |
 |---|---|---|
-| La API rechaza (422) toda validación sin `autorizacion.datos = true` | `api-validaciones-contrato`, AV de autorización | Especificado [V] |
-| `face_match = true` exige `autorizacion.sensibles = true` | mismo | Especificado [V]; el motor real rechaza la comparación facial (MS-13) |
-| Se guarda `version_texto`, `otorgada_en`, `registrada_en` y casillas | mismo | Especificado [V] |
-| `DELETE` elimina el resultado y deja solo un registro mínimo de prueba de la autorización, sin datos del documento | AV de supresión | Especificado; plazo del registro pendiente del abogado |
-| El resultado se elimina 86 400 s después de completarse (configurable) | AV-24 | Especificado [V] |
-| Imágenes solo en memoria; logs sin datos personales | MS-04, AV-32 | Especificado [V] |
-| PWA sin `localStorage`, cookies, IndexedDB; buffers a cero | OFF-11 | Especificado [V] |
-| No se decodifica el QR | OFF-07 | Especificado [V] |
-| No se leen AFIS, tarjeta decadactilar ni la cola biométrica del PDF417 | PA-16 | Especificado [V] |
+| La casilla de datos personales se muestra antes de abrir la cámara y viene desmarcada | Ley 1581 art. 9; Decreto 1377 art. 7 | Pendiente en la PWA |
+| Sin casilla marcada no se abre la cámara | Ley 1581 art. 9 | Pendiente en la PWA. En el servidor, la API rechaza con 422 si `autorizacion.datos` no es `true` (especificado) |
+| La casilla de sensibles es independiente | Decreto 1377 art. 6 | La API separa `autorizacion.sensibles`; la comparación facial está desactivada (MS-13) |
+| Se conserva prueba: versión del texto, fecha y hora, casillas | Decreto 1377 art. 8; Ley 1581 art. 12 parágrafo | Servidor: especificado (`version_texto`, `otorgada_en`). PWA sola: hoy no se registra nada (ver el checklist) |
+| Cambio de finalidad: nueva autorización | Decreto 1377 art. 5 | Cambiar la versión del texto obliga a aceptarlo de nuevo |

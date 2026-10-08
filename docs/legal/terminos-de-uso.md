@@ -1,35 +1,43 @@
-# Términos de uso del software y SDK y descargo de responsabilidad (BORRADOR)
+# Términos de uso
 
-> **BORRADOR pendiente de revisión por un abogado colombiano.** Rige la relación entre **[TITULAR DEL SOFTWARE]** y quien lo integra (el integrador). No sustituye las licencias de código abierto de los componentes de terceros, que prevalecen sobre esos componentes (`licencias-terceros-usuarios.md`). **[DECISIÓN: licencia del propio proyecto, ver PARA-EL-ABOGADO.md, D11.]**
+**Versión 1.0, vigente desde [FECHA DE PUBLICACIÓN]. Sujeta a revisión jurídica.**
 
-## 1. Objeto
+Estos términos regulan el uso de la aplicación web [NOMBRE DE LA APLICACIÓN] (en adelante, "la aplicación"), que ofrece [RAZÓN SOCIAL], NIT [NIT], con domicilio en [DOMICILIO] (en adelante, "nosotros"). Al usar la aplicación, usted acepta estos términos.
 
-El software lee, con técnicas automáticas, los datos impresos o codificados en documentos de identidad colombianos (código PDF417 de la cédula amarilla y zona de lectura mecánica de la cédula digital) y los devuelve estructurados.
+## 1. Qué hace la aplicación
 
-## 2. Lo que el software NO es
+La aplicación lee con la cámara de su teléfono los datos codificados en su cédula de ciudadanía colombiana (el código de barras PDF417 de la cédula amarilla y la zona de lectura mecánica de la cédula digital) para verificar su identidad en el trámite de [NOMBRE DEL TRÁMITE].
 
-1. **No es una verificación oficial.** No consulta ni certifica nada ante la Registraduría Nacional del Estado Civil ni ante ninguna base oficial. No acredita que el documento sea auténtico, vigente, ni que pertenezca a quien lo presenta.
-2. No detecta con garantía documentos falsos o alterados. Los controles internos (dígitos de verificación, coherencia de fechas) son indicios, no prueba.
-3. No es un servicio de biometría: no lee la huella del PDF417, no decodifica el QR de la cédula digital y, en la versión actual, no compara rostros.
-4. La interpretación del formato del PDF417 se basa en hipótesis documentadas públicamente (`docs/decisiones/hipotesis-formato.md`) y no en una especificación oficial; puede fallar con versiones del documento no previstas.
-5. Los nombres de lugar de nacimiento provienen de tablas públicas del DANE y la Registraduría (CC BY-SA 4.0) que pueden estar desactualizadas.
+## 2. Lo que la aplicación no es
 
-## 3. Obligaciones del integrador
+1. **No es una verificación oficial.** No consulta a la Registraduría Nacional del Estado Civil ni a ninguna base de datos oficial. No certifica que el documento sea auténtico ni que esté vigente, ni que pertenezca a quien lo presenta.
+2. No detecta con certeza documentos falsos o alterados. Los controles internos, como los dígitos de verificación, son indicios y no prueba.
+3. No es un servicio biométrico: no lee la huella del código de barras, no decodifica el código QR de la cédula digital y no compara rostros.
+4. El formato del código de barras de la cédula amarilla no es público. La aplicación lo interpreta según pruebas propias y puede equivocarse con versiones del documento no previstas.
+5. Los nombres de los lugares de nacimiento provienen de tablas públicas del DANE y de la Registraduría que pueden estar desactualizadas.
 
-1. Actuar como responsable del tratamiento de los datos que obtenga y cumplir la Ley 1581 de 2012 y sus decretos: política, aviso, autorización, atención de derechos, seguridad y, si aplica, RNBD y transferencias internacionales.
-2. No modificar el software para conservar imágenes, leer biometría o decodificar el QR sin su propio análisis legal.
-3. Revisar humanamente toda decisión con efectos jurídicos o significativos basada en la lectura **[DECISIÓN DEL ABOGADO: alcance]**.
-4. Mostrar las atribuciones de licencia exigidas (CC BY-SA 4.0 y licencias de código).
-5. Si opera el servidor de respaldo, alojarlo con medidas de seguridad adecuadas y, si es fuera de Colombia, cumplir el art. 26 de la Ley 1581.
+## 3. Sus compromisos
 
-## 4. Garantía y responsabilidad
+1. Leer solo su propia cédula, o una que esté autorizado a presentar.
+2. Revisar el resultado antes de usarlo en el trámite y avisarnos si encuentra un error.
+3. No usar la aplicación para fines ilícitos ni para suplantar a otra persona.
 
-El software se entrega **"tal cual"**, sin garantía de exactitud, disponibilidad ni idoneidad para un fin concreto, en la medida que lo permita la ley colombiana. **[DECISIÓN DEL ABOGADO: límites de exclusión de responsabilidad válidos en Colombia (Código Civil art. 1616; Estatuto del Consumidor, Ley 1480 de 2011, si el integrador o el usuario final es consumidor).]** Responsabilidad máxima: **[..]**.
+## 4. Cómo tratamos sus datos
 
-## 5. Privacidad por diseño (información, no garantía contractual)
+Según nuestra Política de tratamiento de datos personales ([URL DE LA POLÍTICA]) y la autorización que usted otorga antes de leer la cédula. En resumen: la lectura ocurre en su teléfono, las imágenes no se guardan y el resultado se borra al terminar.
 
-Lectura en el dispositivo y sin conexión; sin almacenamiento de imágenes ni resultados en la PWA; servidor opcional con procesamiento en memoria, registros sin datos personales y eliminación del resultado tras **[24 h]** por defecto.
+## 5. Disponibilidad y responsabilidad
 
-## 6. Ley y jurisdicción
+Ofrecemos la aplicación en el estado en que se encuentra. Procuramos que funcione sin errores, pero no garantizamos que esté siempre disponible ni que cada lectura sea exacta. Las decisiones del trámite no se toman solo con la lectura automática: [DESCRIBIR LA REVISIÓN HUMANA O EL CONTROL ADICIONAL DEL TRÁMITE]. Nada de lo anterior limita los derechos que la ley colombiana le reconoce y que no pueden renunciarse, incluidos los de la Ley 1480 de 2011 (Estatuto del Consumidor) cuando sea aplicable. [DECISIÓN PENDIENTE DEL ABOGADO: límites de responsabilidad válidos.]
 
-Ley colombiana; jueces de **[CIUDAD]**. **[..]**
+## 6. Licencias
+
+La aplicación usa software de código abierto y datos públicos con licencias propias, que se pueden consultar en la pantalla "Acerca de y licencias". El código de la aplicación se distribuye bajo licencia MIT.
+
+## 7. Cambios
+
+Si modificamos estos términos, publicaremos la nueva versión con su fecha de vigencia en la aplicación.
+
+## 8. Ley aplicable y contacto
+
+Estos términos se rigen por la ley colombiana. Contacto: [CORREO DE ATENCIÓN], [TELÉFONO].
