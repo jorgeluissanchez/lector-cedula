@@ -7,10 +7,11 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PERSONA_BASE, generarMrzTd1 } from "@lector-cedula/fixtures";
+import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
-import { crearLectorMrz, type LectorMrz, type ResultadoLectorMrz } from "../../src/mrz/lector.js";
+import { crearLectorMrz, planIntentosMrz, type LectorMrz, type ResultadoLectorMrz } from "../../src/mrz/lector.js";
 import { crearWorkerTesseract, opcionesWorker } from "../../src/mrz/entorno.js";
 import { girar, localizarFranjaMrz } from "../../src/mrz/localizar.js";
 
@@ -30,6 +31,14 @@ let T: Uint8Array;
 let V: Uint8Array;
 /** Foto 900x1600 con madera y R girado 90° horario, a 360 px de ancho en (40, 260): MRZ a la izquierda (LMI-12b). */
 let G: Uint8Array;
+/** Como G pero con R girado 90° antihorario en (500, 260): MRZ a la derecha (LMI-14b). */
+let H: Uint8Array;
+/** R girado a 700 px sobre madera: horario en (20, 200), MRZ a la izquierda; antihorario en (180, 200), MRZ a la derecha. */
+let G7: Uint8Array;
+let H7: Uint8Array;
+/** Como la foto real (LMI-11d): 899x1599, madera, R girado a 829 px, mano color piel y JPEG de calidad 40. */
+let J: Uint8Array;
+let K: Uint8Array;
 let lector: LectorMrz;
 
 /** Textura de madera determinista: vetas casi verticales con ondulación y grano (sin azar). */
@@ -48,6 +57,22 @@ function madera(w: number, h: number): PNG {
     }
   }
   return png;
+}
+
+/** Elipse color piel (mano sintética) de semiejes 160 y 420 centrada en (cx, 1100). */
+function mano(png: PNG, cx: number): void {
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      const dx = (x - cx) / 160;
+      const dy = (y - 1100) / 420;
+      if (dx * dx + dy * dy >= 1) continue;
+      const o = (y * png.width + x) * 4;
+      const n = ((x * 31 + y * 17) % 13) - 6;
+      png.data[o] = 205 + n;
+      png.data[o + 1] = 160 + n;
+      png.data[o + 2] = 130 + n;
+    }
+  }
 }
 
 /** Pega `fuente` escalada (bilineal) a `ancho` px en `destino`, centrada salvo que se dé la esquina `en`. */
@@ -128,6 +153,24 @@ beforeAll(async () => {
   const fondoG = madera(900, 1600);
   pegarEscalada(fondoG, girar({ width: fuente.width, height: fuente.height, data: new Uint8ClampedArray(fuente.data) }, 90), 360, { x: 40, y: 260 });
   G = new Uint8Array(PNG.sync.write(fondoG));
+  const fondoH = madera(900, 1600);
+  pegarEscalada(fondoH, girar({ width: fuente.width, height: fuente.height, data: new Uint8ClampedArray(fuente.data) }, 270), 360, { x: 500, y: 260 });
+  H = new Uint8Array(PNG.sync.write(fondoH));
+  const g7 = madera(900, 1600);
+  pegarEscalada(g7, girar({ width: fuente.width, height: fuente.height, data: new Uint8ClampedArray(fuente.data) }, 90), 700, { x: 20, y: 200 });
+  G7 = new Uint8Array(PNG.sync.write(g7));
+  const h7 = madera(900, 1600);
+  pegarEscalada(h7, girar({ width: fuente.width, height: fuente.height, data: new Uint8ClampedArray(fuente.data) }, 270), 700, { x: 180, y: 200 });
+  H7 = new Uint8Array(PNG.sync.write(h7));
+  const rgba = { width: fuente.width, height: fuente.height, data: new Uint8ClampedArray(fuente.data) };
+  const j = madera(899, 1599);
+  pegarEscalada(j, girar(rgba, 90), 829, { x: 50, y: 220 });
+  mano(j, 820);
+  J = new Uint8Array(jpeg.encode({ width: j.width, height: j.height, data: j.data }, 40).data);
+  const k = madera(899, 1599);
+  pegarEscalada(k, girar(rgba, 270), 829, { x: 20, y: 65 });
+  mano(k, 80);
+  K = new Uint8Array(jpeg.encode({ width: k.width, height: k.height, data: k.data }, 40).data);
   await render.cerrar();
   lector = crearLectorMrz({ rutaModelo: MODELO });
   vacio = mkdtempSync(join(tmpdir(), "mrz-sin-modelo-"));
@@ -233,9 +276,9 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
     expect(r.ok && r.intento.endsWith("@90")).toBe(true);
   });
 
-  it("LMI-12b Tarjeta pequeña girada sobre textura", async () => {
+  /** Lector con OCR real que cuenta las llamadas al OCR (sin límite de tiempo efectivo: bajo carga se mide por llamadas). */
+  async function leerContando(imagen: Uint8Array): Promise<{ r: ResultadoLectorMrz; llamadas: number }> {
     let llamadas = 0;
-    // Sin límite de tiempo efectivo: bajo carga paralela una llamada OCR tarda varios segundos; se mide por llamadas.
     const contador = crearLectorMrz({
       rutaModelo: MODELO,
       tiempoLimiteMs: 600_000,
@@ -248,12 +291,47 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
       },
     });
     try {
-      const r = await contador.leer(G, REF);
-      lecturaCorrecta(r);
-      expect(r.ok && r.intento.endsWith("@270")).toBe(true);
-      expect(llamadas).toBeLessThanOrEqual(40);
+      return { r: await contador.leer(imagen, REF), llamadas };
     } finally {
       await contador.terminar();
     }
+  }
+
+  // LMI-12b (<= 40 llamadas) queda cubierto por el umbral más estricto de LMI-14b (<= 12) sobre la misma foto G.
+  it("LMI-12b y LMI-14b Tarjeta pequeña girada horaria sobre madera", async () => {
+    const { r, llamadas } = await leerContando(G);
+    lecturaCorrecta(r);
+    expect(r.ok && r.intento.endsWith("@270")).toBe(true);
+    expect(llamadas).toBeLessThanOrEqual(12);
   }, 300_000);
+
+  it("LMI-14b Tarjeta pequeña girada antihoraria sobre madera", async () => {
+    const { r, llamadas } = await leerContando(H);
+    lecturaCorrecta(r);
+    expect(r.ok && r.intento.endsWith("@90")).toBe(true);
+    expect(llamadas).toBeLessThanOrEqual(12);
+  }, 300_000);
+
+  it("LMI-14b Tarjeta grande girada sobre madera", async () => {
+    for (const [imagen, sufijo] of [[G7, "@270"], [H7, "@90"]] as const) {
+      const { r, llamadas } = await leerContando(imagen);
+      lecturaCorrecta(r);
+      expect(r.ok && r.intento.endsWith(sufijo)).toBe(true);
+      expect(llamadas).toBeLessThanOrEqual(12);
+    }
+  }, 600_000);
+
+  it("LMI-11d Tarjeta grande girada con JPEG fuerte y una mano", async () => {
+    for (const [imagen, sufijo] of [[J, "@270"], [K, "@90"]] as const) {
+      const { r, llamadas } = await leerContando(imagen);
+      lecturaCorrecta(r);
+      expect(r.ok && r.intento.endsWith(sufijo)).toBe(true);
+      expect(llamadas).toBeLessThanOrEqual(12);
+    }
+  }, 600_000);
+
+  it("LMI-14b Vista derecha primero cuando tiene evidencia (madera con R centrado)", () => {
+    const giros = [...new Set(planIntentosMrz(PNG.sync.read(Buffer.from(T))).map((i) => i.giro))];
+    expect(giros).toStrictEqual([0, 90, 270]);
+  });
 });

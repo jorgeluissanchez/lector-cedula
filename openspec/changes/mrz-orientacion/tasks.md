@@ -1,0 +1,5 @@
+## 1. Orientación por evidencia
+
+- [x] 1.1 Pruebas en rojo de LMI-14 y LMI-14b (evidencia en rectángulos y su transpuesta, lienzo blanco, orden del plan, OCR inyectado, tarjeta pequeña girada horaria y antihoraria sobre madera con <= 12 llamadas al OCR real), implementar `evidenciaMrz`/`localizarConEvidencia` en `localizar.ts` y el orden de vistas en `lector.ts`. Tipos: unitaria e integración con OCR. Verificación: `npx vitest run packages/capture/test/mrz`, `npm run eval:mrz-imagen` y `npm run check`.
+- [x] 1.2 Prueba en rojo de LMI-11c (ventana que corta la tercera línea; tarjeta grande antihoraria con nombre ilegible), implementar el descarte en el ajuste de franjas. Tipos: unitaria e integración con OCR. Verificación: `npx vitest run packages/capture/test/mrz` y `npm run eval:mrz-imagen`.
+- [x] 1.3 Prueba en rojo de LMI-11d (barra vertical junto a las líneas; réplica sintética de la foto real con JPEG 40 y mano, y su espejo, <= 12 llamadas), implementar el recorte en x al grupo de columnas más poblado. Tipos: unitaria e integración con OCR. Verificación: `npx vitest run packages/capture/test/mrz`, `npm run eval:mrz-imagen` y `npm run check`.

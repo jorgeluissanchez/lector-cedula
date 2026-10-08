@@ -396,12 +396,13 @@ describe("LMI-13 Presupuesto de intentos y de tiempo", { timeout: 60_000 }, () =
     expect(reg.imagenes).toHaveLength(MAX_LLAMADAS);
   });
 
-  it("LMI-13 Opciones no enteras positivas toman el valor por defecto", async () => {
-    for (const malo of [0, -3, 2.5, Number.NaN]) {
-      const { reg, crearWorker } = falso([""]);
-      await crearLectorMrz({ rutaModelo: "/m", crearWorker, maxLlamadasOcr: malo, tiempoLimiteMs: malo }).leer(R, REF);
-      expect(reg.imagenes).toHaveLength(MAX_LLAMADAS);
-    }
+  // Lienzo blanco pequeño: plan de más de 40 intentos con recortes baratos (con R, 4 x 40 recortes tardaban 18 s).
+  const pequeno = { width: 200, height: 200, data: new Uint8ClampedArray(200 * 200 * 4).fill(255) };
+  it.each([0, -3, 2.5, Number.NaN])("LMI-13 Opciones no enteras positivas toman el valor por defecto (%s)", async (malo) => {
+    expect(planIntentosMrz(pequeno).length).toBeGreaterThan(MAX_LLAMADAS);
+    const { reg, crearWorker } = falso([""]);
+    await crearLectorMrz({ rutaModelo: "/m", crearWorker, maxLlamadasOcr: malo, tiempoLimiteMs: malo }).leer(pequeno, REF);
+    expect(reg.imagenes).toHaveLength(MAX_LLAMADAS);
   });
 
   it("LMI-13 El tiempo se mide desde el inicio de cada lectura", async () => {

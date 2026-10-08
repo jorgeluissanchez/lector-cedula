@@ -162,7 +162,35 @@ function candidatoProyeccion(p: PixelesRgba): CandidatoMrz | null {
  * recorte de la MRZ). `[]` solo si la entrada no tiene forma de píxeles.
  */
 export function localizarFranjaMrz(pixeles: unknown): CandidatoMrz[] {
-  if (!esPixelesRgba(pixeles)) return [];
+  return localizarConEvidencia(pixeles).candidatos;
+}
+
+/** LMI-14: medidas de un trío ajustado (tramos por línea, alto medio de línea y ancho de los bordes). */
+export interface MedidasTrio {
+  readonly tramos: readonly [number, number, number];
+  readonly altoMedio: number;
+  readonly ancho: number;
+}
+
+/** LMI-14: mínimo de tramos por línea y rango de t * a / w. */
+const TRAMOS_MINIMOS = 20;
+const RELACION_MINIMA = 0.5;
+const RELACION_MAXIMA = 2.5;
+
+/** LMI-14: true si el trío tiene forma de MRZ horizontal (muchos tramos cortos por línea, no vetas altas). */
+export function esTrioMrzHorizontal(m: MedidasTrio): boolean {
+  const t = Math.min(...m.tramos);
+  if (t < TRAMOS_MINIMOS) return false;
+  const relacion = (t * m.altoMedio) / m.ancho;
+  return relacion >= RELACION_MINIMA && relacion <= RELACION_MAXIMA;
+}
+
+/**
+ * LMI-14a: candidatos de localizarFranjaMrz y evidencia de orientación: el mayor centro vertical relativo de las
+ * franjas ajustadas cuyo trío es MRZ horizontal, o null.
+ */
+export function localizarConEvidencia(pixeles: unknown): { candidatos: CandidatoMrz[]; evidencia: number | null } {
+  if (!esPixelesRgba(pixeles)) return { candidatos: [], evidencia: null };
   const { width: w, height: h } = pixeles;
   const y = Math.round((1 - FRACCION_INFERIOR) * h);
   const inferior: CandidatoMrz = { metodo: "recorte-inferior", caja: { x: 0, y, ancho: w, alto: h - y } };
@@ -170,7 +198,16 @@ export function localizarFranjaMrz(pixeles: unknown): CandidatoMrz[] {
   const completa: CandidatoMrz = { metodo: "imagen-completa", caja: { x: 0, y: 0, ancho: w, alto: h } };
   const base = proyeccion === null ? [inferior, completa] : [proyeccion, inferior, completa];
   const luma = luminancias(pixeles);
-  return [...base, ...ventanasFranja(w, h).map((f) => ajustarFranja(luma, w, f))];
+  let evidencia: number | null = null;
+  const franjas = ventanasFranja(w, h).map((f) => {
+    const { candidato, medidas } = ajustarFranja(luma, w, f);
+    if (medidas !== null && esTrioMrzHorizontal(medidas)) {
+      const centro = (candidato.caja.y + candidato.caja.alto / 2) / h;
+      if (evidencia === null || centro > evidencia) evidencia = centro;
+    }
+    return candidato;
+  });
+  return { candidatos: [...base, ...franjas], evidencia };
 }
 
 /** Una columna es fondo (p. ej. madera al lado de la tarjeta) si tiene tinta en al menos esta fracción de filas. */
@@ -183,7 +220,7 @@ const FRACCION_BORDES_FILA = 0.03;
  * LMI-11: dentro de la franja, con umbral de Otsu local y sin las columnas de fondo, busca el trío regular de bandas
  * más bajo y ajusta la caja a él (con margen de medio alto de línea). Si no lo hay, devuelve la franja tal cual.
  */
-function ajustarFranja(luma: Uint8Array, w: number, f: CandidatoMrz): CandidatoMrz {
+function ajustarFranja(luma: Uint8Array, w: number, f: CandidatoMrz): { candidato: CandidatoMrz; medidas: MedidasTrio | null } {
   const { y: y0, alto: hf } = f.caja;
   const local = luma.subarray(y0 * w, (y0 + hf) * w);
   // Borde fuerte: salto de luminancia >= UMBRAL_BORDE entre vecinos horizontales. El texto OCR-B produce muchos; la
@@ -195,7 +232,7 @@ function ajustarFranja(luma: Uint8Array, w: number, f: CandidatoMrz): CandidatoM
   const util = (x: number): boolean => (bordeCol[x] as number) < FRACCION_COLUMNA_FONDO * hf;
   let utiles = 0;
   for (let x = 0; x < w; x++) if (util(x)) utiles++;
-  if (utiles === 0) return f;
+  if (utiles === 0) return { candidato: f, medidas: null };
   const conteos = new Uint32Array(hf);
   for (let y = 0; y < hf; y++) {
     let n = 0;
@@ -206,24 +243,55 @@ function ajustarFranja(luma: Uint8Array, w: number, f: CandidatoMrz): CandidatoM
   for (let i = encontradas.length - 3; i >= 0; i--) {
     const [a, b, c] = encontradas.slice(i, i + 3) as [Banda, Banda, Banda];
     if (!bandasRegulares(a, b, c)) continue;
-    let x0 = w;
-    let x1 = -1;
-    for (let y = a.inicio; y <= c.fin; y++) {
-      for (let x = 0; x < w; x++) {
-        if (util(x) && borde(x, y)) {
-          if (x < x0) x0 = x;
-          if (x > x1) x1 = x;
-        }
-      }
-    }
+    // LMI-11c: una línea pegada a un borde interior de la ventana puede estar cortada.
+    if ((a.inicio === 0 && y0 > 0) || (c.fin === hf - 1 && y0 + hf < luma.length / w)) continue;
+    // LMI-11d: límites en x del grupo de columnas con borde más poblado (huecos de más de un alto de línea separan
+    // grupos), para dejar fuera el borde de la tarjeta o el fondo junto a la MRZ.
+    const columna = (x: number): boolean => {
+      for (let y = a.inicio; y <= c.fin; y++) if (util(x) && borde(x, y)) return true;
+      return false;
+    };
+    const { x0, x1 } = grupoMayor(columna, w, (alto(a) + alto(b) + alto(c)) / 3);
     const margen = Math.round(((alto(a) + alto(b) + alto(c)) / 3) * 0.5);
     const izq = Math.max(0, x0 - margen);
     const der = Math.min(w, x1 + 1 + margen);
     const arriba = Math.max(0, a.inicio - margen);
     const abajo = Math.min(hf, c.fin + 1 + margen);
-    return { metodo: "franja", caja: { x: izq, y: y0 + arriba, ancho: der - izq, alto: abajo - arriba } };
+    // LMI-14: tramos = rachas maximales de columnas útiles con algún borde en las filas de la línea.
+    const tramos = [a, b, c].map((banda) => {
+      let n = 0;
+      let antes = false;
+      for (let x = x0; x <= x1; x++) {
+        let hay = false;
+        for (let y = banda.inicio; y <= banda.fin && !hay; y++) hay = util(x) && borde(x, y);
+        if (hay && !antes) n++;
+        antes = hay;
+      }
+      return n;
+    }) as [number, number, number];
+    return {
+      candidato: { metodo: "franja", caja: { x: izq, y: y0 + arriba, ancho: der - izq, alto: abajo - arriba } },
+      medidas: { tramos, altoMedio: (alto(a) + alto(b) + alto(c)) / 3, ancho: x1 - x0 + 1 },
+    };
   }
-  return f;
+  return { candidato: f, medidas: null };
+}
+
+/**
+ * LMI-11d: extremos del grupo con más columnas activas, separando grupos por huecos de más de `hueco` columnas.
+ * Empate: el primero. Solo se llama con al menos una columna activa (las bandas del trío tienen bordes).
+ */
+function grupoMayor(activa: (x: number) => boolean, w: number, hueco: number): { x0: number; x1: number } {
+  let mejor = { x0: 0, x1: -1, n: 0 };
+  let actual = { x0: 0, x1: -1, n: 0 };
+  for (let x = 0; x < w; x++) {
+    if (!activa(x)) continue;
+    if (actual.n === 0 || x - actual.x1 - 1 > hueco) actual = { x0: x, x1: x, n: 0 };
+    actual.x1 = x;
+    actual.n++;
+    if (actual.n > mejor.n) mejor = { ...actual };
+  }
+  return mejor;
 }
 
 /** Alto y paso de las franjas de LMI-11, como fracción del alto de la imagen. */

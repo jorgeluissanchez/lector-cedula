@@ -11,7 +11,7 @@ import {
   esPixelesRgba,
   GIROS,
   girar,
-  localizarFranjaMrz,
+  localizarConEvidencia,
   ventanasFranja,
   type CajaMrz,
   type CandidatoMrz,
@@ -127,6 +127,34 @@ export interface IntentoPlan {
 
 const claveCaja = (c: CajaMrz): string => `${c.x},${c.y},${c.ancho},${c.alto}`;
 
+interface Vista {
+  readonly giro: 0 | Giro;
+  readonly imagen: PixelesRgba;
+  readonly candidatos: CandidatoMrz[];
+  readonly evidencia: number | null;
+}
+
+function vista(pixeles: PixelesRgba, giro: 0 | Giro): Vista {
+  const imagen = giro === 0 ? pixeles : girar(pixeles, giro);
+  return { giro, imagen, ...localizarConEvidencia(imagen) };
+}
+
+/**
+ * LMI-14b: vistas en orden de prueba. Con evidencia en la derecha, derecha, 90 y 270, girando solo al llegar a cada
+ * una. Si no, primero las vistas con evidencia (mayor evidencia antes; empate, 90 antes que 270) y luego el resto.
+ */
+function* ordenVistas(pixeles: PixelesRgba): Generator<Vista> {
+  const derecha = vista(pixeles, 0);
+  if (derecha.evidencia !== null) {
+    yield derecha;
+    for (const giro of GIROS) yield vista(pixeles, giro);
+    return;
+  }
+  const todas = [derecha, ...GIROS.map((g) => vista(pixeles, g))];
+  // sort es estable: el empate conserva el orden derecha, 90, 270.
+  yield* todas.sort((a, b) => (b.evidencia ?? -1) - (a.evidencia ?? -1));
+}
+
 /**
  * LMI-12b: intentos en dos pasadas sobre las vistas (derecha, 90, 270), sin cajas repetidas dentro de una vista. La
  * pasada 1 lleva los candidatos que no son ventanas literales de LMI-11; la pasada 2, las ventanas literales. Las
@@ -134,12 +162,11 @@ const claveCaja = (c: CajaMrz): string => `${c.x},${c.y},${c.ancho},${c.alto}`;
  */
 export function* intentosMrz(pixeles: PixelesRgba): Generator<IntentoPlan & { readonly imagen: PixelesRgba }> {
   const vistas: { giro: 0 | Giro; imagen: PixelesRgba; literales: CandidatoMrz[]; vistas: Set<string> }[] = [];
-  for (const giro of [0, ...GIROS] as const) {
-    const imagen = giro === 0 ? pixeles : girar(pixeles, giro);
+  for (const { giro, imagen, candidatos } of ordenVistas(pixeles)) {
     const ventanas = new Set(ventanasFranja(imagen.width, imagen.height).map((v) => claveCaja(v.caja)));
     const vista = { giro, imagen, literales: [] as CandidatoMrz[], vistas: new Set<string>() };
     vistas.push(vista);
-    for (const candidato of localizarFranjaMrz(imagen)) {
+    for (const candidato of candidatos) {
       const clave = claveCaja(candidato.caja);
       if (candidato.metodo === "franja" && ventanas.has(clave)) vista.literales.push(candidato);
       else if (!vista.vistas.has(clave)) {
@@ -163,6 +190,8 @@ export function planIntentosMrz(pixeles: unknown): IntentoPlan[] {
   if (!esPixelesRgba(pixeles)) return [];
   return [...intentosMrz(pixeles)].map(({ giro, candidato }) => ({ giro, candidato }));
 }
+
+const ceder = (): Promise<void> => new Promise((resolver) => setTimeout(resolver, 0));
 
 const enteroPositivo = (x: number | undefined, defecto: number): number => (Number.isInteger(x) && (x as number) > 0 ? (x as number) : defecto);
 
@@ -220,8 +249,15 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
     // LMI-12 y LMI-12b: vistas derecha, 90° y 270° en dos pasadas. LMI-13: presupuesto de llamadas y de tiempo.
     const inicio = ahora();
     let llamadas = 0;
-    for (const { giro, imagen: imagenVista, candidato } of intentosMrz(pixeles)) {
+    const intentos = intentosMrz(pixeles);
+    for (;;) {
       if (llamadas >= maxLlamadas || ahora() - inicio >= limiteMs) break;
+      // Cede el hilo antes de cada paso síncrono pesado (girar y localizar una vista, recortar y enderezar): con
+      // fotos grandes bloqueaba el bucle de eventos lo bastante para agotar los RPC de Vitest bajo carga.
+      await ceder();
+      const paso = intentos.next();
+      if (paso.done === true) break;
+      const { giro, imagen: imagenVista, candidato } = paso.value;
       llamadas++;
       // Un fallo del OCR cuenta como texto ilegible; el parser rechaza `null` (sin 3 líneas) con ok: false.
       const texto: unknown = await w

@@ -30,6 +30,12 @@ let rutaLugarDesconocido;
 let rutaAlterado;
 let modeloVacio;
 
+/**
+ * Tope del proceso hijo: una MRZ que nunca da 4 dígitos válidos agota el presupuesto de LMI-13 (40 llamadas o 60 s),
+ * más el arranque de Node y Tesseract; con 60 s el hijo moría justo en el límite bajo carga.
+ */
+const TIEMPO_HIJO_MS = 150_000;
+
 function correr(...args) {
   return correrCon({}, ...args);
 }
@@ -37,7 +43,7 @@ function correr(...args) {
 /** Proceso hijo asíncrono: un spawnSync largo (OCR) bloquea el worker de Vitest y provoca timeouts de su RPC. */
 function correrCon(entorno, ...args) {
   return new Promise((resolver, rechazar) => {
-    const hijo = spawn(process.execPath, [CLI, ...args], { cwd: RAIZ, env: { ...process.env, ...entorno }, timeout: 60_000 });
+    const hijo = spawn(process.execPath, [CLI, ...args], { cwd: RAIZ, env: { ...process.env, ...entorno }, timeout: TIEMPO_HIJO_MS });
     let stdout = "";
     let stderr = "";
     hijo.stdout.setEncoding("utf8").on("data", (d) => (stdout += d));
@@ -219,7 +225,7 @@ describe("LPI-06 CLI leer-foto", { timeout: 60_000 }, () => {
     const r = await correr("--fecha-referencia", "2026-10-06", rutaAlterado);
     expect(r.status).toBe(2);
     expect(r.stdout).toBe('{"ok":false,"tipo":"mrz","error":"mrz-no-valida","digitosValidos":3}\n');
-  });
+  }, 180_000);
 
   it("LPI-06 Modelo MRZ ausente", async () => {
     const r = await correrCon({ LECTOR_CEDULA_RUTA_MODELO_MRZ: modeloVacio }, rutaR);
