@@ -124,3 +124,12 @@ Todas pendientes. Fuente base: Resolución UAEMC 0086 de 2017 (tarjeta ID-1 conf
 | CE07 | La CE rediseñada de 2025 mantiene TD1 con el mismo layout | Truora `co_foreign-id-2025` | confirmada parcialmente | Res. UAEMC 1395/2025 existe y conserva MRZ y 2D en el reverso; layout exacto sin espécimen (docs/investigacion/05) |
 | T01 | Una TI con MRZ (si existe) usa código `IT` o `TI` y emisor `COL` | Ninguna confirmada | pendiente | TI digital con QR y MRZ anunciada por prensa, sin norma ni espécimen; TI azul vigente solo con PDF417 (docs/investigacion/05) |
 | P01 | El dato opcional del pasaporte colombiano lleva el NUIP del titular | Conocimiento general | pendiente | Sin fuente pública del campo opcional; buscado en 2026-10-08 (docs/investigacion/05) |
+
+## Detección de fraude (cambio `deteccion-fraude`, 2026-10-08)
+
+Pendientes. Se exponen en `warnings` de la `SenalRiesgo` mientras sigan pendientes. H-FRA-2 (rangos de NUIP por época) se descartó por decisión P7: no se comprueban rangos de NUIP.
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| H-FRA-1 | El holograma de la cédula amarilla ocupa una región fija del anverso y su tono o brillo varía entre frames al mover la tarjeta; una fotocopia no varía | Conocimiento general de elementos ópticamente variables | pendiente | Sin medición sobre espécimen ni cédula real |
+| H-FRA-3 | La cédula digital en policarbonato conserva el radio de esquina ISO/IEC 7810 ID-1 (3,18 mm) | ISO/IEC 7810 | pendiente | Sin medición sobre cédula real |

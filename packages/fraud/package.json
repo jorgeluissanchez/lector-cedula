@@ -1,0 +1,21 @@
+{
+  "name": "@lector-cedula/fraud",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Señal de riesgo de presentación fraudulenta de la cédula, en el dispositivo y offline (cambio deteccion-fraude).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./sintetico": { "types": "./dist/sintetico/index.d.ts", "default": "./dist/sintetico/index.js" }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lector-cedula/parsers": "0.0.0"
+  }
+}

@@ -36,7 +36,9 @@
     "e2e:videos": "node e2e/videos/generar.mjs",
     "test:visual": "node tools/visual.mjs",
     "test:lighthouse": "npm run build -w @lector-cedula/pwa && node tools/lighthouse.mjs",
-    "test:webkit": "node tools/visual.mjs --webkit"
+    "test:webkit": "node tools/visual.mjs --webkit",
+    "fraude:sinteticos": "tsc -b && node tools/fraude/generar-sinteticos.mjs",
+    "eval:fraude": "tsc -b && node evals/runners/fraude/eval-fraude.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

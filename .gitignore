@@ -60,3 +60,7 @@ models/tesseract/
 /*.heic
 /*.webp
 .lighthouseci/
+
+# Cambio deteccion-fraude: escenas sintéticas generadas y reporte efímero del corredor
+evals/sinteticos/fraude/
+evals/reports/fraude-latest.json

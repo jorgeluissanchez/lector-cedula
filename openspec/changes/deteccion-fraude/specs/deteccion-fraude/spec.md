@@ -44,7 +44,7 @@ El paquete MUST NOT escribir imágenes, frames, recortes ni la señal en almacen
 - **THEN** sale con código 0 sin excepciones `privacidad-ok` nuevas en `packages/fraud/src`
 
 ### Requirement: FRA-04 La señal no bloquea por defecto
-Con la configuración por defecto, `accion` MUST ser `"continuar"` o `"revisar"`, nunca `"bloquear"`, y la lectura de datos MUST completarse igual. `"bloquear"` MUST aparecer solo si la instancia define `bloquearSi` y la señal lo cumple. Ningún motivo aislado MUST producir `"bloquear"` salvo que `bloquearSi.motivoUnico` lo permita expresamente.
+Con la configuración por defecto, `accion` MUST ser `"continuar"` o `"revisar"`, nunca `"bloquear"`, y la lectura de datos MUST completarse igual. `"bloquear"` MUST aparecer solo si la instancia define `bloquearSi` y la señal lo cumple. `"bloquear"` MUST exigir al menos 2 motivos distintos que superen la política, salvo que la instancia configure explícitamente `bloquearSi.motivoUnico: true` (decisión P3).
 
 #### Scenario: Pantalla con configuración por defecto
 - **WHEN** se evalúa `amarilla-pantalla-semilla-1` con la configuración por defecto
@@ -52,6 +52,14 @@ Con la configuración por defecto, `accion` MUST ser `"continuar"` o `"revisar"`
 
 #### Scenario: Instancia que bloquea por puntaje
 - **WHEN** se evalúa `amarilla-pantalla-semilla-1` con `bloquearSi: { puntajeMinimo: 70, motivosMinimos: 1, motivoUnico: true }`
+- **THEN** `accion` es `"bloquear"`
+
+#### Scenario: Un solo motivo sin motivoUnico no bloquea
+- **WHEN** se evalúa una entrada con un solo motivo de puntaje 90 y `bloquearSi: { puntajeMinimo: 70, motivosMinimos: 2 }`
+- **THEN** `accion` es `"revisar"`
+
+#### Scenario: Dos motivos distintos bloquean
+- **WHEN** se evalúa una entrada con motivos `pantalla` 0,9 y `recorte` 0,8 y `bloquearSi: { puntajeMinimo: 70, motivosMinimos: 2 }`
 - **THEN** `accion` es `"bloquear"`
 
 #### Scenario: Instancia que exige dos motivos
@@ -65,12 +73,16 @@ Umbrales, pesos y `bloquearSi` MUST leerse de un objeto `ConfigFraude` validado.
 - **WHEN** se valida `{ umbralMedio: 80, umbralAlto: 50 }`
 - **THEN** el resultado es `{ ok: false, error: "config-fraude-invalida", campo: "umbralAlto" }`
 
+#### Scenario: motivosMinimos 1 sin motivoUnico
+- **WHEN** se valida `{ bloquearSi: { puntajeMinimo: 70, motivosMinimos: 1 } }` sin `motivoUnico: true`
+- **THEN** el resultado es `{ ok: false, error: "config-fraude-invalida", campo: "bloquearSi.motivosMinimos" }`
+
 #### Scenario: Nivel por umbrales
 - **WHEN** el puntaje agregado es 39, 40, 69 y 70 con los umbrales por defecto
 - **THEN** `nivel` es `"bajo"`, `"medio"`, `"medio"` y `"alto"` respectivamente
 
 ### Requirement: FRA-06 Agregación determinista y explicable
-El `puntaje` global MUST calcularse como `round(100 * (1 - prod(1 - p_i * w_i)))` sobre los puntajes por motivo `p_i` en [0,1] y pesos `w_i` de la configuración, de modo que es monótono no decreciente en cada `p_i`. La misma entrada y configuración MUST producir el mismo resultado byte a byte.
+El `puntaje` global MUST calcularse como `round(100 * (1 - prod(1 - p_i * w_i)))` sobre los puntajes por motivo `p_i` en [0,1] y pesos `w_i` de la configuración, de modo que es monótono no decreciente en cada `p_i`. Solo entran en `motivos` y en la agregación los motivos con puntaje >= 0,3. La misma entrada y configuración MUST producir el mismo resultado byte a byte.
 
 #### Scenario: Agregación literal
 - **WHEN** los motivos son `pantalla` 0,5 y `edicion` 0,5 con pesos 1
@@ -129,7 +141,7 @@ El detector `edicion` MUST buscar bloques 8x8 con firma de doble cuantización J
 - **THEN** `motivos` contiene `edicion` con `detalle` `"doble-compresion"` o `"superposicion"`
 
 ### Requirement: FRA-11 Consistencia de datos
-El detector `inconsistencia` MUST reutilizar los validadores de `packages/parsers` (NUIP, dígito ICAO, DIVIPOL y parsers) sin duplicar su lógica, con reloj inyectado, y emitir `detalle` en `fecha-imposible`, `nuip-fuera-de-rango`, `municipio-inexistente`, `vencido`, `digito-control`, `mrz-vs-visible`, `pdf417-vs-visible`. Los rangos de NUIP son **hipótesis** H-FRA-2.
+El detector `inconsistencia` MUST reutilizar los validadores de `packages/parsers` (NUIP, dígito ICAO, DIVIPOL y parsers) sin duplicar su lógica, con reloj inyectado, y emitir `detalle` en `fecha-imposible`, `nuip-formato`, `municipio-inexistente`, `vencido`, `digito-control`, `mrz-vs-visible`, `pdf417-vs-visible`. Sin rangos de NUIP (P7): `nuip-formato` solo cuando `validarFormatoNuip` rechaza.
 
 #### Scenario: Nacimiento posterior a expedición
 - **WHEN** los datos tienen nacimiento `2005-03-01` y expedición `2004-01-10`
@@ -220,3 +232,17 @@ La pantalla `resultado` MUST mostrar el nivel de riesgo y los motivos en españo
 #### Scenario: Auténtico en E2E
 - **WHEN** la cámara simulada reproduce `amarilla-1080p.y4m`
 - **THEN** `data-riesgo-nivel` es `bajo`
+
+### Requirement: FRA-18 Vencimiento solo en la cédula digital
+El `detalle` `vencido` MUST emitirse solo cuando `tipo` es `"digital"` (decisión P5); la cédula amarilla no tiene fecha de vencimiento.
+
+#### Scenario: La amarilla nunca vence
+- **WHEN** se evalúa la amarilla con datos que incluyen una fecha `vencimiento` `2026-01-31` y el reloj inyectado es `2026-10-08`
+- **THEN** no se emite `vencido`
+
+### Requirement: FRA-19 Set de campo bloqueado hasta revisión legal
+La recolección de ataques físicos (fotocopias, pantallas) con cédulas reales MUST NOT empezar hasta que exista una aprobación legal escrita en `docs/legal/` (decisión P4).
+
+#### Scenario: Sin aprobación legal
+- **WHEN** no existe `docs/legal/aprobacion-set-campo.md`
+- **THEN** la tarea 6.3 permanece abierta y no existe ningún `evals/reports/fraude-campo-*.json`
