@@ -128,10 +128,12 @@ describe("CAL-07 Score y motivo", { timeout: 60_000 }, () => {
           alto: fc.constant(alto),
           // Píxeles arbitrarios (incluido alfa) desde una semilla: generar 16 KB elemento a elemento con fast-check
           // multiplicaba por diez la duración sin ampliar el dominio.
-          bytes: fc.integer({ min: 0, max: 0xffffffff }).map((semilla) => {
+          // El techo de la intensidad (1..256) cubre de frames casi negros a ruido completo: sin él, el ruido uniforme
+          // daba casi siempre el mismo motivo y la comprobación de no vacuidad fallaba de forma intermitente.
+          bytes: fc.tuple(fc.integer({ min: 0, max: 0xffffffff }), fc.integer({ min: 1, max: 256 })).map(([semilla, techo]) => {
             const r = prng(semilla);
             const bytes = new Uint8Array(ancho * alto * 4);
-            for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(r() * 256);
+            for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(r() * techo);
             return bytes;
           }),
         }),

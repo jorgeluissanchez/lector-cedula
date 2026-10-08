@@ -31,11 +31,16 @@
     "leer-foto": "node tools/leer-foto.mjs",
     "modelos:mrz": "node tools/modelos/descargar-mrz.mjs",
     "eval:mrz-imagen": "tsc -b && node evals/runners/mrz-imagen.mjs",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "e2e:videos": "node e2e/videos/generar.mjs",
+    "test:visual": "node tools/visual.mjs",
+    "test:lighthouse": "npm run build -w @lector-cedula/pwa && node tools/lighthouse.mjs",
+    "test:webkit": "node tools/visual.mjs --webkit"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.39.5",
+    "@lhci/cli": "0.15.1",
     "@playwright/test": "^1.63.0",
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",

@@ -14,6 +14,7 @@
     "vite": "7.3.7"
   },
   "dependencies": {
-    "preact": "10.29.8"
+    "preact": "10.29.8",
+    "@lector-cedula/capture": "0.0.0"
   }
 }

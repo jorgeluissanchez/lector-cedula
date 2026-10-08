@@ -1,0 +1,18 @@
+/* Estilos de la PWA. Contraste AA sobre fondo opaco; botones de 44 px o más (CAM-09). */
+:root { color-scheme: dark; font-family: system-ui, sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #111; color: #fff; }
+.pantalla { position: relative; min-height: 100vh; }
+.escena { position: fixed; inset: 0; background: #000; }
+.video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.guia { position: absolute; border: 3px solid #4ade80; border-radius: 12px; pointer-events: none; }
+.panel { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 12px; padding: 16px; max-width: 40rem; margin: 0 auto; }
+.pantalla[data-pantalla="activo"] .panel { position: fixed; left: 0; right: 0; bottom: 0; }
+h1 { font-size: 1.5rem; margin: 0; }
+.estado { margin: 0; padding: 8px 12px; background: #111; border-radius: 8px; font-size: 1.125rem; min-height: 1.5em; }
+.estado:empty { padding: 0; background: none; min-height: 0; }
+.aviso { margin: 0; padding: 8px 12px; background: #3b2f00; color: #fde68a; border-radius: 8px; }
+.acciones { display: flex; gap: 12px; flex-wrap: wrap; }
+.boton { min-width: 44px; min-height: 48px; padding: 12px 20px; font-size: 1rem; border: 0; border-radius: 8px; background: #15803d; color: #fff; cursor: pointer; }
+.boton.secundario { background: #374151; }
+.boton:focus-visible { outline: 3px solid #fde68a; outline-offset: 2px; }

@@ -23,6 +23,14 @@ La PWA SHALL servir un manifiesto web válido y registrar un service worker que 
 - **WHEN** se completa el flujo desde "Iniciar cámara" hasta `listo` con el vídeo `nitida-1080p` y se listan las claves de todas las cachés de `CacheStorage`
 - **THEN** cada URL es del mismo origen y su ruta cumple `^/(index\.html|manifest\.webmanifest|sw\.js|iconos/[^/]+\.png|assets/[^/]+)?$`
 
+#### Scenario: Worker de calidad precacheado
+- **WHEN** se calcula la lista de precarga del service worker a partir de los nombres emitidos por la compilación
+- **THEN** contiene `/`, `/index.html`, `/manifest.webmanifest`, los iconos y todos los archivos de `assets/`, incluido el chunk `assets/calidad.worker-*.js` (requisito offline, OFF-01 del cambio `pwa-lectura-offline`), y nada más
+
+#### Scenario: Análisis sin conexión
+- **WHEN** se visita `/`, se espera a que `navigator.serviceWorker.controller` deje de ser `null`, se activa `context.setOffline(true)`, se recarga y se pulsa "Iniciar cámara" con el vídeo `nitida-1080p`
+- **THEN** `data-pantalla` llega a `listo`
+
 ### Requirement: CAM-02 Contexto seguro y soporte de cámara
 Antes de pedir la cámara, la PWA MUST comprobar `window.isSecureContext` y la existencia de `navigator.mediaDevices.getUserMedia`. Si falta alguno, MUST mostrar la pantalla `error` con el código y el texto del escenario y MUST NOT invocar `getUserMedia`. El contexto inseguro tiene prioridad sobre la falta de soporte.
 
@@ -179,7 +187,7 @@ Durante todo el flujo, la PWA MUST NOT enviar por red, guardar en el navegador n
 
 #### Scenario: Código fuente sin salidas de datos
 - **WHEN** se analizan los archivos de `packages/capture/src/` y `apps/pwa/src/`
-- **THEN** no aparece ninguno de `fetch(`, `XMLHttpRequest`, `sendBeacon`, `WebSocket`, `EventSource`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `getDirectory`, `createObjectURL`, `toBlob`, `toDataURL` ni `convertToBlob`, salvo `fetch(` y `caches` en el archivo del service worker, y `npm run check:privacidad` termina con 0 hallazgos
+- **THEN** no aparece ninguno de `fetch(`, `XMLHttpRequest`, `sendBeacon`, `WebSocket`, `EventSource`, `localStorage`, `sessionStorage`, `indexedDB`, `caches`, `getDirectory`, `createObjectURL`, `toBlob`, `toDataURL` ni `convertToBlob`, salvo `fetch(` y `caches` en el archivo del service worker y `convertToBlob` en `packages/capture/src/mrz/entorno.ts` (codificación PNG en memoria que el lector MRZ del cambio `leer-mrz-desde-imagen` entrega a Tesseract.js dentro del dispositivo; el resultado no se guarda ni se envía), y `npm run check:privacidad` termina con 0 hallazgos
 
 #### Scenario: Borrado de la captura
 - **WHEN** en Chromium real (Vitest browser) se libera una captura aceptada de 1920x1080
@@ -193,5 +201,5 @@ La compilación de producción MUST obtener en Lighthouse (configuración móvil
 - **THEN** todas las aserciones pasan: `categories:performance` >= 0,90, `categories:accessibility` >= 0,95 y `resource-summary:script:size` <= 307200 bytes
 
 #### Scenario: Worker diferido
-- **WHEN** se registran las peticiones desde la carga de `/` hasta que el botón "Iniciar cámara" es visible, y después hasta que `data-pantalla` vale `activo`
-- **THEN** en el primer tramo ninguna ruta contiene `calidad.worker` y en el segundo exactamente una petición la contiene
+- **WHEN** se registran las peticiones de la página (no las del service worker) desde la carga de `/` hasta que el botón "Iniciar cámara" es visible, y después hasta que `data-pantalla` vale `activo`
+- **THEN** en el primer tramo ninguna ruta contiene `calidad.worker`, en el segundo exactamente una petición de la página la contiene, y el código del Worker no está en el chunk inicial (la precarga del service worker no cuenta como carga en ejecución)

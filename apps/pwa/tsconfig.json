@@ -5,11 +5,22 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "rootDir": ".",
     "outDir": "node_modules/.cache/tsc",
     "tsBuildInfoFile": "node_modules/.cache/tsc/.tsbuildinfo",
     "emitDeclarationOnly": true
   },
-  "include": ["src", "vite.config.ts"]
+  "include": [
+    "src",
+    "vite.config.ts",
+    "plugin-pwa.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/capture"
+    }
+  ]
 }

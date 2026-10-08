@@ -58,3 +58,4 @@ models/tesseract/
 /*.png
 /*.heic
 /*.webp
+.lighthouseci/

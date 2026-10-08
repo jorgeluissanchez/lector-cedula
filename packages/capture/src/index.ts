@@ -84,3 +84,6 @@ export {
   type ResultadoLectorMrz,
   type WorkerOcr,
 } from "./mrz/lector.js";
+
+// Cámara trasera (CAM-03, CAM-04, CAM-06, CAM-10), tarea 5.3 de captura-calidad-pwa.
+export { iniciarCamara, RESTRICCIONES_CAMARA, type Camara, type Medios } from "./navegador/camara.js";
