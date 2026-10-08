@@ -44,15 +44,22 @@ Con `admitirTarjetaIdentidad` en `true`, `leerDocumento` MUST: (a) dar `"tarjeta
 - **WHEN** con el parámetro encendido se lee una TI sintética (PDF417 prefijo `I3`) con `fechaNacimiento` `2008-10-09` y otra con `2008-10-08`, ambas con `fechaReferencia` `2026-10-08`
 - **THEN** la primera es `tarjeta-identidad` y la segunda `{ ok: false, error: "ti-mayor-de-edad" }`
 
+### Requirement: OD-32b Menores de 7 años
+Con `admitirTarjetaIdentidad` en `true`, una persona menor de 7 años a la `fechaReferencia` MUST dar `{ ok: false, tipo, error: "documento-no-admitido" }`: su documento es el registro civil (decisión del orquestador 2).
+
+#### Scenario: Frontera de 7 años
+- **WHEN** con el parámetro encendido y autorización se lee una TI sintética (PDF417 prefijo `I3`) con `fechaNacimiento` `2019-10-09` y otra con `2019-10-08`, ambas con `fechaReferencia` `2026-10-08`
+- **THEN** la primera es `{ ok: false, error: "documento-no-admitido" }` y la segunda `tarjeta-identidad`
+
 ### Requirement: OD-32a CE y pasaporte de menores
-Una CE o un pasaporte de una persona menor de 18 años MUST dar `menor-de-edad` con el parámetro apagado y, con el parámetro encendido, `ok: true` con `menorDeEdad: true` sujeto a la autorización de OD-34.
+Una CE o un pasaporte de una persona menor de 18 años MUST dar `menor-de-edad` con el parámetro apagado y, con el parámetro encendido, `ok: true` con `menorDeEdad: true` sujeto a la misma autorización de OD-34.
 
 #### Scenario: Pasaporte de un menor
 - **WHEN** se lee un pasaporte sintético de una persona de 10 años con el parámetro apagado y, aparte, encendido con autorización
 - **THEN** el primero es `menor-de-edad` y el segundo `ok: true` con `tipoDocumento: "pasaporte"` y `menorDeEdad: true`
 
 ### Requirement: OD-33 Identificación de la TI (hipótesis)
-Un documento MUST identificarse como TI si: en PDF417, los bytes `[0,2)` son `I3` (hipótesis H12, pendiente); en MRZ TD1, `IC`+`COL` no (es CC), y un código `IT` o `TI` con emisor `COL` sí (hipótesis T01, pendiente). Cada identificación añade el warning de su hipótesis. Un PDF417 de menor sin prefijo `I3` se trata como TI solo por edad (warning `"H10"`).
+Un documento MUST identificarse como TI si: en PDF417, los bytes `[0,2)` son `I3` (hipótesis H12, pendiente); en MRZ TD1, `IC`+`COL` no (es CC), un código `IT` o `TI` con emisor `COL` es TI (T01, pendiente) y se rechaza (OD-11b). Cada identificación añade el warning de su hipótesis. Un PDF417 de menor sin prefijo `I3` se trata como TI solo por edad (warning `"H10"`).
 
 #### Scenario: Prefijo 03 de un menor
 - **WHEN** con el parámetro encendido y autorización se lee un PDF417 sintético con prefijo `03` de una persona de 15 años
@@ -60,7 +67,7 @@ Un documento MUST identificarse como TI si: en PDF417, los bytes `[0,2)` son `I3
 
 #### Scenario: TD1 IT sintético
 - **WHEN** con el parámetro encendido y autorización se lee un TD1 sintético `IT`+`COL` válido de 15 años
-- **THEN** `tipoDocumento` es `"tarjeta-identidad"` y `warnings` contiene `"T01"`
+- **THEN** el resultado es `{ ok: false, error: "documento-no-admitido" }` y `warnings` contiene `"T01"`
 
 ### Requirement: OD-34 Autorización del representante legal
 Con el parámetro encendido, antes de devolver campos de un menor (`tipoDocumento: "tarjeta-identidad"` o `menorDeEdad: true`), la lectura MUST exigir la autorización expresa del representante legal (Ley 1581 de 2012 art. 7; Decreto 1377 de 2013 art. 12, compilado en el Decreto 1074 de 2015). En la API es `autorizacionRepresentante: true`; sin él, 422 `autorizacion-representante-requerida` sin campos. En la PWA es la pantalla `autorizacion-representante` (OD-34b).

@@ -65,6 +65,7 @@ Set de campo (solo desarrollo): fotos reales con consentimiento firmado, cifrada
 8. ¿Se pueden fotografiar cédulas reales para el set de campo cubriendo la foto? ¿Qué plazo máximo recomienda?
 9. ¿Qué exclusiones de responsabilidad son válidas en los términos frente a integradores y frente a consumidores?
 10. ¿La obligación CompartirIgual de CC BY-SA 4.0 se limita al módulo de datos adaptado?
+11. Tarjeta de identidad y documentos de menores (cambio `otros-documentos`, activable con `LECTOR_ADMITIR_TI` o `VITE_ADMITIR_TI`): la PWA pide al representante legal marcar una casilla de autorización sin registrar su nombre ni su documento. ¿Esa autorización, sin identificar al representante, cumple la Ley 1581 de 2012 art. 7 y el Decreto 1377 de 2013 art. 12 (y la prueba del art. 8), o debe identificarse al representante y conservarse esa prueba?
 
 ## 6. Archivos del paquete
 

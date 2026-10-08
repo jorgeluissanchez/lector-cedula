@@ -56,3 +56,20 @@ El lector admite hoy la cédula de ciudadanía (amarilla PDF417 y digital MRZ TD
 | OD-35 | Unitaria de presencia de textos legales | Vitest | `npx vitest run tools/test/legal-ti.test.mjs` | 100 % de escenarios |
 | OD-40 | Unitaria de `privacidad-check` con casos que deben fallar | Vitest | `npx vitest run tools/test` y `npm run check:privacidad` | detecta 2 de 2 casos; repo limpio |
 | Todos | Puerta completa | npm | `npm run check` | verde |
+
+## Decisiones del orquestador por delegación del usuario, 2026-10-08
+
+1. **TI solo por PDF417.** Una MRZ TD1 con código `IT` o `TI` y emisor `COL` (hipótesis T01) no se admite: `clasificarDocumento` da `documento-no-admitido` con el warning `"T01"` (OD-11b, OD-33).
+2. **Menores de 7 años.** Con la TI encendida, una persona menor de 7 años a la `fechaReferencia` se rechaza con `documento-no-admitido`: su documento es el registro civil, no la TI (OD-32b).
+3. **CE y pasaporte de menores** se admiten solo con el parámetro encendido y la misma autorización del representante de OD-34 (OD-32a).
+4. **Pasaporte vencido** es el warning `"documento-vencido"`, no un rechazo; decide el integrador (OD-05).
+5. **`tipo` obsoleto** se mantiene un ciclo y se retira en el próximo cambio (OD-22).
+6. **P01**: el dato opcional del pasaporte se devuelve sin interpretar; no se valida como NUIP ni se expone como `nuip` (OD-01c).
+7. **Autorización sin identificar al representante**: la pregunta jurídica va a `docs/legal/PARA-EL-ABOGADO.md` (OD-34b).
+8. **CE con hipótesis**: se implementa con CE01, CE02, CE03, CE05, CE06 y CE07 como warnings hasta confirmar con espécimen (docs/investigacion/05-cedula-extranjeria-y-ti.md); CE04 no es warning porque se cumple no decodificando el 2D (OD-11a, OD-13).
+
+### Decisiones del implementador de la fase 1 (trasladadas a la spec)
+
+9. `nombrePaisEmisor` y `nombreNacionalidad` van en la raíz del resultado de `parsearMrzTd3` y `parsearMrzTd1`, no en `campos`, para que `campos` sea exactamente el de OD-01a (OD-01b, OD-10b).
+10. Una `fechaReferencia` presente que no sea `AAAA-MM-DD` existente da `error: "fecha-referencia-invalida"` en ambos parsers; ausente usa la fecha del sistema en `America/Bogota` (OD-05a).
+11. `parsearMrzTd3` y `parsearMrzTd1` no normalizan espacios ni minúsculas: cualquier carácter fuera de `0-9A-Z<` da `formato-td3` o `formato-td1`; la limpieza del OCR es del lector de imagen (OD-01b, OD-10b).

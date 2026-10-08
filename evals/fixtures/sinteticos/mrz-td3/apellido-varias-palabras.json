@@ -1,0 +1,35 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-td3",
+  "descripcion": "OD-01a: DE LA OSSA y sexo M",
+  "entrada": [
+    "P<COLDE<LA<OSSA<<JUAN<<<<<<<<<<<<<<<<<<<<<<<",
+    "AZ76543211COL8501019M3001019<<<<<<<<<<<<<<<0"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "codigoDocumento": "P",
+    "estadoEmisor": "COL",
+    "apellidos": "DE LA OSSA",
+    "nombres": "JUAN",
+    "numeroDocumento": "AZ7654321",
+    "nacionalidad": "COL",
+    "fechaNacimiento": "1985-01-01",
+    "sexo": "M",
+    "fechaVencimiento": "2030-01-01",
+    "datoOpcional": null,
+    "nombrePaisEmisor": "Colombia",
+    "nombreNacionalidad": "Colombia",
+    "cd_numeroDocumento": "valido",
+    "cd_nacimiento": "valido",
+    "cd_vencimiento": "valido",
+    "cd_datoOpcional": "valido",
+    "cd_compuesto": "valido",
+    "correcciones": 0,
+    "warnings": ""
+  }
+}

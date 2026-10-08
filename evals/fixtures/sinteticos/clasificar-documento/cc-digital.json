@@ -1,0 +1,24 @@
+{
+  "sintetico": true,
+  "tipo": "clasificar-documento",
+  "descripcion": "OD-11: digital colombiana",
+  "entrada": [
+    "ICCOL1234567897<<<<<<<<<<<<<<<",
+    "8001014F3001019COL1234567890<5",
+    "PEREZ<<ANA<<<<<<<<<<<<<<<<<<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "tipoDocumento": "cedula-ciudadania",
+    "fuente": "mrz-td1",
+    "numeroDocumento": "123456789",
+    "nacionalidad": "COL",
+    "apellidos": "PEREZ",
+    "nombres": "ANA",
+    "warnings": ""
+  }
+}

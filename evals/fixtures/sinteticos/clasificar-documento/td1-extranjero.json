@@ -1,0 +1,19 @@
+{
+  "sintetico": true,
+  "tipo": "clasificar-documento",
+  "descripcion": "OD-11: TD1 con emisor ESP",
+  "entrada": [
+    "I<ESP1234567<<4<<<<<<<<<<<<<<<",
+    "8001014F3001019VEN<<<<<<<<<<<4",
+    "GARCIA<<MARIA<JOSE<<<<<<<<<<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": false,
+    "error": "documento-no-admitido",
+    "warnings": ""
+  }
+}

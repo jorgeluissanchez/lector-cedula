@@ -23,7 +23,7 @@ El lector MRZ desde imagen (LMI) MUST aceptar un parámetro `formato: "td1" | "t
 - **THEN** el resultado tiene `tipoDocumento: "cedula-extranjeria"`, TD3 tiene 1 llamada antes que TD1 y PDF417 0 llamadas
 
 ### Requirement: OD-22 Salida unificada con tipoDocumento
-`leerDocumento`, el SDK y el servidor MUST devolver en el éxito `{ ok: true, tipoDocumento, fuente, campos, warnings }`, con `tipoDocumento` en `"cedula-ciudadania" | "cedula-extranjeria" | "pasaporte" | "tarjeta-identidad"` y `fuente` en `"pdf417" | "mrz-td1" | "mrz-td3"`. El campo `tipo` actual se conserva un ciclo, marcado obsoleto en el OpenAPI; los errores conservan `{ ok: false, tipo, error }`.
+`leerDocumento`, el SDK y el servidor MUST devolver en el éxito `{ ok: true, tipoDocumento, fuente, campos, warnings }`, con `tipoDocumento` en `"cedula-ciudadania" | "cedula-extranjeria" | "pasaporte" | "tarjeta-identidad"` y `fuente` en `"pdf417" | "mrz-td1" | "mrz-td3"`. El campo `tipo` actual se conserva un ciclo, marcado obsoleto en el OpenAPI, y se retira en el cambio siguiente a este; los errores conservan `{ ok: false, tipo, error }`.
 
 #### Scenario: Contrato del servidor
 - **WHEN** Schemathesis ejecuta `--checks all` contra `/openapi.json` con los ejemplos de los cuatro `tipoDocumento`

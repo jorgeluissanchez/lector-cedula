@@ -1,0 +1,35 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-td3",
+  "descripcion": "OD-03: O en la fecha de nacimiento",
+  "entrada": [
+    "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
+    "L898902C36UTO74O8122F1204159ZE184226B<<<<<10"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "codigoDocumento": "P",
+    "estadoEmisor": "UTO",
+    "apellidos": "ERIKSSON",
+    "nombres": "ANNA MARIA",
+    "numeroDocumento": "L898902C3",
+    "nacionalidad": "UTO",
+    "fechaNacimiento": "1974-08-12",
+    "sexo": "F",
+    "fechaVencimiento": "2012-04-15",
+    "datoOpcional": "ZE184226B",
+    "nombrePaisEmisor": "Utopía (espécimen ICAO)",
+    "nombreNacionalidad": "Utopía (espécimen ICAO)",
+    "cd_numeroDocumento": "valido",
+    "cd_nacimiento": "valido",
+    "cd_vencimiento": "valido",
+    "cd_datoOpcional": "valido",
+    "cd_compuesto": "valido",
+    "correcciones": 1,
+    "warnings": "documento-vencido,pais-especimen"
+  }
+}

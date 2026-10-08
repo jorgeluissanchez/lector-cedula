@@ -1,0 +1,35 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-td3",
+  "descripcion": "OD-01a: pasaporte colombiano sintético, apellido compuesto y Ñ transliterada",
+  "entrada": [
+    "P<COLPEREZ<NUNEZ<<ANA<MARIA<<<<<<<<<<<<<<<<<",
+    "AZ12345673COL9002155F31021451234567890<<<<78"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "codigoDocumento": "P",
+    "estadoEmisor": "COL",
+    "apellidos": "PEREZ NUNEZ",
+    "nombres": "ANA MARIA",
+    "numeroDocumento": "AZ1234567",
+    "nacionalidad": "COL",
+    "fechaNacimiento": "1990-02-15",
+    "sexo": "F",
+    "fechaVencimiento": "2031-02-14",
+    "datoOpcional": "1234567890",
+    "nombrePaisEmisor": "Colombia",
+    "nombreNacionalidad": "Colombia",
+    "cd_numeroDocumento": "valido",
+    "cd_nacimiento": "valido",
+    "cd_vencimiento": "valido",
+    "cd_datoOpcional": "valido",
+    "cd_compuesto": "valido",
+    "correcciones": 0,
+    "warnings": ""
+  }
+}

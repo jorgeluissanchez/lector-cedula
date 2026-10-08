@@ -4,12 +4,12 @@
 
 ## 1. Parsers puros (`packages/parsers`)
 
-- [ ] 1.1 Generador sintético de TD3 y TD1 genérico en `fixture-sintetico` (los literales de las specs como casos fijos). Cubre: OD-01, OD-02, OD-10. Tipos: unitaria del generador y propiedad (dígitos válidos por construcción). Verificación: `npx vitest run packages/fixtures`.
-- [ ] 1.2 `paises-icao.ts` con 249 alfa-3, especiales ICAO y `UTO` espécimen. Cubre: OD-04. Tipos: unitaria y mutación. Verificación: `npx vitest run packages/parsers/test/paises-icao` y `npm run test:mutacion`.
-- [ ] 1.3 Pruebas en rojo y `parsearMrzTd3`. Cubre: OD-01, OD-01a, OD-02, OD-03, OD-05. Tipos: unitaria, propiedad (nunca lanza, round-trip), mutación. Verificación: `npx vitest run packages/parsers/test/mrz-td3` y `npm run test:mutacion`.
+- [x] 1.1 Generador sintético de TD3 y TD1 genérico en `fixture-sintetico` (los literales de las specs como casos fijos). Ubicado en `packages/parsers/test/ayudas/generador-mrz-icao.ts` para no alterar la interfaz estable de `@lector-cedula/fixtures` (FX-02); se prueba por round-trip en `packages/parsers/test/mrz-icao.propiedades.test.ts`. Cubre: OD-01, OD-02, OD-10. Tipos: unitaria del generador y propiedad (dígitos válidos por construcción). Verificación: `npx vitest run packages/fixtures`.
+- [x] 1.2 `paises-icao.ts` con 249 alfa-3, especiales ICAO y `UTO` espécimen. Cubre: OD-04. Tipos: unitaria y mutación. Verificación: `npx vitest run packages/parsers/test/paises-icao` y `npm run test:mutacion`.
+- [x] 1.3 Pruebas en rojo y `parsearMrzTd3`. Cubre: OD-01, OD-01a, OD-02, OD-03, OD-05. Tipos: unitaria, propiedad (nunca lanza, round-trip), mutación. Verificación: `npx vitest run packages/parsers/test/mrz-td3` y `npm run test:mutacion`.
 - [ ] 1.4 Prueba diferencial contra `cheminfo/mrz` como devDependency (requiere 5.1 antes). Cubre: OD-02. Tipos: diferencial. Verificación: `npx vitest run packages/parsers/test/mrz-td3.diferencial`.
-- [ ] 1.5 Pruebas en rojo y `parsearMrzTd1` genérico, sin cambiar `parsearMrzCedulaDigital`. Cubre: OD-10, OD-10a. Tipos: unitaria, propiedad, regresión, mutación. Verificación: `npx vitest run packages/parsers` y `npm run test:mutacion`.
-- [ ] 1.6 `clasificarDocumento` (CC, CE, TI, pasaporte, no admitido) con warnings de hipótesis. Cubre: OD-11, OD-12, OD-33. Tipos: unitaria y mutación. Verificación: `npx vitest run packages/parsers/test/clasificar-documento`.
+- [x] 1.5 Pruebas en rojo y `parsearMrzTd1` genérico, sin cambiar `parsearMrzCedulaDigital`. Cubre: OD-10, OD-10a. Tipos: unitaria, propiedad, regresión, mutación. Verificación: `npx vitest run packages/parsers` y `npm run test:mutacion`.
+- [x] 1.6 `clasificarDocumento` (CC, CE, TI, pasaporte, no admitido) con warnings de hipótesis. Cubre: OD-11, OD-12, OD-33. Tipos: unitaria y mutación. Verificación: `npx vitest run packages/parsers/test/clasificar-documento`.
 
 ## 2. Captura y lectura (`packages/capture`)
 

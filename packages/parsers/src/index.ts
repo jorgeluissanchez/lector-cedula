@@ -53,3 +53,14 @@ export type {
 // equivalencia con DIVIPOLA del DANE vive en el punto de entrada separado ./divipola y nunca se importa aquí (DV-17).
 export { DIVIPOL_METADATOS, buscarDivipol } from "./divipol/buscar.js";
 export type { MotivoDivipolNoEncontrado, ResultadoDivipol, TipoLugarDivipol } from "./divipol/buscar.js";
+
+// Otros documentos por MRZ ICAO 9303 (cambio otros-documentos): pasaporte TD3, TD1 genérico y clasificación.
+export { buscarPaisIcao, PAISES_ICAO } from "./paises-icao.js";
+export type { PaisIcao } from "./paises-icao.js";
+export type { CorreccionIcao, EstadoDigitoIcao, SexoIcao } from "./mrz-icao-comun.js";
+export { parsearMrzTd3 } from "./mrz-td3.js";
+export type { CamposMrzTd3, DigitosControlTd3, ErrorMrzTd3, ResultadoMrzTd3 } from "./mrz-td3.js";
+export { parsearMrzTd1 } from "./mrz-td1.js";
+export type { CamposMrzTd1, CorreccionTd1, DigitosControlTd1, ErrorMrzTd1, ResultadoMrzTd1 } from "./mrz-td1.js";
+export { clasificarDocumento } from "./clasificar-documento.js";
+export type { ResultadoClasificacion, TipoDocumentoMrz } from "./clasificar-documento.js";

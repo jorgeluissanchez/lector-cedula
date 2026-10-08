@@ -1,0 +1,35 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-td3",
+  "descripcion": "OD-04: D<< normalizado a D",
+  "entrada": [
+    "P<D<<MUSTERMANN<<ERIKA<<<<<<<<<<<<<<<<<<<<<<",
+    "C01X00T478D<<6408125F3103315<<<<<<<<<<<<<<<2"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "codigoDocumento": "P",
+    "estadoEmisor": "D",
+    "apellidos": "MUSTERMANN",
+    "nombres": "ERIKA",
+    "numeroDocumento": "C01X00T47",
+    "nacionalidad": "D",
+    "fechaNacimiento": "1964-08-12",
+    "sexo": "F",
+    "fechaVencimiento": "2031-03-31",
+    "datoOpcional": null,
+    "nombrePaisEmisor": "Alemania",
+    "nombreNacionalidad": "Alemania",
+    "cd_numeroDocumento": "valido",
+    "cd_nacimiento": "valido",
+    "cd_vencimiento": "valido",
+    "cd_datoOpcional": "valido",
+    "cd_compuesto": "valido",
+    "correcciones": 0,
+    "warnings": ""
+  }
+}

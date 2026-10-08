@@ -1,0 +1,17 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-td3",
+  "descripcion": "OD-01: código V<",
+  "entrada": [
+    "V<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
+    "L898902C36UTO7408122F1204159ZE184226B<<<<<10"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": false,
+    "error": "no-es-pasaporte"
+  }
+}

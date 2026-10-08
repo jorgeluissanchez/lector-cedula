@@ -1,0 +1,22 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-td3",
+  "descripcion": "OD-02: compuesto alterado",
+  "entrada": [
+    "P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<",
+    "L898902C36UTO7408122F1204159ZE184226B<<<<<11"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": false,
+    "error": "digito-control",
+    "cd_numeroDocumento": "valido",
+    "cd_nacimiento": "valido",
+    "cd_vencimiento": "valido",
+    "cd_datoOpcional": "valido",
+    "cd_compuesto": "invalido"
+  }
+}

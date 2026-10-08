@@ -13,7 +13,44 @@ export const EVALUADORES = {
   "pdf417-amarilla": { modulo: "evals/runners/adaptadores/pdf417-amarilla.mjs", exportar: "evaluarPdf417AmarillaHex" },
   "nuip-formato": { modulo: "packages/parsers/dist/index.js", exportar: "validarFormatoNuip" },
   "mrz-cedula-digital": { modulo: "packages/parsers/dist/index.js", exportar: "parsearMrzCedulaDigital", adaptar: aplanarMrz },
+  // Cambio otros-documentos (OD-01 a OD-05a y OD-10 a OD-12).
+  "mrz-td3": { modulo: "packages/parsers/dist/index.js", exportar: "parsearMrzTd3", adaptar: aplanarMrzIcao },
+  "clasificar-documento": { modulo: "packages/parsers/dist/index.js", exportar: "clasificarDocumento", adaptar: aplanarClasificacion },
 };
+
+/**
+ * Adaptador de `parsearMrzTd3` y `parsearMrzTd1` (cambio otros-documentos): rechazo `{ ok, error }` (y los estados
+ * de los dígitos si `error` es `digito-control`); éxito con `campos`, nombres de país, estado de cada dígito,
+ * número de correcciones y `warnings` unidos con ",".
+ */
+export function aplanarMrzIcao(r) {
+  const digitos = (d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [`cd_${k}`, v]));
+  if (!r.ok) return { ok: false, error: r.error, ...(r.digitosControl ? digitos(r.digitosControl) : {}) };
+  return {
+    ok: true,
+    ...r.campos,
+    nombrePaisEmisor: r.nombrePaisEmisor,
+    nombreNacionalidad: r.nombreNacionalidad,
+    ...digitos(r.digitosControl),
+    correcciones: r.correcciones.length,
+    warnings: r.warnings.join(","),
+  };
+}
+
+/** Adaptador de `clasificarDocumento`: tipo, fuente, número, nacionalidad y warnings, o el error. */
+export function aplanarClasificacion(r) {
+  if (!r.ok) return { ok: false, error: r.error, warnings: (r.warnings ?? []).join(",") };
+  return {
+    ok: true,
+    tipoDocumento: r.tipoDocumento,
+    fuente: r.fuente,
+    numeroDocumento: r.campos.numeroDocumento,
+    nacionalidad: r.campos.nacionalidad,
+    apellidos: r.campos.apellidos,
+    nombres: r.campos.nombres,
+    warnings: r.warnings.join(","),
+  };
+}
 
 /**
  * Adaptador del parser MRZ de la cédula digital (cambio parser-mrz-cedula-digital, design.md decisión 12): resultado

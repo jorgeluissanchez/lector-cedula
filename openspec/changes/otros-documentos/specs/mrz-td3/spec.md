@@ -15,6 +15,13 @@
 - **WHEN** se parsea el espécimen ICAO con la línea 1 empezando por `V<` y los dígitos de control intactos
 - **THEN** el resultado es `{ ok: false, error: "no-es-pasaporte" }`
 
+### Requirement: OD-01b Forma del resultado del TD3
+El éxito de `parsearMrzTd3` MUST ser `{ ok: true, tipoDocumento: "pasaporte", campos, nombrePaisEmisor, nombreNacionalidad, digitosControl, correcciones, warnings }`, con los nombres de país en la raíz y no en `campos`. Un carácter fuera del alfabeto MRZ MUST dar `formato-td3`: el parser no normaliza espacios ni minúsculas (lo hace el lector de imagen).
+
+#### Scenario: Minúsculas y espacios
+- **WHEN** se parsea el espécimen ICAO con la línea 1 en minúsculas y, aparte, con un espacio en lugar de un `<`
+- **THEN** los dos resultados son `{ ok: false, error: "formato-td3" }`
+
 ### Requirement: OD-01a Campos del TD3
 Los campos de `parsearMrzTd3` MUST ser: `codigoDocumento` ([0,2) de la línea 1 sin `<`), `estadoEmisor` [2,5), `apellidos` y `nombres` ([5,44) separados por `<<`, `<` simple como espacio), y de la línea 2 `numeroDocumento` [0,9) sin `<`, `nacionalidad` [10,13), `fechaNacimiento` [13,19) en ISO, `sexo` [20] (`"F"`, `"M"`, o `null` para `<` y `X`), `fechaVencimiento` [21,27) en ISO y `datoOpcional` [28,42) sin `<` (`null` si vacío).
 
@@ -29,6 +36,13 @@ Los campos de `parsearMrzTd3` MUST ser: `codigoDocumento` ([0,2) de la línea 1 
 #### Scenario: Apellido de varias palabras y sexo M (error pasado)
 - **WHEN** se parsea `["P<COLDE<LA<OSSA<<JUAN<<<<<<<<<<<<<<<<<<<<<<<", "AZ76543211COL8501019M3001019<<<<<<<<<<<<<<<0"]`
 - **THEN** `apellidos` es `"DE LA OSSA"`, `nombres` es `"JUAN"`, `sexo` es `"M"` y `datoOpcional` es `null`
+
+### Requirement: OD-01c Dato opcional sin interpretar (P01)
+El `datoOpcional` del pasaporte MUST devolverse sin interpretar mientras la hipótesis P01 siga pendiente: no se valida como NUIP ni se expone como `nuip` (decisión del orquestador 6).
+
+#### Scenario: Pasaporte colombiano sin nuip
+- **WHEN** se parsea el pasaporte colombiano sintético de OD-01a
+- **THEN** `campos.datoOpcional` es `"1234567890"` y el resultado no tiene la clave `nuip` en ningún nivel
 
 ### Requirement: OD-02 Dígitos de control TD3 con digitoControlIcao
 `parsearMrzTd3` MUST verificar con `digitoControlIcao` (MZ-08) los dígitos de número [9], nacimiento [19], vencimiento [27], dato opcional [42] (si el campo es todo `<`, el dígito `<` o `0` es válido) y compuesto [43] (sobre [0,10) + [13,20) + [21,43) de la línea 2). Con cualquier dígito `"invalido"` el resultado MUST ser `{ ok: false, error: "digito-control", digitosControl }` sin campos.
@@ -85,3 +99,10 @@ El paquete MUST incluir `PAISES_ICAO` con los 249 códigos ISO 3166-1 alfa-3, lo
 #### Scenario: Nunca lanza
 - **WHEN** se pasa a `parsearMrzTd3` `fc.anything()`, `fc.string()` y pares de `fc.string({ unit: "binary" })` (numRuns 1000 cada uno)
 - **THEN** nunca lanza y siempre devuelve un objeto con `ok` booleano
+
+### Requirement: OD-05a Fecha de referencia
+Una `fechaReferencia` presente que no sea una fecha `AAAA-MM-DD` existente MUST dar `{ ok: false, error: "fecha-referencia-invalida" }` en `parsearMrzTd3` y `parsearMrzTd1`; sin `fechaReferencia` se usa la fecha del sistema en `America/Bogota`. El pasaporte vencido es un warning y no un rechazo (decisión del orquestador 4).
+
+#### Scenario: Fecha de referencia inexistente
+- **WHEN** se parsea el espécimen ICAO con `fechaReferencia` `"2026-02-30"`
+- **THEN** el resultado es `{ ok: false, error: "fecha-referencia-invalida" }`

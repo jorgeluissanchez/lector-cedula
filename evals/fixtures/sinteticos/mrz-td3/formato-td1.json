@@ -1,0 +1,18 @@
+{
+  "sintetico": true,
+  "tipo": "mrz-td3",
+  "descripcion": "OD-01: TD1 no es TD3",
+  "entrada": [
+    "I<COL1234567<<4<<<<<<<<<<<<<<<",
+    "8001014F3001019VEN<<<<<<<<<<<4",
+    "GARCIA<<MARIA<JOSE<<<<<<<<<<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": false,
+    "error": "formato-td3"
+  }
+}

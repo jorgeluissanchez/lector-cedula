@@ -1,0 +1,24 @@
+{
+  "sintetico": true,
+  "tipo": "clasificar-documento",
+  "descripcion": "OD-11: CE sintética con hipótesis",
+  "entrada": [
+    "I<COL1234567<<4<<<<<<<<<<<<<<<",
+    "8001014F3001019VEN<<<<<<<<<<<4",
+    "GARCIA<<MARIA<JOSE<<<<<<<<<<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "tipoDocumento": "cedula-extranjeria",
+    "fuente": "mrz-td1",
+    "numeroDocumento": "1234567",
+    "nacionalidad": "VEN",
+    "apellidos": "GARCIA",
+    "nombres": "MARIA JOSE",
+    "warnings": "CE01,CE02,CE03,CE05,CE06,CE07"
+  }
+}

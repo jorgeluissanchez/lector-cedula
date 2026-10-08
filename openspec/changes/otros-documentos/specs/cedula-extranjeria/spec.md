@@ -7,6 +7,13 @@
 - **WHEN** se pasa `fc.anything()` y tríos de `fc.string({ unit: "binary" })` (numRuns 1000)
 - **THEN** nunca lanza
 
+### Requirement: OD-10b Forma del resultado del TD1
+`parsearMrzTd1` MUST devolver `{ ok: true, campos, nombrePaisEmisor, nombreNacionalidad, digitosControl, correcciones, warnings }` o `{ ok: false, error }` con `error` en `"formato-td1"` (no son 3 líneas de 30 del alfabeto MRZ; sin normalizar), `"digito-control"` (con `digitosControl`), `"fecha-invalida"` o `"fecha-referencia-invalida"` (OD-05a).
+
+#### Scenario: Dos líneas
+- **WHEN** se parsean las 2 líneas del espécimen ICAO de OD-01a
+- **THEN** el resultado es `{ ok: false, error: "formato-td1" }`
+
 ### Requirement: OD-10a Controles del TD1 y compatibilidad
 `parsearMrzTd1` MUST verificar con `digitoControlIcao` los 4 dígitos de control (línea 1 [14]; línea 2 [6], [14] y compuesto [29]) y aplicar las correcciones OCR-B solo en zonas numéricas. `parsearMrzCedulaDigital` MUST conservar su contrato (MZ) sin cambios en su salida.
 
@@ -36,6 +43,27 @@
 #### Scenario: TD1 extranjero
 - **WHEN** se clasifica un TD1 sintético válido con `estadoEmisor` `"ESP"`
 - **THEN** el resultado es `{ ok: false, error: "documento-no-admitido" }`
+
+### Requirement: OD-11a Hipótesis de la CE como warnings
+Mientras no se confirmen con espécimen (docs/investigacion/05-cedula-extranjeria-y-ti.md), una CE clasificada MUST llevar además los warnings `"CE05"`, `"CE06"` y `"CE07"` (decisión del orquestador 8). CE04 no es warning: se cumple con OD-13.
+
+#### Scenario: Todas las hipótesis aplicables
+- **WHEN** se clasifica la CE sintética de OD-10a
+- **THEN** `warnings` contiene `"CE01"`, `"CE02"`, `"CE03"`, `"CE05"`, `"CE06"` y `"CE07"` y no `"CE04"`
+
+### Requirement: OD-11b TI por MRZ no admitida
+Un TD1 con código `IT` o `TI` y emisor `"COL"` (hipótesis T01) MUST dar `{ ok: false, error: "documento-no-admitido", warnings: ["T01"] }`: la TI solo se admite por PDF417 (decisión del orquestador 1).
+
+#### Scenario: TD1 IT
+- **WHEN** se clasifica un TD1 sintético válido con código `IT` y emisor `"COL"`
+- **THEN** el resultado es `{ ok: false, error: "documento-no-admitido", warnings: ["T01"] }`
+
+### Requirement: OD-11c Forma de la clasificación
+`clasificarDocumento(lineas, opciones?)` MUST clasificar 2 líneas con `parsearMrzTd3` como `"pasaporte"` y cualquier otra entrada con `parsearMrzTd1`, propagar el error del parser y devolver en el éxito `{ ok: true, tipoDocumento, fuente: "mrz-td1" | "mrz-td3", campos, warnings }`.
+
+#### Scenario: Pasaporte
+- **WHEN** se clasifica el espécimen ICAO de OD-01a
+- **THEN** `tipoDocumento` es `"pasaporte"` y `fuente` es `"mrz-td3"`
 
 ### Requirement: OD-12 Número de la CE
 Para `tipoDocumento: "cedula-extranjeria"` el campo `numeroDocumento` MUST ser el número tal cual (entre 1 y 9 caracteres, conservando los ceros a la izquierda; hipótesis CE03: la CE tiene hasta 7 dígitos impresos y el TD1 lo rellena con `<`). Si contiene letras, se devuelve igual y se añade el warning `"CE03-numero-no-numerico"`. El validador de NUIP (NF) MUST NOT aplicarse a la CE.
