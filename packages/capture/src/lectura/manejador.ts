@@ -2,7 +2,13 @@
 // transferido, lee con `leerDocumento` y responde el resultado (enmascarado salvo con `enmascarar: false`, OFF-09). Pone a cero los píxeles recibidos en
 // todas las ramas (los bytes del PDF417 los pone a cero `leerDocumento`). `cancelar` aborta la lectura de ese id.
 import { leerDocumento } from "./leer.js";
-import type { DependenciasLectura, ResultadoLectura } from "./tipos.js";
+import type { DependenciasLectura, OpcionesLectura, ResultadoLectura } from "./tipos.js";
+
+/** OFF-27: solo `"pdf417"` y `"mrz"` son pistas; cualquier otro valor equivale a no tenerla. */
+function opcionesPista(m: MensajeLeer): Pick<OpcionesLectura, "pista" | "respaldo"> {
+  const pista = m.pista === "pdf417" || m.pista === "mrz" ? m.pista : undefined;
+  return pista === undefined ? {} : { pista, ...(m.respaldo === false ? { respaldo: false } : {}) };
+}
 
 export interface MensajeLeer {
   readonly tipo: "leer";
@@ -11,6 +17,10 @@ export interface MensajeLeer {
   readonly alto: number;
   readonly pixeles: ArrayBuffer;
   readonly fechaReferencia: string;
+  /** OFF-27: contenido que vio la presencia; otro valor se ignora. */
+  readonly pista?: unknown;
+  /** OFF-28: `false` desactiva el respaldo del otro lector. */
+  readonly respaldo?: unknown;
 }
 
 export interface MensajeCancelar {
@@ -69,6 +79,7 @@ export function crearManejadorLector(
           fechaReferencia: m.fechaReferencia,
           senal: control.signal,
           enmascarar,
+          ...opcionesPista(m),
         },
       ).catch((): ResultadoLectura => ({ ok: false, error: "motor" }));
       return { tipo: "resultado", id: m.id, resultado };

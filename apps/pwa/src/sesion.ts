@@ -12,15 +12,21 @@ import {
   crearFeedback,
   crearPlanificador,
   evaluarEntorno,
+  fotoAPixeles,
   iniciarCamara,
   tomarFrameAnalisis,
+  tomarFoto,
   tomarFrameCaptura,
   UMBRALES_POR_DEFECTO,
   type Camara,
   type CapturaAceptada,
   type ClienteCalidad,
+  type ContenidoPresencia,
   type Cuadrilatero,
+  type EntornoFoto,
+  type FrameLectura,
 } from "@lector-cedula/capture";
+import type { Diagnostico } from "./diagnostico";
 import type { Evento } from "./estado";
 import { conLienzoTemporal } from "./lienzo";
 import {
@@ -29,10 +35,13 @@ import {
   type ClienteLector,
 } from "./lectura";
 import { crearReintentos } from "./reintentos";
+import { leerSecuencia, MAX_FRAMES_LECTURA } from "./secuencia";
 
 export interface Observador {
   evento(e: Evento): void;
   feedback(texto: string): void;
+  /** OFF-29: solo números y códigos; la app lo muestra con `?debug=1`. */
+  diagnostico?(d: Diagnostico): void;
 }
 
 const MARCA = "camara:solicitada";
@@ -62,6 +71,25 @@ export function hoyEnBogota(ahora: Date = new Date()): string {
 
 const MARCA_LECTURA = "lectura:inicio";
 
+/** Espera el siguiente frame del vídeo (requestVideoFrameCallback o un cuadro), como mucho 250 ms. */
+function siguienteFrame(v: HTMLVideoElement): Promise<void> {
+  return new Promise<void>((resolver) => {
+    const t = setTimeout(resolver, 250);
+    const listo = () => {
+      clearTimeout(t);
+      resolver();
+    };
+    if (typeof v.requestVideoFrameCallback === "function") v.requestVideoFrameCallback(listo);
+    else requestAnimationFrame(listo);
+  });
+}
+
+/** OFF-28: ImageCapture del navegador (no existe en Firefox ni Safari). */
+function entornoFoto(): EntornoFoto {
+  const ImageCapture = (globalThis as { ImageCapture?: EntornoFoto["ImageCapture"] }).ImageCapture;
+  return { ...(ImageCapture === undefined ? {} : { ImageCapture }), aPixeles: fotoAPixeles };
+}
+
 export function crearSesion(obs: Observador): Sesion {
   let cliente: ClienteCalidad | null = null;
   let lector: ClienteLector | null = null;
@@ -69,6 +97,11 @@ export function crearSesion(obs: Observador): Sesion {
   let camara: Camara | null = null;
   let video: HTMLVideoElement | null = null;
   let captura: CapturaAceptada | null = null;
+  // OFF-28: frames de lectura de la captura aceptada (foto, frame aceptado y frames consecutivos), pista y diagnóstico.
+  let frames: FrameLectura[] = [];
+  let pista: ContenidoPresencia = null;
+  let diagnostico: Omit<Diagnostico, "captura" | "pasos" | "totalMs"> = { resolucionPista: null, pista: null, fotoMs: null };
+  let capturas = 0;
   let generacion = 0;
   let animacion = 0;
   const planificador = crearPlanificador(
@@ -99,6 +132,8 @@ export function crearSesion(obs: Observador): Sesion {
   function liberarCaptura(): void {
     captura?.liberar();
     captura = null;
+    for (const f of frames) f.pixeles.fill(0);
+    frames = [];
   }
 
   function abortarLectura(): void {
@@ -119,14 +154,21 @@ export function crearSesion(obs: Observador): Sesion {
     if (control.signal.aborted || captura !== c) return;
     obs.evento({ tipo: "leyendo" });
     reintentos.iniciar();
-    const pendiente = obtenerLector().leer(
-      { ancho: c.ancho, alto: c.alto, pixeles: c.pixeles },
-      hoyEnBogota(),
-      control.signal,
+    capturas++;
+    const inicio = performance.now();
+    const base = { ...diagnostico, captura: capturas };
+    obs.diagnostico?.({ ...base, pasos: [], totalMs: null });
+    const p = pista;
+    // OFF-28 (c): la secuencia pone a cero cada frame tras su última lectura; la captura se libera al terminar.
+    const { resultado: r, pasos } = await leerSecuencia(
+      frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }],
+      p,
+      (f, lector) => obtenerLector().leer(f, hoyEnBogota(), control.signal, lector === null ? {} : { pista: lector, respaldo: false }),
+      { ahora: () => performance.now() },
     );
-    liberarCaptura();
-    const r = await pendiente;
     if (control.signal.aborted) return;
+    liberarCaptura();
+    obs.diagnostico?.({ ...base, pasos, totalMs: performance.now() - inicio });
     lectura = null;
     if (r.ok) performance.measure("lectura:tiempo", MARCA_LECTURA);
     if (
@@ -176,6 +218,34 @@ export function crearSesion(obs: Observador): Sesion {
       completo.pixeles.fill(0);
       return;
     }
+    // OFF-27 y OFF-28: con la cámara aún encendida (CAM-10 la detiene antes de listo), foto de alta resolución si la
+    // pista no es MRZ y, con pista PDF417, frames consecutivos del vídeo hasta MAX_FRAMES_LECTURA.
+    const contenido = r.contenido;
+    const nuevos: FrameLectura[] = [];
+    const descartar = () => {
+      completo.pixeles.fill(0);
+      for (const f of nuevos) f.pixeles.fill(0);
+    };
+    const pistaVideo = camara?.stream.getVideoTracks()[0];
+    let fotoMs: number | null = null;
+    if (contenido !== "mrz" && pistaVideo !== undefined) {
+      const t = performance.now();
+      const foto = await tomarFoto(pistaVideo, entornoFoto());
+      if (foto !== null) {
+        nuevos.push(foto);
+        fotoMs = performance.now() - t;
+      }
+      if (gen !== generacion) return descartar();
+    }
+    nuevos.push({ ancho: completo.ancho, alto: completo.alto, pixeles: completo.pixeles, origen: "video" });
+    while (contenido === "pdf417" && nuevos.length < MAX_FRAMES_LECTURA) {
+      await siguienteFrame(v);
+      if (gen !== generacion) return descartar();
+      nuevos.push({ ...tomarFrameCaptura(v), origen: "video" });
+    }
+    frames = nuevos;
+    pista = contenido;
+    diagnostico = { resolucionPista: { ancho: completo.ancho, alto: completo.alto }, pista: contenido, fotoMs };
     const g = calcularGuia(completo.ancho, completo.alto);
     const cuadrilatero: Cuadrilatero = [
       [g.x, g.y],
@@ -274,6 +344,7 @@ export function crearSesion(obs: Observador): Sesion {
   const sesion: Sesion = {
     async iniciar() {
       reintentos.reiniciar();
+      capturas = 0;
       await arrancar();
     },
     conectarVideo(v) {

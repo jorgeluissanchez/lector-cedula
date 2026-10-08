@@ -50,8 +50,9 @@ export { crearFeedback, TEXTOS_FEEDBACK, textoSituacion, type Feedback, type Sit
 // Navegador (CAL-09, CAM-07, CAM-11): Worker, cliente, frames y captura.
 export { iniciarWorkerCalidad, type AlcanceWorker } from "./navegador/worker-calidad.js";
 export { crearClienteCalidad, type ClienteCalidad, type PuertoWorker, type RespuestaAnalisis } from "./navegador/cliente-calidad.js";
-export type { CodigoErrorWorker, MensajeAlWorker, MensajeDelWorker } from "./navegador/protocolo.js";
+export type { CodigoErrorWorker, ContenidoPresencia, MensajeAlWorker, MensajeDelWorker } from "./navegador/protocolo.js";
 export { tomarFrameAnalisis, tomarFrameCaptura, type FrameCompleto } from "./navegador/frames.js";
+export { fotoAPixeles, LIMITE_FOTO_MS, tomarFoto, type EntornoFoto, type FrameLectura, type OrigenFrame } from "./navegador/foto.js";
 export { crearCapturaAceptada, type DatosCaptura } from "./navegador/captura.js";
 
 // Lectura del PDF417 desde imagen (cambio leer-pdf417-desde-imagen). zxing-wasm se carga solo al decodificar (LPI-08).

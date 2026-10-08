@@ -5,7 +5,7 @@
  */
 import type { DeteccionDocumento, FrameAnalisis, ResultadoCalidad } from "../calidad/tipos.js";
 import type { ResultadoConfiguracion } from "../calidad/umbrales.js";
-import type { CodigoErrorWorker, MensajeDelWorker } from "./protocolo.js";
+import type { CodigoErrorWorker, ContenidoPresencia, MensajeDelWorker } from "./protocolo.js";
 
 /** Lo mínimo de `Worker` que usa el cliente. */
 export interface PuertoWorker {
@@ -22,6 +22,8 @@ export type RespuestaAnalisis =
       readonly deteccion: DeteccionDocumento;
       /** El buffer enviado, devuelto por el Worker. */
       readonly pixeles: Uint8ClampedArray;
+      /** OFF-27: pista de tipo para la lectura. */
+      readonly contenido: ContenidoPresencia;
     }
   | { readonly ok: false; readonly codigo: CodigoErrorWorker };
 
@@ -63,7 +65,7 @@ export function crearClienteCalidad(worker: PuertoWorker): ClienteCalidad {
       const pixeles = frame.pixeles.buffer as ArrayBuffer;
       const { ancho, alto, anchoOriginal, altoOriginal } = frame;
       const m = await enviar({ tipo: "analizar", ancho, alto, anchoOriginal, altoOriginal, pixeles }, [pixeles]);
-      if (m?.tipo === "resultado") return { ok: true, resultado: m.resultado, deteccion: m.deteccion, pixeles: new Uint8ClampedArray(m.pixeles) };
+      if (m?.tipo === "resultado") return { ok: true, resultado: m.resultado, deteccion: m.deteccion, pixeles: new Uint8ClampedArray(m.pixeles), contenido: m.contenido ?? null };
       return { ok: false, codigo: m?.tipo === "error" ? m.codigo : "mensaje-invalido" };
     },
     async configurar(umbrales) {

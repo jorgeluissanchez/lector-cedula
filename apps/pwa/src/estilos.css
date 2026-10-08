@@ -37,3 +37,13 @@ h1 { font-size: 1.5rem; margin: 0; }
 .descargo { margin: 0 0 8px; color: #fde68a; }
 .progreso { display: flex; gap: 12px; align-items: center; }
 .progreso progress { flex: 1; }
+
+/* OFF-29: panel de diagnóstico (?debug=1). */
+.diagnostico {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+.diagnostico ul {
+  margin: 0.5rem 0;
+  padding-left: 1rem;
+}

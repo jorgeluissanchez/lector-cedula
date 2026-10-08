@@ -25,6 +25,10 @@ export interface RutasLector {
   readonly tiempoLimiteMs?: number;
   /** OFF-09: `false` en la PWA (datos completos); por defecto `true`. */
   readonly enmascarar?: boolean;
+  /** OFF-28: intentos de realce para frames de vídeo; por defecto `false`. */
+  readonly realcePdf417?: boolean;
+  /** OFF-28: límite del decodificador PDF417 por frame en ms; por defecto el de LPI-12. */
+  readonly limitePdf417Ms?: number;
 }
 
 export interface AlcanceLector {
@@ -55,6 +59,8 @@ export function iniciarWorkerLector(
     {
       decodificar: crearDecodificador({
         readBarcodes: lectorZxing(rutas.zxingWasm),
+        realce: rutas.realcePdf417 ?? false,
+        ...(rutas.limitePdf417Ms === undefined ? {} : { limiteMs: rutas.limitePdf417Ms }),
       }),
       lectorMrz: crearLectorMrz({
         rutaModelo: rutas.modeloMrz,

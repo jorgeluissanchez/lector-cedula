@@ -2,6 +2,7 @@
 // Devuelve los bytes crudos del símbolo, nunca el texto. No escribe en consola ni a disco; la imagen vive en memoria.
 import { parsearPdf417Amarilla } from "@lector-cedula/parsers";
 import { aGris, cajaBanda, recortar, TAMANOS_VENTANA, ventanas } from "./localizar.js";
+import { ampliar, realzar } from "./realce.js";
 import { decodificarPixeles, esPixeles, girar, type DecodificadorPixeles, type Pixeles, reescalar } from "./pixeles.js";
 
 export type { DecodificadorPixeles, Pixeles } from "./pixeles.js";
@@ -9,7 +10,9 @@ export type { DecodificadorPixeles, Pixeles } from "./pixeles.js";
 export type IntentoBase = "original" | "escala-0.75" | "escala-0.5" | "giro+2" | "giro-2";
 /** Intentos de localización (LPI-14). */
 export type IntentoBanda = `banda${"" | "-global"}${"" | "-giro+2" | "-giro-2"}`;
-export type IntentoPdf417 = IntentoBase | IntentoBanda | `ventana-${(typeof TAMANOS_VENTANA)[number]}`;
+/** Intentos de realce de frames de vídeo (OFF-28 de pwa-lectura-offline). */
+export type IntentoRealce = `realce-x${2 | 3}${"" | "-global"}` | "realce-x1";
+export type IntentoPdf417 = IntentoBase | IntentoBanda | IntentoRealce | `ventana-${(typeof TAMANOS_VENTANA)[number]}`;
 export type ErrorPdf417Imagen = "entrada-invalida" | "imagen-ilegible" | "pdf417-no-encontrado";
 export type ResultadoPdf417Imagen = { ok: true; bytes: Uint8Array; intento: IntentoPdf417 } | { ok: false; error: ErrorPdf417Imagen };
 
@@ -38,6 +41,8 @@ export interface DependenciasDecodificador {
   readonly aceptar?: (bytes: Uint8Array) => boolean;
   /** `false` desactiva banda y rejilla (LPI-11). */
   readonly localizar?: boolean;
+  /** OFF-28: `true` añade los intentos de realce tras la banda (frames de vídeo de la PWA); por defecto `false`. */
+  readonly realce?: boolean;
 }
 
 export const LIMITE_MS_POR_DEFECTO = 15_000;
@@ -81,6 +86,34 @@ function* intentosBanda(p: Pixeles): Generator<Intento> {
   }
 }
 
+/** Realces de OFF-28: [nombre, ampliación, k del enfoque, radio, binarizador]. */
+const REALCES: readonly (readonly [IntentoRealce, number, number, number, "LocalAverage" | "GlobalHistogram"])[] = [
+  ["realce-x2", 2, 3, 3, "LocalAverage"],
+  ["realce-x2-global", 2, 3, 3, "GlobalHistogram"],
+  ["realce-x3", 3, 3, 4, "LocalAverage"],
+  ["realce-x3-global", 3, 3, 4, "GlobalHistogram"],
+  ["realce-x1", 1, 2, 1, "LocalAverage"],
+];
+
+/** OFF-28: recorte de la banda (o mitad inferior), ampliado, con contraste estirado y enfoque horizontal. */
+function* intentosRealce(p: Pixeles): Generator<Intento> {
+  const caja = cajaBanda(p) ?? { x: 0, y: Math.floor(p.height / 2), w: p.width, h: p.height - Math.floor(p.height / 2) };
+  let recorte: Pixeles | null = null;
+  const base = (): Pixeles => (recorte ??= recortar(p, caja));
+  const cache = new Map<number, Pixeles>();
+  for (const [nombre, factor, k, radio, binarizer] of REALCES) {
+    const imagen = (): Pixeles => {
+      let ampliada = cache.get(factor);
+      if (ampliada === undefined) {
+        ampliada = factor === 1 ? base() : ampliar(base(), factor);
+        cache.set(factor, ampliada);
+      }
+      return realzar(ampliada, k, radio);
+    };
+    yield { nombre, imagen, opciones: opcionesLector(binarizer), exigeAceptar: true };
+  }
+}
+
 function* intentosRejilla(p: Pixeles): Generator<Intento> {
   for (const tamano of TAMANOS_VENTANA) {
     for (const caja of ventanas(p.width, p.height, tamano)) {
@@ -90,7 +123,7 @@ function* intentosRejilla(p: Pixeles): Generator<Intento> {
 }
 
 /** Orden de intentos (LPI-02, LPI-11): en fotos grandes la banda va primero. */
-function* intentos(p: Pixeles, localizar: boolean): Generator<Intento> {
+function* intentos(p: Pixeles, localizar: boolean, realce: boolean): Generator<Intento> {
   if (!localizar) return yield* intentosBase(p);
   if (p.width * p.height > PIXELES_FOTO_GRANDE) {
     yield* intentosBanda(p);
@@ -99,6 +132,7 @@ function* intentos(p: Pixeles, localizar: boolean): Generator<Intento> {
     yield* intentosBase(p);
     yield* intentosBanda(p);
   }
+  if (realce) yield* intentosRealce(p);
   yield* intentosRejilla(p);
 }
 
@@ -144,6 +178,7 @@ export function crearDecodificador(dependencias: DependenciasDecodificador = {})
   const ahora = dependencias.ahora ?? (() => performance.now());
   const aceptar = dependencias.aceptar ?? aceptarPorDefecto;
   const localizar = dependencias.localizar ?? true;
+  const realce = dependencias.realce ?? false;
   return async (imagen) => {
     let pixeles: Pixeles | null;
     try {
@@ -156,7 +191,7 @@ export function crearDecodificador(dependencias: DependenciasDecodificador = {})
     if (pixeles === null) return { ok: false, error: "imagen-ilegible" };
     const inicio = ahora();
     let primero = true;
-    for (const intento of intentos(aGris(pixeles), localizar)) {
+    for (const intento of intentos(aGris(pixeles), localizar, realce)) {
       if (!primero && ahora() - inicio >= limiteMs) break;
       primero = false;
       let resultados;

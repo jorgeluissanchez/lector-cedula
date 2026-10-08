@@ -7,7 +7,7 @@ import { detectarPresencia, evaluarConPresencia } from "../calidad/presencia.js"
 import { analizarFrame } from "../calidad/score.js";
 import { crearConfiguracionUmbrales } from "../calidad/umbrales.js";
 import type { DetectorDocumento } from "../interfaces.js";
-import type { MensajeDelWorker } from "./protocolo.js";
+import type { ContenidoPresencia, MensajeDelWorker } from "./protocolo.js";
 
 /** Alcance mínimo del Worker (evita depender de la combinación de `lib` DOM y WebWorker). */
 export interface AlcanceWorker {
@@ -62,12 +62,22 @@ export function iniciarWorkerCalidad(alcance: AlcanceWorker, detector: DetectorD
       const r = analizarFrame(frame, deteccion, configuracion.umbrales);
       if (!r.ok) return error(r.codigo);
       // OFF-22 y OFF-25: la presencia solo se busca si el frame supera el umbral o solo le falta nitidez.
+      // OFF-27: el contenido detectado viaja como pista de tipo; `null` si la presencia no se evaluó.
       const cuadrilatero = deteccion.cuadrilatero;
+      let contenido: ContenidoPresencia = null;
       const resultado =
         opciones.presencia === true && cuadrilatero !== null
-          ? evaluarConPresencia(r.resultado, () => detectarPresencia(frame, cuadrilatero).presente, configuracion.umbrales.umbralListo)
+          ? evaluarConPresencia(
+              r.resultado,
+              () => {
+                const p = detectarPresencia(frame, cuadrilatero);
+                contenido = p.contenido;
+                return p.presente;
+              },
+              configuracion.umbrales.umbralListo,
+            )
           : r.resultado;
-      responder({ tipo: "resultado", id, resultado, deteccion, pixeles }, pixeles);
+      responder({ tipo: "resultado", id, resultado, deteccion, pixeles, contenido }, pixeles);
     } catch {
       error("mensaje-invalido");
     }

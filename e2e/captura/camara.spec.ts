@@ -123,7 +123,9 @@ test.describe("cámara", { timeout: 60_000 }, () => {
     await expect(page.locator("[data-error]")).toHaveCount(0);
   });
 
-  test("CAM-07 Sin ImageCapture y sin carga de archivos @video:nitida-1080p", async ({ page }) => {
+  // CAM-07 modificado (pwa-lectura-offline, OFF-28): ImageCapture solo para el frame de lectura de la amarilla, tras
+  // aceptar la captura y antes de listo; el constructor falso no tiene takePhoto y la lectura usa el frame del vídeo.
+  test("CAM-07 ImageCapture solo para la lectura y sin carga de archivos @video:nitida-1080p", async ({ page }) => {
     await instrumentar(page, { rechazarPrimera: true });
     await page.goto("/");
     await expect(page.locator("input[type=file]")).toHaveCount(0);
@@ -133,6 +135,10 @@ test.describe("cámara", { timeout: 60_000 }, () => {
     await page.getByRole("button", { name: "Reintentar" }).click();
     await esperarPantalla(page, "listo", 30_000);
     await expect(page.locator("input[type=file]")).toHaveCount(0);
-    expect((await registro(page)).imageCapture).toBe(0);
+    const r = await registro(page);
+    expect(r.imageCapture).toBeLessThanOrEqual(1);
+    expect(r.imageCapturePantallas).toStrictEqual(Array(r.imageCapture).fill("activo"));
+    await expect.poll(async () => (await registro(page)).imageCapture, { timeout: 60_000 }).toBe(1);
+    expect((await registro(page)).imageCapturePantallas).toStrictEqual(["activo"]);
   });
 });

@@ -17,6 +17,7 @@ export type ErrorLectura =
   | "modelo-no-disponible"
   | "lector-terminado"
   | "fecha-referencia-invalida"
+  | "pdf417-no-encontrado"
   | "pdf417-no-valido"
   | "mrz-no-valida"
   | "menor-de-edad"
@@ -51,4 +52,8 @@ export interface OpcionesLectura {
   readonly senal?: AbortSignal;
   /** OFF-09: `false` devuelve los campos sin máscara (la PWA); por defecto `true` (CLI y servidor). */
   readonly enmascarar?: boolean;
+  /** OFF-27: contenido que vio la presencia; empieza por ese lector. */
+  readonly pista?: TipoLectura;
+  /** OFF-27 y OFF-28: `false` no prueba el otro lector cuando el de la pista no encuentra nada. */
+  readonly respaldo?: boolean;
 }

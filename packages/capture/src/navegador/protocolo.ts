@@ -15,6 +15,9 @@ export type MensajeAlWorker =
       readonly pixeles: ArrayBuffer;
     };
 
+/** OFF-27: contenido de cédula que vio la presencia (pista de tipo para la lectura). */
+export type ContenidoPresencia = "pdf417" | "mrz" | null;
+
 export type CodigoErrorWorker = "frame-invalido" | "cuadrilatero-invalido" | "mensaje-invalido";
 
 export type MensajeDelWorker =
@@ -26,5 +29,7 @@ export type MensajeDelWorker =
       readonly deteccion: DeteccionDocumento;
       /** El mismo buffer recibido, devuelto por transferencia. */
       readonly pixeles: ArrayBuffer;
+      /** OFF-27: `null` si la presencia no se evaluó o no hay cédula. */
+      readonly contenido: ContenidoPresencia;
     }
   | { readonly tipo: "error"; readonly id: number; readonly codigo: CodigoErrorWorker; readonly pixeles?: ArrayBuffer };

@@ -386,3 +386,64 @@ Si la lectura falla con `no-encontrado`, `no-valido` o `tiempo-agotado` (OFF-13)
 #### Scenario: Tarjeta ilegible
 - **WHEN** se completa el flujo con `tarjeta-ilegible-1080p`
 - **THEN** `leyendo` aparece al menos dos veces en el historial de pantallas, separadas por `activo`, y termina en `error-lectura` con `data-error` `no-encontrado`
+
+### Requirement: OFF-27 Pista de tipo desde la presencia
+El Worker de calidad con presencia MUST devolver, junto al resultado del frame, el `contenido` detectado (`"pdf417"`, `"mrz"` o `null` si la presencia no se evaluó o no hay cédula). La PWA MUST pasar el `contenido` del frame de revalidación aceptado como `pista` hasta `leerDocumento` (cliente, mensaje `leer` y manejador del Worker lector). Con `pista`, `leerDocumento` MUST empezar por ese lector y probar el otro solo como respaldo cuando el primero devuelve "no encontrado" (`pdf417-no-encontrado` o `mrz-no-encontrada`); con `respaldo: false` no hay respaldo. Sin `pista` (o con un valor distinto de `"pdf417"` y `"mrz"` en el mensaje), el orden es el de OFF-06. Si ningún lector encuentra nada, el error es el del último lector intentado, con su `tipo`; `{ tipo: "pdf417", error: "pdf417-no-encontrado" }` se clasifica `no-encontrado` (amplía la tabla de OFF-13). Reporte del usuario del 2026-10-08: la lectura tardaba de 7 a 12 s porque la digital pasaba siempre por todos los intentos del PDF417.
+
+#### Scenario: Pista MRZ
+- **WHEN** se llama `leerDocumento` con `pista: "mrz"` y dependencias inyectadas cuya MRZ es válida
+- **THEN** el resultado tiene `tipo: "mrz"`, el lector MRZ tiene 1 llamada y el decodificador PDF417 0
+
+#### Scenario: Pista MRZ con respaldo
+- **WHEN** se llama con `pista: "mrz"`, la MRZ devuelve `mrz-no-encontrada` y el PDF417 es válido
+- **THEN** el resultado tiene `tipo: "pdf417"`, con 1 llamada a cada lector y la MRZ antes que el PDF417; si el PDF417 también devuelve `pdf417-no-encontrado`, el resultado es `{ ok: false, tipo: "pdf417", error: "pdf417-no-encontrado" }`
+
+#### Scenario: Pista MRZ sin respaldo para otros errores
+- **WHEN** se llama con `pista: "mrz"` y la MRZ devuelve `tiempo-agotado`
+- **THEN** el resultado es `{ ok: false, tipo: "mrz", error: "tiempo-agotado" }` y el decodificador PDF417 tiene 0 llamadas
+
+#### Scenario: Pista PDF417 y respaldo desactivado
+- **WHEN** se llama con `pista: "pdf417"` y el PDF417 es válido; y aparte con `pista: "pdf417"`, `respaldo: false` y `pdf417-no-encontrado`
+- **THEN** el primero tiene `tipo: "pdf417"` y 0 llamadas a la MRZ; el segundo es `{ ok: false, tipo: "pdf417", error: "pdf417-no-encontrado" }` con 0 llamadas a la MRZ, y `clasificarErrorLectura` lo clasifica `no-encontrado`
+
+#### Scenario: Pista en el Worker lector
+- **WHEN** el manejador del Worker lector recibe `leer` con `pista: "mrz"`, y aparte con `pista: "qr"`
+- **THEN** el primero llama al lector MRZ y no al decodificador (MRZ válida); el segundo sigue el orden de OFF-06
+
+#### Scenario: Contenido en la respuesta del Worker de calidad
+- **WHEN** el Worker de calidad con presencia analiza la amarilla y la digital sintéticas en la guía, y sin presencia la amarilla
+- **THEN** las respuestas tienen `contenido` `"pdf417"`, `"mrz"` y `null`
+
+### Requirement: OFF-28 PDF417 en frames de vídeo
+Para la cédula amarilla la PWA MUST leer con más detalle que el frame de análisis. (a) Al aceptar una captura con pista distinta de `"mrz"`, y antes de detener las pistas (CAM-10), si existe `ImageCapture` y su instancia tiene `takePhoto`, la PWA MUST pedir una foto con la máxima resolución de `getPhotoCapabilities()` (`imageWidth.max`, `imageHeight.max`), con un límite de 3000 ms, decodificarla en memoria con `createImageBitmap` y dibujarla en un canvas con el lado mayor <= 4096; si algo falla, usa el frame del vídeo. Las restricciones de `getUserMedia` de CAM-03 no cambian. (b) El Worker lector de la PWA MUST usar el decodificador con `realce: true`: tras los intentos de banda (LPI-11) y antes de la rejilla, sobre el recorte de la banda (o la mitad inferior de la imagen si no hay banda), los intentos `realce-x2` y `realce-x2-global` (ampliación bilineal x2, estiramiento de contraste entre los percentiles 2 y 98 y enfoque horizontal k = 3, radio 3), `realce-x3` y `realce-x3-global` (x3, k = 3, radio 4) y `realce-x1` (sin ampliar, k = 2, radio 1), con binarizador `LocalAverage` o `GlobalHistogram`, aceptados solo si el parser de la amarilla acepta los bytes; sin `realce` el orden de LPI-11 no cambia. El límite de tiempo del decodificador en la PWA es 6000 ms por frame. (c) Con pista `"pdf417"` la PWA MUST tomar hasta 5 frames de lectura antes de detener las pistas (la foto si la hay, el frame aceptado y frames consecutivos del vídeo) y leerlos en orden con la pista y `respaldo: false`: para en el primero leído o con un error que no es "no encontrado" (OFF-13) y no empieza un frame nuevo pasados 8000 ms desde el primero. Si ninguno se lee y hay pista, el respaldo de OFF-27 se hace una sola vez al final, sobre el primer frame, con el otro lector y `respaldo: false` (así el respaldo MRZ, de hasta 15 s por OFF-23, no consume el presupuesto de los frames; medido el 2026-10-08 con `amarilla-suave-1080p`). Sin pista, cada frame se lee con el orden de OFF-06. Cada frame se pone a cero tras su última lectura (el primero, tras el respaldo) y todos al terminar (OFF-11).
+
+#### Scenario: Frame de vídeo degradado
+- **WHEN** se decodifica en Node un frame sintético de 1920x1080 de la amarilla de `PERSONA_BASE` con módulos de 2 px, giro 1 grado, desenfoque gaussiano sigma 1,3 y JPEG calidad 60, y otro con sigma 1,2 y JPEG calidad 45
+- **THEN** sin `realce` ambos dan `pdf417-no-encontrado` y con `realce: true` ambos dan los bytes de `PERSONA_BASE` con un intento `realce-*`
+
+#### Scenario: Sin lecturas falsas
+- **WHEN** se decodifica con `realce: true` un frame de 1920x1080 con una tarjeta de barras verticales aleatorias que no forman un PDF417 y otro con la amarilla demasiado degradada (sigma 2,5)
+- **THEN** ambos dan `pdf417-no-encontrado`
+
+#### Scenario: Orden con realce
+- **WHEN** se decodifica con `realce: true` y un lector que nunca encuentra nada una imagen de 1920x1080 con banda
+- **THEN** las llamadas 12 a 16 llevan los binarizadores `LocalAverage`, `GlobalHistogram`, `LocalAverage`, `GlobalHistogram` y `LocalAverage` sobre imágenes de 2, 2, 3, 3 y 1 veces el ancho de la banda, y las siguientes son la rejilla
+
+#### Scenario: Varios frames
+- **WHEN** la secuencia de lectura con pista `pdf417` recibe 5 frames con un lector inyectado que devuelve `no-encontrado` en los dos primeros y una lectura correcta en el tercero; aparte, `no-valido` en el primero; aparte, el reloj supera 8000 ms tras el segundo; aparte, `no-encontrado` en todos; y aparte, sin pista, `no-encontrado` en todos
+- **THEN** el primero da el resultado correcto con 3 lecturas con el lector `pdf417`; el segundo da `no-valido` con 1 lectura; el tercero hace 2 lecturas `pdf417` y el respaldo `mrz` sobre el primer frame; el cuarto hace 5 lecturas `pdf417` y 1 `mrz` sobre el primer frame y devuelve el resultado de la MRZ; el quinto hace 5 lecturas sin pista y ningún respaldo; en todos, los 5 frames quedan a cero
+
+#### Scenario: Foto de alta resolución
+- **WHEN** se toma el frame de lectura con un `ImageCapture` inyectado cuya `getPhotoCapabilities` da un máximo de 4000x3000; aparte, con uno cuyo `takePhoto` rechaza; aparte, sin `ImageCapture`
+- **THEN** `takePhoto` recibe `{ imageWidth: 4000, imageHeight: 3000 }` y el frame tiene origen `takePhoto`; con el rechazo y sin `ImageCapture` no hay foto y se usan los frames del vídeo con origen `video`
+
+### Requirement: OFF-29 Modo diagnóstico
+Con el parámetro `debug=1` en la URL, la PWA MUST mostrar en `leyendo`, `resultado` y `error-lectura` un panel `[data-diagnostico]` con solo números y códigos: resolución de la pista de vídeo, pista de tipo, y por cada frame de lectura su origen (`takePhoto` o `video`), su resolución, el código del resultado (`ok:<tipo>:<intento>` o el código de error de `leerDocumento`) y su duración en ms, más el tiempo de la foto y el total. MUST NOT mostrar campos de la cédula ni imágenes, ni guardar nada (solo estado en memoria). Sin el parámetro, el panel no existe.
+
+#### Scenario: Sin parámetro
+- **WHEN** se lee la amarilla sintética sin `debug=1`
+- **THEN** la página no contiene `[data-diagnostico]`
+
+#### Scenario: Con parámetro
+- **WHEN** se lee la amarilla sintética con `?debug=1`
+- **THEN** `[data-diagnostico]` es visible, contiene `pdf417` y una resolución `<ancho>x<alto>`, no contiene `9999123456`, `PRUEBA` ni `FICTICIA` ni ningún `<img>`, `<canvas>` o `<video>`, y `localStorage` y `sessionStorage` están vacíos

@@ -2,6 +2,7 @@
 // (pwa-lectura-offline, OFF-09, OFF-13, OFF-14, OFF-18, OFF-19): `leyendo`, `resultado` y `error-lectura`.
 import { calcularGuia, guiaEnPantalla, TEXTOS_ENTORNO, TEXTOS_ERROR_CAMARA, TEXTOS_ERROR_LECTURA, type Caja } from "@lector-cedula/capture";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "preact/hooks";
+import { diagnosticoActivo, lineasDiagnostico, type Diagnostico } from "./diagnostico";
 import { ESTADO_INICIAL, reducir, type CodigoError } from "./estado";
 import { iniciarIndicador, TEXTOS_OFFLINE, type EstadoOffline } from "./precache/indicador";
 import { fragmentos, RUTA_POLITICA, RUTA_TERMINOS, TEXTO_ALCANCE, type Bloque } from "./legal";
@@ -82,7 +83,13 @@ export function App() {
   const [estado, despachar] = useReducer(reducir, ESTADO_INICIAL);
   const [feedback, setFeedback] = useState("");
   const [video, setVideo] = useState<HTMLVideoElement | null>(null);
-  const sesion = useMemo(() => crearSesion({ evento: despachar, feedback: setFeedback }), []);
+  // OFF-29: diagnóstico solo con ?debug=1, en memoria (números y códigos).
+  const [diagnostico, setDiagnostico] = useState<Diagnostico | null>(null);
+  const depurar = useMemo(() => diagnosticoActivo(location.search), []);
+  const sesion = useMemo(
+    () => crearSesion({ evento: despachar, feedback: setFeedback, ...(depurar ? { diagnostico: setDiagnostico } : {}) }),
+    [depurar],
+  );
   const [offline, setOffline] = useState<EstadoOffline>("pendiente");
   // OFF-21: la autorización vive solo en memoria de la página; nunca se guarda (OFF-11).
   const [autorizado, setAutorizado] = useState(false);
@@ -247,6 +254,15 @@ export function App() {
                 </div>
               ))}
             </dl>
+          </section>
+        )}
+        {depurar && diagnostico !== null && (p === "leyendo" || p === "resultado" || p === "error-lectura") && (
+          <section class="diagnostico" aria-label="Diagnóstico" data-diagnostico="">
+            <ul>
+              {lineasDiagnostico(diagnostico).map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
           </section>
         )}
         <div class="acciones">

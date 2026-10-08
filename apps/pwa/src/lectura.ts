@@ -3,7 +3,7 @@
  * (la captura original la libera quien llama), cancela con `AbortSignal` mandando `cancelar` al Worker y resuelve
  * de inmediato, y convierte un error del Worker en `motor`. No guarda ningún resultado.
  */
-import type { ResultadoLectura } from "@lector-cedula/capture";
+import type { ResultadoLectura, TipoLectura } from "@lector-cedula/capture";
 
 export interface PuertoLector {
   postMessage(mensaje: unknown, transferir?: Transferable[]): void;
@@ -18,8 +18,14 @@ export interface PixelesCaptura {
   readonly pixeles: Uint8ClampedArray;
 }
 
+/** OFF-27 y OFF-28: pista de tipo y respaldo del otro lector. */
+export interface OpcionesLecturaCliente {
+  readonly pista?: TipoLectura;
+  readonly respaldo?: boolean;
+}
+
 export interface ClienteLector {
-  leer(captura: PixelesCaptura, fechaReferencia: string, senal?: AbortSignal): Promise<ResultadoLectura>;
+  leer(captura: PixelesCaptura, fechaReferencia: string, senal?: AbortSignal, opciones?: OpcionesLecturaCliente): Promise<ResultadoLectura>;
   terminar(): void;
 }
 
@@ -47,7 +53,7 @@ export function crearClienteLector(puerto: PuertoLector): ClienteLector {
   });
 
   return {
-    leer(captura, fechaReferencia, senal) {
+    leer(captura, fechaReferencia, senal, opciones = {}) {
       if (senal?.aborted === true) return Promise.resolve({ ok: false, error: "cancelada" });
       const id = siguiente++;
       const pixeles = new Uint8ClampedArray(captura.pixeles).buffer;
@@ -62,7 +68,11 @@ export function crearClienteLector(puerto: PuertoLector): ClienteLector {
           },
           { once: true },
         );
-        puerto.postMessage({ tipo: "leer", id, ancho: captura.ancho, alto: captura.alto, pixeles, fechaReferencia }, [pixeles]);
+        const extra = {
+          ...(opciones.pista === undefined ? {} : { pista: opciones.pista }),
+          ...(opciones.respaldo === undefined ? {} : { respaldo: opciones.respaldo }),
+        };
+        puerto.postMessage({ tipo: "leer", id, ancho: captura.ancho, alto: captura.alto, pixeles, fechaReferencia, ...extra }, [pixeles]);
       });
     },
     terminar() {

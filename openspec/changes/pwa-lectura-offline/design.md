@@ -78,6 +78,11 @@ Según el principio II y la fila "Captura web" de la matriz de `.claude/skills/e
 | OFF-22, OFF-25 | Unitaria (Worker en Node con frames sintéticos degradados) | Vitest | `npx vitest run packages/capture/test/lectura` | cédulas degradadas: score 70 y motivo null; escenas sin cédula < 70; desenfoque extremo `desenfocado` |
 | OFF-25 | E2E (vídeos suaves) | Playwright | `npx playwright test e2e/lectura/suave-amarilla.spec.ts e2e/lectura/suave-digital.spec.ts --project=lectura-chromium` | `listo` y `resultado` |
 | OFF-26 | Unitaria (política y reductor) + E2E (tarjeta ilegible) | Vitest, Playwright | `npx vitest run apps/pwa/test/off-26-reintentos.test.ts`, `E(errores)` | decisiones literales; dos `leyendo` antes de `error-lectura` |
+| OFF-27 | Unitaria (orden y número de llamadas con dependencias inyectadas; mensaje del Worker lector; `contenido` del Worker de calidad) + cliente | Vitest | `npx vitest run packages/capture/test/lectura/off-27-pista.test.ts apps/pwa/test/off-27-29-diagnostico-cliente.test.ts` | escenarios literales |
+| OFF-28 | Unitaria con frames sintéticos de vídeo (módulos de 2 px, sigma 1,3 y JPEG 60; sigma 1,2 y JPEG 45) y sin lecturas falsas | Vitest + zxing-wasm real | `npx vitest run packages/capture/test/pdf417/off-28-realce.test.ts` | sin realce `pdf417-no-encontrado`, con realce bytes exactos; 0 lecturas falsas |
+| OFF-28 | Unitaria (foto: `takePhoto` con la resolución máxima, límite y respaldo; secuencia de frames) | Vitest | `npx vitest run packages/capture/test/lectura/off-28-foto.test.ts apps/pwa/test/off-28-secuencia.test.ts` | escenarios literales; frames a cero |
+| OFF-28, CAM-07 | E2E (`ImageCapture` solo para la lectura; amarilla suave; tarjeta ilegible sin lecturas falsas) | Playwright | `npx playwright test e2e/captura/camara.spec.ts --project=captura-nitida-1080p-escritorio`, `E(suave-amarilla)`, `E(errores)` | verde |
+| OFF-29 | E2E (panel solo con `?debug=1`, sin datos ni imágenes) + unitaria (líneas de solo números y códigos) | Playwright, Vitest | `E(diagnostico)` | verde; mutante "panel siempre visible" detectado |
 | Todos | Licencias y privacidad del repositorio | `licencia-check`, `privacidad-check` | `L`, `P`, `npm run check` | 0 infracciones |
 
 ## Decisiones humanas (2026-10-07)
@@ -85,3 +90,11 @@ Según el principio II y la fila "Captura web" de la matriz de `.claude/skills/e
 - Se acepta la precaché de unos 19 MB (incluye `mrz.traineddata` de 11,4 MB); el tope de 20 MiB de OFF-16 se mantiene.
 - Se precachean las dos variantes del core de tesseract (`simd-lstm` y `lstm`) para leer sin red también en navegadores sin SIMD.
 - El Worker de calidad se precachea (OFF-01); reemplaza los escenarios CAM-01 "Precarga sin el Worker de calidad" y CAM-12 "Worker diferido" de `captura-calidad-pwa`.
+
+## Decisiones del 2026-10-08 (reporte del usuario: la amarilla no se lee en Android)
+
+- OFF-27: la presencia ya sabe si ve un PDF417 o una MRZ; ese `contenido` viaja como `pista` hasta `leerDocumento`, que empieza por ese lector. Medido en Node (Chromium escritorio, 3 repeticiones, frame de 1920x1080): digital sin pista 3742 a 4576 ms, con pista `mrz` 2818 a 3520 ms; en la PWA (`?debug=1`, `digital-1080p`) la digital con pista tarda 2934 a 3155 ms.
+- OFF-28 (a): `ImageCapture.takePhoto` con la resolución máxima de `getPhotoCapabilities` para el frame de lectura de la amarilla, antes de detener las pistas (CAM-10 no cambia) y con respaldo al frame del vídeo; las restricciones de `getUserMedia` de CAM-03 no cambian. CAM-07 se modifica (delta en `captura-camara`).
+- OFF-28 (b): la ampliación bilineal sola no recupera un PDF417 de 2 px por módulo desenfocado (probado con x2 y x3 y ambos binarizadores); lo que sí lo recupera es el enfoque horizontal (unsharp mask) tras el estiramiento de contraste. Se activa solo en el Worker de la PWA (`realce: true`) para no cambiar el orden de LPI-11 de la CLI. Amarilla sintética de vídeo (sigma 1,3, JPEG 60): antes `mrz-no-encontrada` tras 16592 a 17291 ms (PDF417 sin éxito y respaldo MRZ); después `realce-x2` en 865 a 980 ms.
+- OFF-28 (c): con `amarilla-suave-1080p` se vio que un respaldo MRZ en el primer frame (11,5 s) agotaba el presupuesto de frames; el respaldo pasa a hacerse una sola vez al final, sobre el primer frame. Con la secuencia, la misma escena se lee en el tercer frame (unos 4,1 s) cuando los dos primeros fallan.
+- OFF-29: `?debug=1` para diagnosticar en el celular sin datos personales: solo resoluciones, códigos y tiempos, en memoria.

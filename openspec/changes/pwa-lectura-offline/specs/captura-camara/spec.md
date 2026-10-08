@@ -81,3 +81,18 @@ Durante todo el flujo, la PWA MUST NOT enviar por red, guardar en el navegador n
 #### Scenario: Borrado de la captura
 - **WHEN** en Chromium real (Vitest browser) se libera una captura aceptada de 1920x1080
 - **THEN** los 8294400 bytes de su buffer valen 0 y la captura informa `liberada: true`
+
+### Requirement: CAM-07 Frame tomado del vídeo en vivo
+Todo frame de análisis y de revalidación MUST obtenerse dibujando el `<video>` en un canvas con `drawImage`, a la resolución de la pista o reducido según CAL-01, sin `ImageCapture`. Solo los frames de lectura de la amarilla (OFF-28 de `lectura-pwa-offline`, reporte del 2026-10-08: el frame de vídeo no tiene detalle para el PDF417) MAY usar `ImageCapture` tras aceptar la captura y antes de detener las pistas, con respaldo al frame del vídeo; la foto se decodifica en memoria y nunca se guarda ni se codifica. La PWA MUST NOT ofrecer carga de imágenes desde archivo.
+
+#### Scenario: ImageCapture solo para la lectura
+- **WHEN** la instrumentación sustituye `window.ImageCapture` por un constructor sin `takePhoto` que anota la pantalla de cada uso, se rechaza la primera llamada a `getUserMedia`, se pulsa "Reintentar" y se completa el flujo hasta `listo` con `nitida-1080p` (amarilla)
+- **THEN** cada uso anotado ocurre con `data-pantalla` `activo` (tras aceptar la captura y antes de `listo`), hay a lo sumo 1 uso por captura aceptada, el flujo sigue con el frame del vídeo, y no hay `input[type=file]` en ninguna de las pantallas recorridas
+
+#### Scenario: Resolución del frame de captura
+- **WHEN** en Chromium real (Vitest browser) se toma un frame de captura de un `<video>` alimentado por `canvas.captureStream()` de un canvas de 1920x1080 relleno con el color (40, 120, 200)
+- **THEN** el frame mide 1920x1080, su buffer tiene 8294400 bytes y el píxel central difiere del color dibujado en 3 o menos por canal
+
+#### Scenario: Resolución del frame de análisis
+- **WHEN** se toma un frame de análisis del mismo `<video>`
+- **THEN** el frame mide 640x360 y su buffer tiene 921600 bytes

@@ -20,23 +20,26 @@ export interface Registro {
   readonly llamadas: unknown[];
   readonly applyConstraints: unknown[];
   readonly imageCapture: number;
+  /** CAM-07 modificado: `data-pantalla` en cada uso de `ImageCapture`. */
+  readonly imageCapturePantallas: readonly (string | null)[];
 }
 
 declare global {
   interface Window {
-    __espia: { llamadas: unknown[]; streams: MediaStream[]; applyConstraints: unknown[]; imageCapture: number };
+    __espia: { llamadas: unknown[]; streams: MediaStream[]; applyConstraints: unknown[]; imageCapture: number; imageCapturePantallas: (string | null)[] };
     __visibilidad: (estado: "hidden" | "visible") => void;
   }
 }
 
 export async function instrumentar(page: Page, opciones: OpcionesInstrumentacion = {}): Promise<void> {
   await page.addInitScript((o: OpcionesInstrumentacion) => {
-    const espia = { llamadas: [] as unknown[], streams: [] as MediaStream[], applyConstraints: [] as unknown[], imageCapture: 0 };
+    const espia = { llamadas: [] as unknown[], streams: [] as MediaStream[], applyConstraints: [] as unknown[], imageCapture: 0, imageCapturePantallas: [] as (string | null)[] };
     window.__espia = espia;
 
     // CAM-07: ImageCapture que cuenta sus usos.
     (window as unknown as { ImageCapture: unknown }).ImageCapture = function ImageCapture() {
       espia.imageCapture++;
+      espia.imageCapturePantallas.push(document.querySelector("[data-pantalla]")?.getAttribute("data-pantalla") ?? null);
     };
 
     const proto = MediaStreamTrack.prototype as unknown as Record<string, unknown>;
@@ -86,7 +89,7 @@ export async function instrumentar(page: Page, opciones: OpcionesInstrumentacion
 export const contenedor = (page: Page) => page.locator("[data-pantalla]");
 
 export async function registro(page: Page): Promise<Registro> {
-  return page.evaluate(() => ({ llamadas: window.__espia.llamadas, applyConstraints: window.__espia.applyConstraints, imageCapture: window.__espia.imageCapture }));
+  return page.evaluate(() => ({ llamadas: window.__espia.llamadas, applyConstraints: window.__espia.applyConstraints, imageCapture: window.__espia.imageCapture, imageCapturePantallas: window.__espia.imageCapturePantallas }));
 }
 
 /** Estados de todas las pistas de los streams devueltos por getUserMedia. */

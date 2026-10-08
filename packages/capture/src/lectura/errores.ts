@@ -21,6 +21,8 @@ function codigo(r: unknown): CodigoErrorLectura {
   const { tipo, error } = r as { tipo?: unknown; error?: unknown };
   // La MRZ solo se intenta tras `pdf417-no-encontrado` (OFF-06): su "no encontrada" significa que no hay documento.
   if (error === "mrz-no-encontrada" && tipo === "mrz") return "no-encontrado";
+  // OFF-27: con pista PDF417 sin respaldo (o tras el respaldo MRZ), "no encontrado" del PDF417.
+  if (error === "pdf417-no-encontrado" && tipo === "pdf417") return "no-encontrado";
   if (error === "tiempo-agotado") return "tiempo-agotado";
   if (error === "pdf417-no-valido" || error === "mrz-no-valida")
     return "no-valido";
