@@ -7,7 +7,8 @@
 import { readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { crearLectorMrz, decodificarPdf417Imagen } from "../packages/capture/dist/index.js";
+// Máscara y lugar de nacimiento compartidos con la PWA (pwa-lectura-offline, OFF-08 y OFF-09).
+import { conLugarNacimiento, crearLectorMrz, decodificarPdf417Imagen, enmascararCamposPdf417, enmascararResultadoMrz } from "../packages/capture/dist/index.js";
 import { buscarDivipol, parsearPdf417Amarilla } from "../packages/parsers/dist/index.js";
 
 const USO = "uso: npm run leer-foto -- [--sin-mascara] [--fecha-referencia AAAA-MM-DD] <ruta-de-la-foto>";
@@ -22,33 +23,6 @@ function fallarUso(motivo) {
 function emitir(objeto, codigo) {
   process.stdout.write(`${JSON.stringify(objeto)}\n`);
   process.exitCode = codigo;
-}
-
-function enmascararNuip(nuip) {
-  if (typeof nuip !== "string") return nuip;
-  // salida-leer-foto-v2 (LPI-06): solo los 2 últimos dígitos, sea cual sea la longitud.
-  return "*".repeat(Math.max(0, nuip.length - 2)) + nuip.slice(-2);
-}
-
-function enmascararNombre(nombre) {
-  if (typeof nombre !== "string") return nombre;
-  return nombre.replace(/\S+/gu, (p) => p[0] + "*".repeat(p.length - 1));
-}
-
-/** Conserva solo los 2 últimos caracteres (serial de la cédula digital). */
-function enmascararSerial(serial) {
-  if (typeof serial !== "string") return serial;
-  return "*".repeat(Math.max(0, serial.length - 2)) + serial.slice(-2);
-}
-
-function enmascararMrz(resultado) {
-  const c = resultado.campos;
-  return {
-    ...resultado,
-    campos: { ...c, nuip: enmascararNuip(c.nuip), serial: enmascararSerial(c.serial), apellidos: enmascararNombre(c.apellidos), nombres: enmascararNombre(c.nombres) },
-    lineasCorregidas: null,
-    correcciones: null,
-  };
 }
 
 /** Fecha actual en America/Bogota como AAAA-MM-DD. */
@@ -93,30 +67,8 @@ async function leerMrz(bytes, fechaReferencia, conMascara) {
   }
   const { resultado } = lectura;
   if (!resultado.valido) return emitir({ ok: false, tipo: "mrz", error: "mrz-no-valida", digitosValidos: lectura.digitosValidos }, 2);
-  const salida = conMascara ? enmascararMrz(resultado) : resultado;
+  const salida = conMascara ? enmascararResultadoMrz(resultado) : resultado;
   return emitir({ ok: true, tipo: "mrz", intento: lectura.intento, enmascarado: conMascara, resultado: salida }, 0);
-}
-
-function enmascarar(campos) {
-  return {
-    ...campos,
-    numeroDocumento: enmascararNuip(campos.numeroDocumento),
-    primerApellido: enmascararNombre(campos.primerApellido),
-    segundoApellido: enmascararNombre(campos.segundoApellido),
-    primerNombre: enmascararNombre(campos.primerNombre),
-    segundoNombre: enmascararNombre(campos.segundoNombre),
-  };
-}
-
-/** LPI-08 (salida-leer-foto-v2): lugar de nacimiento resuelto con DIVIPOL; no se enmascara. */
-function conLugarNacimiento(resultado) {
-  const { codigoDepartamentoNacimiento: d, codigoMunicipioNacimiento: m } = resultado.campos;
-  const r = typeof d === "string" && typeof m === "string" ? buscarDivipol(d + m) : null;
-  if (r?.encontrado) {
-    return { ...resultado, campos: { ...resultado.campos, lugarNacimiento: { codigo: r.codigo, departamento: r.departamento, municipio: r.municipio } } };
-  }
-  const warnings = [...(resultado.warnings ?? []), "lugar-nacimiento-no-resuelto"];
-  return { ...resultado, campos: { ...resultado.campos, lugarNacimiento: null }, warnings };
 }
 
 async function principal(argv) {
@@ -158,8 +110,8 @@ async function principal(argv) {
   const resultado = parsearPdf417Amarilla(imagen.bytes, { divipol: buscarDivipol });
   imagen.bytes.fill(0);
   if (!resultado.ok) return emitir({ ok: false, tipo: "pdf417", error: resultado.error }, 2);
-  const conLugar = conLugarNacimiento(resultado);
-  const salida = conMascara ? { ...conLugar, campos: enmascarar(conLugar.campos) } : conLugar;
+  const conLugar = conLugarNacimiento(resultado, buscarDivipol); // LPI-08, compartido con la PWA (OFF-08).
+  const salida = conMascara ? { ...conLugar, campos: enmascararCamposPdf417(conLugar.campos) } : conLugar;
   return emitir({ ok: true, tipo: "pdf417", intento: imagen.intento, enmascarado: conMascara, resultado: salida }, 0);
 }
 

@@ -27,6 +27,18 @@ const proyectosCaptura: Project[] = VIDEOS.flatMap((video) =>
   })),
 );
 
+// Lectura en el dispositivo (pwa-lectura-offline, tarea 1.1): un proyecto por dispositivo. Cada spec elige su vídeo
+// (amarilla-1080p, digital-1080p, digital-girada-90-1080p) con `test.use({ launchOptions })` por describe, y se graba
+// vídeo de la ejecución por proyecto cuando falla.
+const proyectosLectura: Project[] = [
+  { name: "lectura-chromium", dispositivo: DISPOSITIVOS.escritorio },
+  { name: "lectura-pixel7", dispositivo: DISPOSITIVOS.pixel },
+].map(({ name, dispositivo }) => ({
+  name,
+  testDir: "e2e/lectura",
+  use: { ...dispositivo, baseURL: "http://localhost:4173", video: "retain-on-failure", launchOptions: { args: CAMARA } },
+}));
+
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
@@ -48,9 +60,10 @@ export default defineConfig({
     launchOptions: { args: CAMARA },
   },
   projects: [
-    { name: "chromium-escritorio", testIgnore: /captura\//, use: { ...devices["Desktop Chrome"] } },
-    { name: "android-pixel", testIgnore: /captura\//, use: { ...devices["Pixel 7"] } },
+    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/], use: { ...devices["Desktop Chrome"] } },
+    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/], use: { ...devices["Pixel 7"] } },
     ...proyectosCaptura,
+    ...proyectosLectura,
     ...(CON_WEBKIT ? [{
       name: "captura-webkit",
       testMatch: /captura\/webkit\.spec\.ts/,

@@ -1,0 +1,55 @@
+// pwa-lectura-offline, tarea 1.2 (design.md, decisión 13): escenas de cédula sintética de la cámara simulada.
+// Comprueba que las imágenes fuente son de PERSONA_BASE (NUIP ^9999) y, si ya se generaron con `npm run e2e:videos`,
+// la cabecera y las dimensiones de cada .y4m. Las imágenes se generan en memoria; nada se escribe en el repositorio.
+import { existsSync, openSync, readSync, closeSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { PNG } from "pngjs";
+import { describe, expect, it } from "vitest";
+import { leerCabeceraY4m } from "../../e2e/videos/y4m.mjs";
+import { ESCENAS_CEDULA, fuentesCedula } from "../../e2e/videos/cedulas.mjs";
+import { lectorReal } from "../../packages/capture/test/pdf417/sintetica.ts";
+
+const RAIZ = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+
+function cabecera(ruta) {
+  const fd = openSync(ruta, "r");
+  const buf = Buffer.alloc(256);
+  readSync(fd, buf, 0, 256, 0);
+  closeSync(fd);
+  return leerCabeceraY4m(buf);
+}
+
+describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () => {
+  it("declara las tres escenas de 1920x1080 con su fuente", () => {
+    expect(ESCENAS_CEDULA.map((e) => [e.nombre, e.fuente, e.ancho, e.alto])).toStrictEqual([
+      ["amarilla-1080p", "amarilla", 1920, 1080],
+      ["digital-1080p", "digital", 1920, 1080],
+      ["digital-girada-90-1080p", "digital", 1920, 1080],
+    ]);
+    expect(ESCENAS_CEDULA[2].filtro).toContain("transpose=1");
+  });
+
+  it("las fuentes son PNG sintéticos de PERSONA_BASE con NUIP ^9999", async () => {
+    const f = await fuentesCedula();
+    const decodificar = await lectorReal();
+    const amarilla = PNG.sync.read(Buffer.from(f.amarilla));
+    const leidos = await decodificar({ data: new Uint8ClampedArray(amarilla.data), width: amarilla.width, height: amarilla.height }, { formats: ["PDF417"], tryHarder: true });
+    expect(leidos).toHaveLength(1);
+    const texto = Buffer.from(leidos[0].bytes).toString("latin1");
+    expect(texto).toMatch(/9999123456/u);
+    expect(f.lineasMrz.join("\n")).toMatch(/9999123456/u);
+    const digital = PNG.sync.read(Buffer.from(f.digital));
+    expect([digital.width, digital.height]).toStrictEqual([1011, 638]);
+    expect(f.nuip).toMatch(/^9999/u);
+  });
+
+  for (const e of ESCENAS_CEDULA) {
+    const ruta = join(RAIZ, "e2e/videos/sinteticos", `${e.nombre}.y4m`);
+    it.skipIf(!existsSync(ruta))(`${e.nombre}.y4m tiene cabecera 4:2:0 de ${e.ancho}x${e.alto}`, () => {
+      const c = cabecera(ruta);
+      expect([c.ancho, c.alto]).toStrictEqual([e.ancho, e.alto]);
+      expect(c.croma.startsWith("420")).toBe(true);
+    });
+  }
+});

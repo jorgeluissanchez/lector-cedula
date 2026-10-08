@@ -21,7 +21,7 @@ export default defineConfig({
     },
     coverage: {
       provider: "v8",
-      include: ["packages/capture/src/navegador/**"],
+      include: ["packages/capture/src/navegador/**", "packages/capture/src/lectura/worker-lector.ts"],
       thresholds: { lines: 90, branches: 85, functions: 90, statements: 90 },
       reportsDirectory: "coverage/browser",
     },

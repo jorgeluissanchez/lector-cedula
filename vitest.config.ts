@@ -15,7 +15,7 @@ export default defineConfig({
       provider: "v8",
       include: ["packages/*/src/**"],
       // Código solo-navegador (captura-calidad-pwa, decisión 13): lo cubre vitest.browser.config.ts.
-      exclude: ["packages/capture/src/navegador/**"],
+      exclude: ["packages/capture/src/navegador/**", "packages/capture/src/lectura/worker-lector.ts"],
       thresholds: { lines: 90, branches: 85, functions: 90, statements: 90 },
     },
   },

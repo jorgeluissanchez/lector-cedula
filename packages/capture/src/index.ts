@@ -87,3 +87,13 @@ export {
 
 // Cámara trasera (CAM-03, CAM-04, CAM-06, CAM-10), tarea 5.3 de captura-calidad-pwa.
 export { iniciarCamara, RESTRICCIONES_CAMARA, type Camara, type Medios } from "./navegador/camara.js";
+
+// Lectura en el dispositivo (cambio pwa-lectura-offline): máscara, orquestación PDF417 -> MRZ y errores.
+export type { DependenciasLectura, ErrorLectura, OpcionesLectura, ResultadoLectura, TipoLectura } from "./lectura/tipos.js";
+export { enmascararCamposMrz, enmascararCamposPdf417, enmascararNombre, enmascararResultadoMrz, enmascararUltimos2 } from "./lectura/mascara.js";
+export { leerDocumento } from "./lectura/leer.js";
+export { crearLectorCodigosPdf417 } from "./lectura/codigos.js";
+export { AVISO_LUGAR_NO_RESUELTO, conLugarNacimiento } from "./lectura/lugar.js";
+export { clasificarErrorLectura, TEXTOS_ERROR_LECTURA, type CodigoErrorLectura } from "./lectura/errores.js";
+export { crearManejadorLector, type MensajeAlLector, type MensajeCancelar, type MensajeLeer, type RespuestaLector } from "./lectura/manejador.js";
+export { iniciarWorkerLector, type AlcanceLector, type RutasLector } from "./lectura/worker-lector.js";

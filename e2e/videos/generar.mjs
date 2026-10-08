@@ -3,10 +3,12 @@
 // No contienen ninguna cédula ni dato real: `testsrc2` con la luminancia acotada sobre un fondo gris, en la posición
 // exacta de la guía de CAM-08. Salida en e2e/videos/sinteticos/ (ignorada por git). Uso: npm run e2e:videos
 import { execFileSync } from "node:child_process";
-import { mkdirSync, openSync, readSync, closeSync } from "node:fs";
+import { mkdirSync, mkdtempSync, openSync, readSync, closeSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { leerCabeceraY4m } from "./y4m.mjs";
+import { ESCENAS_CEDULA, fuentesCedula } from "./cedulas.mjs";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SALIDA = "e2e/videos/sinteticos";
@@ -36,22 +38,43 @@ function cabecera(ruta) {
   return leerCabeceraY4m(buf);
 }
 
-function main() {
+function docker(montajes, args) {
+  execFileSync("docker", ["run", "--rm", ...montajes.flatMap((m) => ["-v", m]), "-w", "/w", IMAGEN, "-hide_banner", "-loglevel", "error", ...args], {
+    stdio: "inherit",
+    env: { ...process.env, MSYS_NO_PATHCONV: "1" },
+  });
+}
+
+function comprobar(e, destino) {
+  const c = cabecera(join(RAIZ, destino));
+  const ok = c.ancho === e.ancho && c.alto === e.alto && c.croma.startsWith("420");
+  process.stdout.write(`${ok ? "OK " : "MAL"} ${e.nombre}: ${c.texto}\n`);
+  return ok;
+}
+
+async function main() {
   mkdirSync(join(RAIZ, SALIDA), { recursive: true });
   let fallos = 0;
   for (const e of ESCENAS) {
     const destino = `${SALIDA}/${e.nombre}.y4m`;
-    execFileSync(
-      "docker",
-      ["run", "--rm", "-v", `${RAIZ}:/w`, "-w", "/w", IMAGEN, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", e.grafo, "-frames:v", "10", "-pix_fmt", "yuv420p", "-y", destino],
-      { stdio: "inherit", env: { ...process.env, MSYS_NO_PATHCONV: "1" } },
-    );
-    const c = cabecera(join(RAIZ, destino));
-    const ok = c.ancho === e.ancho && c.alto === e.alto && c.croma.startsWith("420");
-    if (!ok) fallos++;
-    process.stdout.write(`${ok ? "OK " : "MAL"} ${e.nombre}: ${c.texto}\n`);
+    docker([`${RAIZ}:/w`], ["-f", "lavfi", "-i", e.grafo, "-frames:v", "10", "-pix_fmt", "yuv420p", "-y", destino]);
+    if (!comprobar(e, destino)) fallos++;
+  }
+  // Cédulas sintéticas (pwa-lectura-offline, tarea 1.2): las PNG fuente van a un temporal fuera del repositorio.
+  const fuentes = await fuentesCedula();
+  const tmp = mkdtempSync(join(tmpdir(), "videos-cedula-"));
+  try {
+    writeFileSync(join(tmp, "amarilla.png"), fuentes.amarilla);
+    writeFileSync(join(tmp, "digital.png"), fuentes.digital);
+    for (const e of ESCENAS_CEDULA) {
+      const destino = `${SALIDA}/${e.nombre}.y4m`;
+      docker([`${RAIZ}:/w`, `${tmp}:/src:ro`], ["-loop", "1", "-i", `/src/${e.fuente}.png`, "-filter_complex", e.filtro, "-frames:v", "10", "-pix_fmt", "yuv420p", "-y", destino]);
+      if (!comprobar(e, destino)) fallos++;
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
   }
   if (fallos > 0) process.exit(1);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
