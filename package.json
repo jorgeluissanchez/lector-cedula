@@ -1,6 +1,7 @@
 {
   "name": "lector-cedula",
   "private": true,
+  "license": "MIT",
   "version": "0.0.0",
   "description": "Lector autoalojado de cédula colombiana (PDF417, MRZ, OCR) con antifraude",
   "type": "module",
