@@ -1,7 +1,7 @@
 // CAM-08 "Apariencia de la guía" y CAM-09 "Apariencia de las pantallas" (regresión visual, solo con VISUAL=1 dentro
 // del contenedor mcr.microsoft.com/playwright:v1.63.0-noble; design.md, decisión 15). El <video> va enmascarado.
 import { expect, test, type Page } from "@playwright/test";
-import { esperarPantalla, iniciarCamara, instrumentar } from "./instrumentacion";
+import { esperarPantalla, iniciarCamara, instrumentar, medidasCalidad } from "./instrumentacion";
 
 // El vídeo ocupa toda la pantalla y `mask` pinta encima de todo: se enmascara ocultándolo con CSS, de modo que la
 // captura muestra la guía, la región de estado y los botones sobre un fondo fijo.
@@ -15,6 +15,12 @@ test.describe("apariencia @visual", { timeout: 60_000 }, () => {
     await page.goto("/");
     await iniciarCamara(page);
     await expect(page.getByRole("status")).toHaveText("Hay reflejo, inclina la cédula", { timeout: 30_000 });
+    // Congela el análisis: con el vídeo en pausa cada frame analizado es el mismo, y se esperan 3 análisis más para
+    // que el texto quede estable antes de la captura.
+    await page.locator("video").evaluate((v: HTMLVideoElement) => v.pause());
+    const antes = await medidasCalidad(page);
+    await expect.poll(() => medidasCalidad(page)).toBeGreaterThanOrEqual(antes + 3);
+    await expect(page.getByRole("status")).toHaveText("Hay reflejo, inclina la cédula", { timeout: 0 });
     await foto(page, "activo-reflejo");
   });
 

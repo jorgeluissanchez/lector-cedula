@@ -54,10 +54,26 @@ test.describe("privacidad", { timeout: 60_000 }, () => {
     await esperarPantalla(page, "activo");
     await expect.poll(() => rutas.slice(corte).filter((r) => r.includes("calidad.worker")).length).toBe(1);
     expect(primerTramo).toStrictEqual([]);
-    // El código del Worker no está en el chunk inicial: el script de entrada no contiene la función del Worker.
+    // El código del Worker no está en la carga inicial: se recorren el script de entrada, los modulepreload y sus
+    // importaciones estáticas, y ninguno contiene el testigo del Worker; el chunk del Worker sí lo contiene.
     const html = await (await request.get("/")).text();
-    const entrada = /src="(\/assets\/index-[^"]+\.js)"/.exec(html)?.[1];
-    expect(entrada).toBeDefined();
-    expect(await (await request.get(entrada ?? "")).text()).not.toContain("frame-invalido");
+    const iniciales = [...html.matchAll(/<(?:script[^>]*\ssrc|link[^>]*rel="modulepreload"[^>]*\shref)="([^"]+\.js)"/g)].map((m) => m[1] as string);
+    expect(iniciales.length).toBeGreaterThan(0);
+    const visitados = new Map<string, string>();
+    const pendientes = [...iniciales];
+    while (pendientes.length > 0) {
+      const ruta = pendientes.pop() as string;
+      if (visitados.has(ruta)) continue;
+      const codigo = await (await request.get(ruta)).text();
+      visitados.set(ruta, codigo);
+      // Importaciones estáticas (no `import(` dinámico ni `new URL(...)`).
+      for (const m of codigo.matchAll(/(?:\bimport\s*|\bfrom\s*)["'](\.{1,2}\/[^"']+\.js)["']/g)) {
+        pendientes.push(new URL(m[1] as string, `http://x${ruta}`).pathname);
+      }
+    }
+    const TESTIGO = "frame-invalido";
+    expect([...visitados].filter(([, c]) => c.includes(TESTIGO)).map(([r]) => r)).toStrictEqual([]);
+    const rutaWorker = rutas.find((r) => r.includes("calidad.worker")) as string;
+    expect(await (await request.get(rutaWorker)).text()).toContain(TESTIGO);
   });
 });

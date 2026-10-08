@@ -46,5 +46,7 @@ describe("CAM-01 recursos del service worker", () => {
     const re = /^\/(index\.html|manifest\.webmanifest|sw\.js|iconos\/[^/]+\.png|assets\/[^/]+)?$/;
     expect(RUTA_PERMITIDA.source).toBe(re.source);
     for (const r of listaRecursos(["assets/a.js", "iconos/b.png"])) expect(re.test(r)).toBe(true);
+    const rechazadas = ["/api/x", "/assets/sub/a.js", "/iconos/a.svg", "/iconos/a/b.png", "/sw.jsx", "/index.htm", "x/index.html", "/manifest.json", "/assets", "//evil/x"];
+    expect(rechazadas.filter((r) => RUTA_PERMITIDA.test(r))).toStrictEqual([]);
   });
 });

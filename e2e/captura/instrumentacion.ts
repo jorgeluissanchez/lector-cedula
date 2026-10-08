@@ -104,3 +104,21 @@ export async function esperarPantalla(page: Page, pantalla: string, timeout = 20
 
 /** Expresión de CAM-01 para las rutas permitidas. */
 export const RUTA_PERMITIDA = /^\/(index\.html|manifest\.webmanifest|sw\.js|iconos\/[^/]+\.png|assets\/[^/]+)?$/;
+
+/** Espera `n` cuadros de animación de la página: ventana de observación por condición, sin tiempo fijo. */
+export async function esperarCuadros(page: Page, n: number): Promise<void> {
+  await page.evaluate(
+    (total) =>
+      new Promise<void>((resolve) => {
+        let k = 0;
+        const paso = () => (++k >= total ? resolve() : requestAnimationFrame(paso));
+        requestAnimationFrame(paso);
+      }),
+    n,
+  );
+}
+
+/** Número de medidas `calidad:frame` registradas hasta ahora. */
+export async function medidasCalidad(page: Page): Promise<number> {
+  return page.evaluate(() => performance.getEntriesByName("calidad:frame", "measure").length);
+}

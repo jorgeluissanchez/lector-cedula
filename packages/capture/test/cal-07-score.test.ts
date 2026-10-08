@@ -158,7 +158,7 @@ describe("CAL-07 Score y motivo", { timeout: 60_000 }, () => {
       }),
       { numRuns: 1000 },
     );
-    // No vacuidad: el ruido arbitrario llega a varios motivos distintos.
-    expect(motivosVistos.size).toBeGreaterThanOrEqual(2);
+    // No vacuidad: aparecen las dos ramas del motivo: frames casi negros (oscuro) y ruido completo nítido (null, listo).
+    expect([...motivosVistos]).toEqual(expect.arrayContaining(["oscuro", null]));
   });
 });

@@ -1,6 +1,7 @@
 // CAM-11 "Código fuente sin salidas de datos" (seguridad o privacidad estática, tarea 5.1).
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -31,15 +32,15 @@ const EXCEPCIONES: Readonly<Record<string, ReadonlySet<string>>> = {
 function archivos(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const ruta = join(dir, e.name);
-    return e.isDirectory() ? archivos(ruta) : /\.(ts|tsx)$/.test(e.name) ? [ruta] : [];
+    return e.isDirectory() ? archivos(ruta) : /\.(ts|tsx|js|mjs|html)$/.test(e.name) ? [ruta] : [];
   });
 }
 
-function hallazgos(): string[] {
+function hallazgos(raiz = RAIZ, bases: readonly string[] = ["packages/capture/src", "apps/pwa/src"]): string[] {
   const salida: string[] = [];
-  for (const base of ["packages/capture/src", "apps/pwa/src"]) {
-    for (const ruta of archivos(join(RAIZ, base))) {
-      const rel = relative(RAIZ, ruta).replaceAll("\\", "/");
+  for (const base of bases) {
+    for (const ruta of archivos(join(raiz, base))) {
+      const rel = relative(raiz, ruta).replaceAll("\\", "/");
       const texto = readFileSync(ruta, "utf8");
       for (const p of PROHIBIDOS) {
         if (EXCEPCIONES[rel]?.has(p)) continue;
@@ -55,9 +56,27 @@ describe("CAM-11 análisis estático", () => {
     expect(hallazgos()).toStrictEqual([]);
   });
 
-  it("CAM-11 el analizador detecta un identificador prohibido", () => {
-    // Control de que la búsqueda no es vacía: el propio archivo de la prueba contiene los literales.
-    const propio = readFileSync(fileURLToPath(import.meta.url), "utf8");
-    expect(PROHIBIDOS.every((p) => propio.includes(p))).toBe(true);
+  it("CAM-11 el analizador detecta identificadores prohibidos en .ts, .tsx, .js, .mjs y .html", () => {
+    // Control de no vacuidad: un árbol temporal con un prohibido distinto por extensión y la excepción fuera de su archivo.
+    const dir = mkdtempSync(join(tmpdir(), "cam11-"));
+    try {
+      const archivosPrueba: Record<string, string> = {
+        "src/a.ts": "await fetch(url);",
+        "src/b.tsx": "localStorage.setItem(1, 2);",
+        "src/c.js": "navigator.sendBeacon(u);",
+        "src/sub/d.mjs": "new WebSocket(u);",
+        "src/e.html": "<script>c.toDataURL()</script>",
+        "src/f.css": "fetch(",
+        "src/limpio.ts": "const x = 1;",
+      };
+      for (const [r, t] of Object.entries(archivosPrueba)) {
+        const ruta = join(dir, r);
+        mkdirSync(dirname(ruta), { recursive: true });
+        writeFileSync(ruta, t);
+      }
+      expect(hallazgos(dir, ["src"])).toStrictEqual(["src/a.ts: fetch(", "src/b.tsx: localStorage", "src/c.js: sendBeacon", "src/e.html: toDataURL", "src/sub/d.mjs: WebSocket"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
