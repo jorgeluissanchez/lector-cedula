@@ -2,6 +2,10 @@
 
 Lector autoalojable y de código abierto de la cédula de ciudadanía colombiana.
 
+**Pruébalo:** https://lector-frontend-nrumhc-c7438f-76-13-96-196.sslip.io (ábrelo en el celular; funciona sin conexión después de la primera visita).
+
+> Instancia de demostración en construcción: puede cambiar o reiniciarse sin aviso. La lectura ocurre en tu dispositivo y no se guarda nada, pero no la uses para trámites reales.
+
 ## Qué hace
 
 - Lee el código de barras **PDF417** de la cédula amarilla y la zona de lectura mecánica (**MRZ**) de la cédula digital, con la cámara del teléfono.
