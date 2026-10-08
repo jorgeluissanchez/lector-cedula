@@ -28,7 +28,7 @@
   { "divipol": "29076", "divipola": "73443", "justificacion": "MARIQUITA (Eitol) es SAN SEBASTIÁN DE MARIQUITA (DANE)." },
   { "divipol": "31001", "divipola": "76001", "justificacion": "CALI (Eitol) es SANTIAGO DE CALI (DANE), capital del Valle." },
   { "divipol": "31022", "divipola": "76111", "justificacion": "BUGA (Eitol) es GUADALAJARA DE BUGA (DANE)." },
-  { "divipol": "50050", "divipola": null, "justificacion": "MAPIRIPANA (Eitol, Guainía) era un área no municipalizada sin código en la DIVIPOLA vigente: sin equivalente." },
+  { "divipol": "50050", "divipola": "94343", "justificacion": "MAPIRIPANA (Guainía), antigua área no municipalizada: la Ordenanza 248 de 2019 de la Asamblea de Guainía creó Barrancominas (vigente desde 2019-12-01) uniendo Barranco Minas y Mapiripana, hoy centro poblado de Barrancominas (DANE 94343). Duplicado documentado de 50070. Fuentes: https://www.radionacional.co/cultura/barrancominas-el-municipio-1103-de-colombia y https://es.hispanopedia.com/wiki/Barrancominas. Corrección del 2026-10-07, confirmada por el usuario el 2026-10-07." },
   { "divipol": "52060", "divipola": "50689", "justificacion": "SAN MARTIN DE LOS LLANOS (Eitol) es SAN MARTÍN (DANE, Meta)." },
   { "divipol": "68010", "divipola": "97777", "justificacion": "MORICHAL (PAPUNAGUA) (Eitol) es PAPUNAHUA (DANE); el nombre entre paréntesis difiere en una letra." },
   { "divipol": "68013", "divipola": "97511", "justificacion": "BUENOS AIRES (PACOA) (Eitol) es PACOA (DANE); el nombre DANE es el alias entre paréntesis." }

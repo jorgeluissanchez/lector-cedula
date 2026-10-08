@@ -247,9 +247,9 @@ Al leer `localities.py`, el generador MUST aplicar solo estas transformaciones a
 - **WHEN** se llama `divipolADivipola("11058")` (PATIA (EL BORDO))
 - **THEN** devuelve `{ equivalente: true, divipol: "11058", divipola: "19532", metodo: "nombre-sin-parentesis", warnings: [] }`
 
-#### Scenario: Sin equivalente en DIVIPOLA vigente
-- **WHEN** se llama `divipolADivipola("50050")` (MAPIRIPANA)
-- **THEN** devuelve `{ equivalente: false, divipol: "50050", motivo: "sin-equivalente", warnings: [] }`
+#### Scenario: Mapiripana equivale a Barrancominas
+- **WHEN** se llama `divipolADivipola("50050")` (MAPIRIPANA) y `divipolADivipola("50070")` (BARRANCOMINAS)
+- **THEN** devuelven `{ equivalente: true, divipol: "50050", divipola: "94343", metodo: "manual", warnings: [] }` y `{ equivalente: true, divipol: "50070", divipola: "94343", metodo: "nombre-sin-parentesis", warnings: [] }` (la Ordenanza 248 de 2019 de Guainía creó Barrancominas uniendo las áreas no municipalizadas de Barranco Minas y Mapiripana; corrección del 2026-10-07)
 
 #### Scenario: Entradas no resolubles
 - **WHEN** se llama `divipolADivipola("17082")`, `divipolADivipola("00000")` y `divipolADivipola(" 01001")`
@@ -276,7 +276,7 @@ El generador MUST emparejar cada fila municipal con DIVIPOLA en tres etapas excl
 
 #### Scenario: Conteo por método sobre las fuentes fijadas
 - **WHEN** se genera la equivalencia con las instantáneas fijadas
-- **THEN** de las 1123 filas municipales, 1042 se resuelven por `nombre-exacto`, 48 por `nombre-sin-parentesis`, 32 por `manual` con código y 1 (`50050`) por `manual` sin equivalente; las 67 de consulado quedan sin equivalente; el único código DANE con más de un código DIVIPOL es `11001` (`15001` y `16001`) y el único código DANE sin pareja es `27493`
+- **THEN** de las 1123 filas municipales, 1042 se resuelven por `nombre-exacto`, 48 por `nombre-sin-parentesis`, 33 por `manual` con código (incluido `50050` -> `94343`) y ninguna por `manual` sin equivalente; las 67 de consulado quedan sin equivalente; los únicos códigos DANE con más de un código DIVIPOL son `11001` (`15001` y `16001`) y `94343` (`50050` y `50070`) y el único código DANE sin pareja es `27493`
 
 #### Scenario: Fila sin resolver
 - **WHEN** una fuente sintética contiene una fila municipal que no empareja en las dos primeras etapas y no figura en la tabla manual
@@ -287,7 +287,7 @@ El generador MUST emparejar cada fila municipal con DIVIPOLA en tres etapas excl
 - **THEN** el generador termina con código 1 y la salida de error contiene ese código
 
 #### Scenario: Código DANE repetido
-- **WHEN** dos códigos DIVIPOL distintos de `15001` y `16001` resultan en el mismo código DANE
+- **WHEN** dos códigos DIVIPOL resultan en el mismo código DANE y no son exactamente `15001` y `16001` en `11001` ni `50050` y `50070` en `94343`
 - **THEN** el generador termina con código 1 y la salida de error contiene el código DANE repetido
 
 #### Scenario: Integridad de la fuente DANE
@@ -323,3 +323,11 @@ El generador MUST ofrecer un modo de contraste que lea un `DIVIPOL.TXT` local de
 #### Scenario: Archivo ausente
 - **WHEN** se ejecuta el contraste con una ruta que no existe
 - **THEN** termina con código 1 y la salida de error contiene la ruta
+
+#### Scenario: Nombre de municipio distinto
+- **WHEN** el archivo trae el código `15001` con el municipio `BOGOTA. D.C.` (varias líneas por código cuentan una vez, con el nombre de la primera)
+- **THEN** `nombresDistintos` contiene `{ "codigo": "15001", "tabla": "BOGOTA, D.C.", "contraste": "BOGOTA. D.C." }`, comparando ambos nombres tras las transformaciones de DV-14, y las tres listas van ordenadas por código
+
+#### Scenario: Línea malformada
+- **WHEN** una línea no vacía del archivo no empieza por 5 dígitos o tiene menos de 51 caracteres, o el archivo no tiene líneas
+- **THEN** termina con código 1 y la salida de error contiene el número de línea (o indica que está sin líneas), sin informe en la salida estándar

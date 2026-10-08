@@ -239,6 +239,16 @@ export const DEPARTAMENTOS_DANE = Object.freeze({
  */
 const BOGOTA = Object.freeze({ historico: "15001", vigente: "16001", divipola: "11001" });
 
+/**
+ * Códigos DANE que admiten exactamente dos códigos DIVIPOL (DV-16): Bogotá y Barrancominas (94343), creado por la
+ * Ordenanza 248 de 2019 de Guainía al unir las áreas no municipalizadas de Barranco Minas (50070) y Mapiripana
+ * (50050). Corrección indicada por el coordinador el 2026-10-07; la aprobación humana queda pendiente de registrar.
+ */
+const DUPLICADOS_DANE = Object.freeze({
+  [BOGOTA.divipola]: `${BOGOTA.historico},${BOGOTA.vigente}`,
+  "94343": "50050,50070",
+});
+
 function leerManuales(manuales, filaPorCodigo, codigosDane) {
   if (!Array.isArray(manuales)) throw new ErrorDivipol("tabla manual: debe ser un arreglo de entradas");
   const entradas = new Map();
@@ -284,7 +294,8 @@ function candidatoUnico(candidatos, normalizacion, nombre) {
  * Empareja cada fila municipal DIVIPOL con DIVIPOLA en tres etapas excluyentes (DV-16): nombre exacto
  * normalizado, nombre sin paréntesis y tabla manual. Solo admite candidatos del departamento DANE de la tabla
  * literal y con un único candidato. Lanza `ErrorDivipol` ante una fila sin resolver, una entrada manual
- * redundante o inválida, o un código DANE repetido (salvo `15001` y `16001` en `11001`).
+ * redundante o inválida, o un código DANE repetido (salvo `15001` y `16001` en `11001`, y `50050` y `50070`
+ * en `94343`).
  * @param {{codigo: string, departamento: string, municipio: string}[]} filasDivipol
  * @param {{codigo: string, municipio: string}[]} filasDivipola
  * @param {{divipol: string, divipola: string | null, justificacion: string}[]} manuales
@@ -323,8 +334,7 @@ export function emparejar(filasDivipol, filasDivipola, manuales) {
     if (divipola !== null) porDane.set(divipola, [...(porDane.get(divipola) ?? []), divipol]);
   }
   for (const [codigoDane, codigos] of porDane) {
-    const bogota = codigoDane === BOGOTA.divipola && codigos.join() === `${BOGOTA.historico},${BOGOTA.vigente}`;
-    if (codigos.length > 1 && !bogota) {
+    if (codigos.length > 1 && DUPLICADOS_DANE[codigoDane] !== codigos.join()) {
       throw new ErrorDivipol(`código DANE ${codigoDane} repetido para los códigos DIVIPOL ${codigos.join(", ")}`);
     }
   }
@@ -370,4 +380,36 @@ export function serializarEquivalencias(equivalencias, fuente) {
     "];",
     "",
   ].join("\n");
+}
+
+const LINEA_DIVIPOL_TXT = /^[0-9]{5}/;
+const ANCHO_MINIMO_TXT = 51;
+
+/**
+ * Contraste con un `DIVIPOL.TXT` local de ancho fijo (DV-18): Latin-1; departamento 0-1, municipio 2-4, nombre de
+ * departamento 9-20 y nombre de municipio 21-50. Varias líneas por municipio (una por puesto). Compara solo los
+ * nombres de municipio, tras `transformarNombre` en ambos lados. Puro: no lee ni escribe archivos.
+ * @param {Uint8Array} bytes
+ * @param {{codigo: string, municipio: string}[]} filas
+ * @returns {{soloEnTabla: string[], soloEnContraste: string[], nombresDistintos: {codigo: string, tabla: string, contraste: string}[]}}
+ */
+export function contrastar(bytes, filas) {
+  const contraste = new Map();
+  Buffer.from(bytes).toString("latin1").split(/\r?\n/).forEach((linea, i) => {
+    if (linea.trim() === "") return;
+    if (linea.length < ANCHO_MINIMO_TXT || !LINEA_DIVIPOL_TXT.test(linea)) {
+      throw new ErrorDivipol(`DIVIPOL.TXT, línea ${i + 1}: línea malformada (se esperan 5 dígitos y al menos ${ANCHO_MINIMO_TXT} caracteres)`);
+    }
+    const codigo = linea.slice(0, 5);
+    if (!contraste.has(codigo)) contraste.set(codigo, transformarNombre(linea.slice(21, 51)));
+  });
+  if (contraste.size === 0) throw new ErrorDivipol("DIVIPOL.TXT: el archivo está sin líneas");
+  const tabla = new Map(filas.map((f) => [f.codigo, transformarNombre(f.municipio)]));
+  const soloEnTabla = [...tabla.keys()].filter((c) => !contraste.has(c)).sort(porCodigo);
+  const soloEnContraste = [...contraste.keys()].filter((c) => !tabla.has(c)).sort(porCodigo);
+  const nombresDistintos = [...tabla.keys()]
+    .filter((c) => contraste.has(c) && contraste.get(c) !== tabla.get(c))
+    .sort(porCodigo)
+    .map((codigo) => ({ codigo, tabla: tabla.get(codigo), contraste: contraste.get(codigo) }));
+  return { soloEnTabla, soloEnContraste, nombresDistintos };
 }

@@ -35,14 +35,14 @@ describe("equivalencia generada: integridad (DV-16)", () => {
   const municipales = FILAS_DIVIPOL.map(([codigo]) => codigo).filter((codigo) => !codigo.startsWith("88"));
   const consulados = FILAS_DIVIPOL.map(([codigo]) => codigo).filter((codigo) => codigo.startsWith("88"));
 
-  it("DV-16 conteo por método: 1042 nombre-exacto, 48 nombre-sin-parentesis, 32 manual con código y 1 manual sin equivalente", () => {
+  it("DV-16 conteo por método: 1042 nombre-exacto, 48 nombre-sin-parentesis, 33 manual con código y ninguna sin equivalente", () => {
     const conteo: Record<string, number> = {};
     for (const [, divipola, metodo] of EQUIVALENCIAS_DIVIPOLA) {
       const clave = divipola === null ? `${metodo} sin equivalente` : metodo;
       conteo[clave] = (conteo[clave] ?? 0) + 1;
     }
-    expect(conteo).toStrictEqual({ "nombre-exacto": 1042, "nombre-sin-parentesis": 48, manual: 32, "manual sin equivalente": 1 });
-    expect(EQUIVALENCIAS_DIVIPOLA.filter(([, divipola]) => divipola === null).map(([divipol]) => divipol)).toStrictEqual(["50050"]);
+    expect(conteo).toStrictEqual({ "nombre-exacto": 1042, "nombre-sin-parentesis": 48, manual: 33 });
+    expect(EQUIVALENCIAS_DIVIPOLA.filter(([, divipola]) => divipola === null).map(([divipol]) => divipol)).toStrictEqual([]);
   });
 
   it("DV-16 cubre exactamente las 1123 filas municipales en orden de código y deja fuera los 67 consulados", () => {
@@ -63,12 +63,15 @@ describe("equivalencia generada: integridad (DV-16)", () => {
     expect(new Set(EQUIVALENCIAS_DIVIPOLA.map(([divipol]) => divipol.slice(0, 2))).size).toBe(33);
   });
 
-  it("DV-16 el único código DANE con más de un código DIVIPOL es 11001 (15001 y 16001)", () => {
+  it("DV-16 los únicos códigos DANE con más de un código DIVIPOL son 11001 (15001 y 16001) y 94343 (50050 y 50070)", () => {
     const porDane = new Map<string, string[]>();
     for (const [divipol, divipola] of EQUIVALENCIAS_DIVIPOLA) {
       if (divipola !== null) porDane.set(divipola, [...(porDane.get(divipola) ?? []), divipol]);
     }
-    expect([...porDane].filter(([, divipol]) => divipol.length > 1)).toStrictEqual([["11001", ["15001", "16001"]]]);
+    expect([...porDane].filter(([, divipol]) => divipol.length > 1)).toStrictEqual([
+      ["11001", ["15001", "16001"]],
+      ["94343", ["50050", "50070"]],
+    ]);
   });
 
   it("DV-16 todo divipola existe en la instantánea del DANE y el único código DANE sin pareja es 27493", () => {
@@ -87,7 +90,8 @@ describe("equivalencia generada: integridad (DV-16)", () => {
     expect(fila("16001")).toStrictEqual(["16001", "11001", "nombre-exacto"]);
     expect(fila("56001")).toStrictEqual(["56001", "88001", "nombre-exacto"]);
     expect(fila("11058")).toStrictEqual(["11058", "19532", "nombre-sin-parentesis"]);
-    expect(fila("50050")).toStrictEqual(["50050", null, "manual"]);
+    expect(fila("50050")).toStrictEqual(["50050", "94343", "manual"]);
+    expect(fila("50070")).toStrictEqual(["50070", "94343", "nombre-sin-parentesis"]);
   });
 
   it("DV-17 la cabecera y los metadatos de la fuente declaran el SHA-256 de la instantánea del DANE", () => {
@@ -122,8 +126,9 @@ describe("DV-15 equivalencia DIVIPOL a DIVIPOLA", { timeout: 60_000 }, () => {
     expect(divipolADivipola("11058")).toStrictEqual({ equivalente: true, divipol: "11058", divipola: "19532", metodo: "nombre-sin-parentesis", warnings: [] });
   });
 
-  it("DV-15 sin equivalente en DIVIPOLA vigente", () => {
-    expect(divipolADivipola("50050")).toStrictEqual({ equivalente: false, divipol: "50050", motivo: "sin-equivalente", warnings: [] });
+  it("DV-15 Mapiripana equivale a Barrancominas", () => {
+    expect(divipolADivipola("50050")).toStrictEqual({ equivalente: true, divipol: "50050", divipola: "94343", metodo: "manual", warnings: [] });
+    expect(divipolADivipola("50070")).toStrictEqual({ equivalente: true, divipol: "50070", divipola: "94343", metodo: "nombre-sin-parentesis", warnings: [] });
   });
 
   it("DV-15 entradas no resolubles", () => {
@@ -166,7 +171,7 @@ describe("DV-15 equivalencia DIVIPOL a DIVIPOLA", { timeout: 60_000 }, () => {
     fc.assert(fc.property(entrada, totalYDeterminista), { numRuns: 1000 });
   });
 
-  it("DV-15 propiedad exhaustiva: 1122 equivalentes, 1 sin-equivalente y 67 consulados en las 1190 filas", () => {
+  it("DV-15 propiedad exhaustiva: 1123 equivalentes, 0 sin-equivalente y 67 consulados en las 1190 filas", () => {
     const conteo: Record<string, number> = {};
     const discrepancias: string[] = [];
     for (const [codigo] of FILAS_DIVIPOL) {
@@ -182,7 +187,7 @@ describe("DV-15 equivalencia DIVIPOL a DIVIPOLA", { timeout: 60_000 }, () => {
         if (fila?.[1] !== resultado.divipola || fila[2] !== resultado.metodo) discrepancias.push(codigo);
       }
     }
-    expect(conteo).toStrictEqual({ equivalente: 1122, "sin-equivalente": 1, consulado: 67 });
+    expect(conteo).toStrictEqual({ equivalente: 1123, consulado: 67 });
     expect(discrepancias).toStrictEqual([]);
   });
 });

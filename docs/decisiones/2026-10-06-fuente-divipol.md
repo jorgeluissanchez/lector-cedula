@@ -26,7 +26,21 @@ Verificación con `gh api repos/<repo>` (campo `license`), `gh api repos/<repo>/
 
 Detalle técnico, alternativas e implicaciones del share-alike: `openspec/changes/divipol-registraduria/design.md`, decisiones 1, 6 y 7.
 
+## Resultado del contraste (DV-18, tarea 5.2)
+
+Ejecutado el 2026-10-07 con `node tools/divipol/generar-divipol.mjs --contraste <ruta local>` sobre una copia de `DIVIPOL.TXT` (miltonrojasb, rama `main`, SHA-256 `a9cd520c962ffd357637ade618f20d21c41b7325776e2310d67f84e67907e17d`) guardada fuera del repositorio. No se versiona ninguna fila del archivo; solo los conteos:
+
+| Diferencia | Conteo | Esperado (design.md) |
+|---|---|---|
+| Códigos solo en la tabla | 12 (`15001`, `50050` y 10 consulados `88`) | 12 |
+| Códigos solo en el contraste | 11 (`17082` y 10 consulados `88`) | 11 |
+| Nombres de municipio distintos | 6 (`16001`, `50070` y 4 consulados `88`) | 6 |
+
+Sin divergencias frente al análisis del diseño.
+
 ## Pendiente de decisión humana
+
+- Revisión humana de las 33 equivalencias manuales de `tools/divipol/equivalencias-manuales.json`: **aprobada por el usuario el 2026-10-07** en la sesión de trabajo, con la corrección 50050 MAPIRIPANA -> 94343 BARRANCOMINAS. El usuario acepta la tabla Eitol (Divipol 2011 más `15001`) como fuente válida.
 
 - Obtener `DIVIPOL.TXT` de una publicación oficial de la Registraduría con términos de uso, o su autorización, para incorporar `17082` y los consulados nuevos.
 - Separar o no la equivalencia en otro paquete npm antes de publicar.

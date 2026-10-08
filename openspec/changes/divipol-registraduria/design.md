@@ -154,7 +154,7 @@ Algoritmo del generador (DV-16):
 | 29076 | MARIQUITA | 73443 | SAN SEBASTIÁN DE MARIQUITA |
 | 31001 | CALI | 76001 | SANTIAGO DE CALI |
 | 31022 | BUGA | 76111 | GUADALAJARA DE BUGA |
-| 50050 | MAPIRIPANA | null | (área no municipalizada sin código en la DIVIPOLA vigente) |
+| 50050 | MAPIRIPANA | 94343 | BARRANCOMINAS (Ordenanza 248 de 2019 de Guainía; duplicado documentado de `50070`; corrección del 2026-10-07) |
 | 52060 | SAN MARTIN DE LOS LLANOS | 50689 | SAN MARTÍN |
 | 68010 | MORICHAL (PAPUNAGUA) | 97777 | PAPUNAHUA |
 | 68013 | BUENOS AIRES (PACOA) | 97511 | PACOA |
@@ -222,10 +222,10 @@ Según el principio II y la matriz de `.claude/skills/estrategia-pruebas/SKILL.m
 | DV-14 | Propiedad: `transformarNombre` sobre cadenas de `A`-`Z`, espacio, `/` y U+2010 | fast-check | G | numRuns >= 1000; salida sin `/` ni U+2010; misma longitud tras recorte; idempotente |
 | DV-15 | Unitaria: las 11 entradas de sus escenarios | Vitest | V | 11 de 11 `toStrictEqual` |
 | DV-15 | Fuzz y determinismo de `divipolADivipola` | fast-check | V | numRuns >= 1000 cada una; 0 excepciones; 0 diferencias |
-| DV-15 | Propiedad exhaustiva: toda fila municipal tiene equivalencia o `sin-equivalente`; todo consulado da `consulado` | Vitest | V | 1122 + 1 + 67 = 1190 |
+| DV-15 | Propiedad exhaustiva: toda fila municipal tiene equivalencia o `sin-equivalente`; todo consulado da `consulado` | Vitest | V | 1123 + 0 + 67 = 1190 |
 | DV-16 | Unitaria de `normalizar` y `normalizarSinParentesis` con los literales de la spec | Vitest | G | 5 de 5 |
 | DV-16 | Unitaria de `emparejar` con fuentes sintéticas: fila sin resolver, manual redundante, DANE repetido, DANE con 1121 filas | Vitest | G | 4 de 4 lanzan `ErrorDivipol` con el código esperado en el mensaje |
-| DV-16 | Integridad de la equivalencia generada: conteos por método, tabla de departamentos, prefijos, `11001` doble, `27493` sin pareja | Vitest | V | igualdad exacta con los literales de DV-16 |
+| DV-16 | Integridad de la equivalencia generada: conteos por método, tabla de departamentos, prefijos, `11001` y `94343` dobles, `27493` sin pareja | Vitest | V | igualdad exacta con los literales de DV-16 |
 | DV-17 | Unitaria: grafo de importaciones desde `src/index.ts`; `DIVIPOLA_METADATOS`; `package.json` y avisos | Vitest | V | 0 módulos de `divipola/` alcanzados; 0 apariciones de `CC-BY-SA`; campos exactos |
 | DV-17 | Licencias del repositorio | `licencia-check` | L | código 0 |
 | DV-18 | Integración: contraste con TXT sintético de 3 líneas (Latin-1), ruta inexistente, `git status` antes y después | Vitest + `spawnSync` | I | informe JSON exacto; código 1 con la ruta; `git status --porcelain` idéntico |
@@ -258,4 +258,4 @@ Capacidad nueva, sin consumidores todavía. Orden: fuentes e instantáneas -> ge
 ## Pendiente antes de archivar (orquestador, 2026-10-06)
 
 - DV-16, escenario "Tabla literal de departamentos": contradice DV-15 y la decisión 5 para `15001 -> 11001` (Cundinamarca es DANE 25, Bogotá 11). La implementación lo trata como una única excepción documentada y probada. Corregir el escenario para declarar esa excepción.
-- La tabla manual de 33 equivalencias (`tools/divipol/equivalencias-manuales.json`) requiere revisión humana.
+- La tabla manual de 33 equivalencias (`tools/divipol/equivalencias-manuales.json`) fue revisada y aprobada por el usuario el 2026-10-07, con la corrección de Mapiripana.

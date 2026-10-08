@@ -5,6 +5,7 @@
  * Uso:
  *   node tools/divipol/generar-divipol.mjs               # genera los archivos desde las instantáneas (sin red)
  *   node tools/divipol/generar-divipol.mjs --verificar   # código 1 si los archivos versionados difieren de una regeneración
+ *   node tools/divipol/generar-divipol.mjs --contraste <ruta>  # informe JSON contra un DIVIPOL.TXT local (sin escribir ni red)
  *   node tools/divipol/generar-divipol.mjs --descargar   # descarga las fuentes del manifiesto y verifica su SHA-256 (única operación con red)
  *
  * Opciones (para pruebas):
@@ -21,6 +22,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ErrorDivipol,
+  contrastar,
   emparejar,
   parsearDivipola,
   parsearLocalities,
@@ -45,7 +47,13 @@ function leerArgumentos(argv) {
   const opciones = { ...POR_DEFECTO, modo: "generar" };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (OPCIONES_CON_VALOR.has(arg)) {
+    if (arg === "--contraste") {
+      if (opciones.modo !== "generar") throw new ErrorDivipol(`modos incompatibles: --${opciones.modo} y ${arg}`);
+      const valor = argv[++i];
+      if (valor === undefined) throw new ErrorDivipol(`falta el valor de ${arg}`);
+      opciones.modo = "contraste";
+      opciones.contraste = resolve(valor);
+    } else if (OPCIONES_CON_VALOR.has(arg)) {
       const valor = argv[++i];
       if (valor === undefined) throw new ErrorDivipol(`falta el valor de ${arg}`);
       opciones[arg.slice(2)] = resolve(valor);
@@ -223,8 +231,22 @@ function verificar(opciones) {
   console.log("divipol: archivos generados al día");
 }
 
+/** Contraste con un DIVIPOL.TXT local (DV-18): solo lee; el informe JSON va a la salida estándar. */
+function contraste(opciones) {
+  let bytes;
+  try {
+    bytes = readFileSync(opciones.contraste);
+  } catch (e) {
+    throw new ErrorDivipol(`no se pudo leer el archivo de contraste ${opciones.contraste}: ${e.message}`);
+  }
+  const manifiesto = leerManifiesto(opciones.manifiesto);
+  const filas = parsearLocalities(leerInstantanea(opciones, manifiesto, "eitol-localities").texto);
+  console.log(JSON.stringify(contrastar(bytes, filas), null, 2));
+}
+
 async function main(argv) {
   const opciones = leerArgumentos(argv);
+  if (opciones.modo === "contraste") return contraste(opciones);
   if (opciones.modo === "descargar") return descargar(opciones);
   if (opciones.modo === "verificar") return verificar(opciones);
   return generar(opciones);

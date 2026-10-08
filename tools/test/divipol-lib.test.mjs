@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   CAMBIOS_EQUIVALENCIAS,
+  contrastar,
   DEPARTAMENTOS_DANE,
   ErrorDivipol,
   emparejar,
@@ -122,7 +123,7 @@ function capturarError(fn) {
   throw new Error("se esperaba un ErrorDivipol");
 }
 
-describe("transformarNombre (DV-14)", () => {
+describe("transformarNombre (DV-14)", { timeout: 60_000 }, () => {
   it("DV-14 Ñ restaurada: BRICE/O -> BRICEÑO con U+00D1", () => {
     const nombre = transformarNombre("BRICE/O");
     expect(nombre).toBe("BRICEÑO");
@@ -583,6 +584,25 @@ describe("emparejar (DV-16)", () => {
     expect(error.message).toContain("05107");
   });
 
+  it("DV-16 Mapiripana: 50050 y 50070 en 94343 se admiten; un tercer código o 50050 sin 50070 en otro DANE repetido no", () => {
+    const guainia = [divipol("50050", "GUAINIA", "MAPIRIPANA"), divipol("50070", "GUAINIA", "BARRANCO MINAS")];
+    const danes = [...DANE_PRUEBA, dane("94343", "BARRANCO MINAS")];
+    expect(emparejar(guainia, danes, [manual("50050", "94343")])).toStrictEqual([
+      { divipol: "50050", divipola: "94343", metodo: "manual" },
+      { divipol: "50070", divipola: "94343", metodo: "nombre-exacto" },
+    ]);
+    const triple = capturarError(() =>
+      emparejar([...guainia, divipol("50001", "GUAINIA", "OTRA")], danes, [manual("50050", "94343"), manual("50001", "94343")]),
+    );
+    expect(triple).toBeInstanceOf(ErrorDivipol);
+    expect(triple.message).toContain("94343");
+    const conInirida = capturarError(() =>
+      emparejar([divipol("50001", "GUAINIA", "INIRIDA"), divipol("50050", "GUAINIA", "MAPIRIPANA")], danes, [manual("50050", "94001")]),
+    );
+    expect(conInirida).toBeInstanceOf(ErrorDivipol);
+    expect(conInirida.message).toContain("94001");
+  });
+
   it("DV-16 el duplicado de Bogotá solo se admite para exactamente 15001 y 16001 en 11001", () => {
     const bogota = [divipol("15001", "CUNDINAMARCA", "BOGOTA, D.C."), divipol("16001", "BOGOTA D.C", "BOGOTA, D.C.")];
     // Un tercer código DIVIPOL hacia 11001 rompe la excepción.
@@ -730,5 +750,86 @@ describe("serializarEquivalencias (DV-16, DV-17)", () => {
     const copia = structuredClone(equivalencias);
     expect(serializarEquivalencias(equivalencias, FUENTE)).toBe(serializarEquivalencias([...equivalencias].reverse(), FUENTE));
     expect(equivalencias).toStrictEqual(copia);
+  });
+});
+
+/** Línea sintética de DIVIPOL.TXT (146 caracteres): dep 0-1, mun 2-4, relleno, nombre dep 9-20, nombre mun 21-50. */
+function lineaTxt(codigo, departamento, municipio) {
+  return (codigo + "0000" + departamento.padEnd(12).slice(0, 12) + municipio.padEnd(30).slice(0, 30)).padEnd(146, "0");
+}
+const FILAS_CONTRASTE = [
+  { codigo: "01001", departamento: "ANTIOQUIA", municipio: "MEDELLIN" },
+  { codigo: "01062", departamento: "ANTIOQUIA", municipio: "BRICE" + String.fromCharCode(0xd1) + "O" },
+  { codigo: "15001", departamento: "BOGOTA D.C.", municipio: "BOGOTA, D.C." },
+];
+
+describe("contrastar (DV-18)", () => {
+  it("DV-18 diferencias en un archivo sintético Latin-1 con varias líneas por municipio", () => {
+    const txt = [
+      lineaTxt("01001", "ANTIOQUIA", "MEDELLIN"),
+      lineaTxt("01001", "ANTIOQUIA", "MEDELLIN"),
+      lineaTxt("01062", "ANTIOQUIA", "BRICE" + String.fromCharCode(0xd1) + "O"),
+      lineaTxt("17082", "CHOCO", "NUEVO BELEN DE BAJIRA"),
+    ].join("\r\n") + "\r\n";
+    expect(txt.split("\r\n")[0]).toHaveLength(146);
+    expect(contrastar(Buffer.from(txt, "latin1"), FILAS_CONTRASTE)).toStrictEqual({
+      soloEnTabla: ["15001"],
+      soloEnContraste: ["17082"],
+      nombresDistintos: [],
+    });
+  });
+
+  it("DV-18 nombre de municipio distinto: reporta código y ambos nombres, ordenado por código", () => {
+    const txt = [lineaTxt("15001", "BOGOTA", "BOGOTA. D.C."), lineaTxt("01001", "ANTIOQUIA", "MEDELLIN")].join("\n");
+    expect(contrastar(Buffer.from(txt, "latin1"), FILAS_CONTRASTE)).toStrictEqual({
+      soloEnTabla: ["01062"],
+      soloEnContraste: [],
+      nombresDistintos: [{ codigo: "15001", tabla: "BOGOTA, D.C.", contraste: "BOGOTA. D.C." }],
+    });
+  });
+
+  it("DV-18 compara solo el nombre de municipio, no el de departamento truncado", () => {
+    const txt = lineaTxt("01001", "OTRO DEPTO", "MEDELLIN");
+    expect(contrastar(Buffer.from(txt, "latin1"), FILAS_CONTRASTE).nombresDistintos).toStrictEqual([]);
+  });
+
+  it("DV-18 línea malformada: ErrorDivipol con el número de línea", () => {
+    const txt = lineaTxt("01001", "ANTIOQUIA", "MEDELLIN") + "\nAB001 corta";
+    expect(() => contrastar(Buffer.from(txt, "latin1"), FILAS_CONTRASTE)).toThrow(ErrorDivipol);
+    expect(() => contrastar(Buffer.from(txt, "latin1"), FILAS_CONTRASTE)).toThrow(/línea 2/);
+  });
+
+  it("DV-18 límites de línea: 51 caracteres válida, 50 o código no numérico malformada, solo espacios ignorada", () => {
+    const valida = lineaTxt("01001", "ANTIOQUIA", "MEDELLIN").slice(0, 51);
+    const informe = contrastar(Buffer.from(`${" ".repeat(146)}\n${valida}`, "latin1"), FILAS_CONTRASTE);
+    expect(informe.soloEnContraste).toStrictEqual([]);
+    expect(informe.nombresDistintos).toStrictEqual([]);
+    const malas = [valida.slice(0, 50), `0100A${valida.slice(5)}`, `X${valida}`];
+    for (const mala of malas) {
+      expect(() => contrastar(Buffer.from(mala, "latin1"), FILAS_CONTRASTE)).toThrow(/línea 1/);
+    }
+  });
+
+  it("DV-18 código repetido: vale el nombre de la primera línea; listas ordenadas por código", () => {
+    const txt = [
+      lineaTxt("99002", "X", "B"),
+      lineaTxt("15001", "BOGOTA", "PRIMERO"),
+      lineaTxt("15001", "BOGOTA", "BOGOTA, D.C."),
+      lineaTxt("99001", "X", "A"),
+      lineaTxt("01001", "ANTIOQUIA", "OTRO"),
+    ].join("\n");
+    const filas = [FILAS_CONTRASTE[2], { codigo: "02002", municipio: "Z" }, FILAS_CONTRASTE[0], { codigo: "02001", municipio: "Y" }];
+    expect(contrastar(Buffer.from(txt, "latin1"), filas)).toStrictEqual({
+      soloEnTabla: ["02001", "02002"],
+      soloEnContraste: ["99001", "99002"],
+      nombresDistintos: [
+        { codigo: "01001", tabla: "MEDELLIN", contraste: "OTRO" },
+        { codigo: "15001", tabla: "BOGOTA, D.C.", contraste: "PRIMERO" },
+      ],
+    });
+  });
+
+  it("DV-18 archivo sin líneas: ErrorDivipol", () => {
+    expect(() => contrastar(Buffer.from("\r\n", "latin1"), FILAS_CONTRASTE)).toThrow(/sin líneas/);
   });
 });

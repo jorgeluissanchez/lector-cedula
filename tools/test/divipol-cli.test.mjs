@@ -466,3 +466,72 @@ describe("generar-divipol: generación y verificación (DV-13, DV-14)", { timeou
     expect(readdirSync(dir)).toStrictEqual([]);
   });
 });
+
+/** Línea sintética de DIVIPOL.TXT (146 caracteres, DV-18). */
+function lineaTxt(codigo, departamento, municipio) {
+  return (codigo + "0000" + departamento.padEnd(12).slice(0, 12) + municipio.padEnd(30).slice(0, 30)).padEnd(146, "0");
+}
+
+function estadoGit() {
+  return spawnSync("git", ["status", "--porcelain"], { cwd: RAIZ, encoding: "utf8", timeout: LIMITE_MS }).stdout;
+}
+
+describe("generar-divipol --contraste (DV-18)", { timeout: 60_000 }, () => {
+  it("DV-18 diferencias en un archivo sintético: informe JSON exacto y sin efectos en el repositorio", () => {
+    const dir = directorioTemporal("contraste");
+    const ruta = join(dir, "DIVIPOL.TXT");
+    const lineas = [
+      lineaTxt("01001", "ANTIOQUIA", "MEDELLIN"),
+      lineaTxt("01062", "ANTIOQUIA", "BRICE" + String.fromCharCode(0xd1) + "O"),
+      lineaTxt("17082", "CHOCO", "NUEVO BELEN DE BAJIRA"),
+    ];
+    for (const l of lineas) expect(l).toHaveLength(146);
+    const bytes = Buffer.from(lineas.join("\r\n") + "\r\n", "latin1");
+    expect(bytes.includes(0xd1)).toBe(true);
+    writeFileSync(ruta, bytes);
+    const antes = estadoGit();
+    const r = correr("--contraste", ruta);
+    expect(estadoGit()).toBe(antes);
+    expect(r.stderr).toBe("");
+    expect(r.status).toBe(0);
+    const informe = JSON.parse(r.stdout);
+    expect(Object.keys(informe).sort()).toStrictEqual(["nombresDistintos", "soloEnContraste", "soloEnTabla"]);
+    expect(informe.soloEnContraste).toStrictEqual(["17082"]);
+    expect(informe.nombresDistintos).toStrictEqual([]);
+    expect(informe.soloEnTabla).toHaveLength(1188);
+    expect(informe.soloEnTabla).toContain("15001");
+    expect(informe.soloEnTabla).not.toContain("01001");
+    expect(informe.soloEnTabla).not.toContain("01062");
+    expect(readdirSync(dir)).toStrictEqual(["DIVIPOL.TXT"]);
+  });
+
+  it("DV-18 archivo ausente: código 1 con la ruta en stderr y sin efectos en el repositorio", () => {
+    const dir = directorioTemporal("contraste-ausente");
+    const ruta = join(dir, "no-existe", "DIVIPOL.TXT");
+    const antes = estadoGit();
+    const r = correr("--contraste", ruta);
+    expect(estadoGit()).toBe(antes);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain(ruta);
+    expect(r.stdout).toBe("");
+  });
+
+  it("DV-18 línea malformada: código 1 con el número de línea y sin informe", () => {
+    const dir = directorioTemporal("contraste-malformado");
+    const ruta = join(dir, "DIVIPOL.TXT");
+    writeFileSync(ruta, Buffer.from(`${lineaTxt("01001", "ANTIOQUIA", "MEDELLIN")}\nAB001 corta\n`, "latin1"));
+    const r = correr("--contraste", ruta);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("línea 2");
+    expect(r.stdout).toBe("");
+  });
+
+  it("DV-18 --contraste sin ruta o combinado con otro modo: código 1", () => {
+    const r1 = correr("--contraste");
+    expect(r1.status).toBe(1);
+    expect(r1.stderr).toContain("--contraste");
+    const r2 = correr("--verificar", "--contraste", "x.txt");
+    expect(r2.status).toBe(1);
+    expect(r2.stderr).toContain("modos incompatibles");
+  });
+});
