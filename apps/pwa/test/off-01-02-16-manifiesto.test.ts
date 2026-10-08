@@ -92,11 +92,25 @@ describe("OFF-01, OFF-02, OFF-04 y OFF-16 sobre la compilación", { timeout: 60_
     }
   });
 
+  it("OFF-20 Avisos de terceros en la compilación", () => {
+    expect(manifiesto.entradas.map((e) => e.ruta)).toContain("/assets/THIRD_PARTY_LICENSES.txt");
+    const texto = readFileSync(archivoDe("/assets/THIRD_PARTY_LICENSES.txt"), "utf8");
+    for (const s of ["Apache License", "Version 2.0", "tesseract.js", "tesseract.js-core", "zxing-wasm", "zxing-cpp", "Preact", "Leptonica", "BSD-3-Clause", "tesseract-mrz", "MIT License"]) expect(texto, s).toContain(s);
+    const modelo = (JSON.parse(readFileSync(join(RAIZ, "models", "manifest.json"), "utf8")) as { fuente: string; sha256: string }[])[0];
+    expect(texto).toContain(modelo?.fuente);
+    expect(texto).toContain(modelo?.sha256);
+  });
+
   it("OFF-16 Presupuesto de bytes", () => {
     const total = manifiesto.entradas.reduce((s, e) => s + e.bytes, 0);
     mkdirSync(join(RAIZ, "reports", "lectura"), { recursive: true });
     writeFileSync(join(RAIZ, "reports", "lectura", "precache.json"), `${JSON.stringify({ total, limite: LIMITE, rutas: Object.fromEntries(manifiesto.entradas.map((e) => [e.ruta, e.bytes])) }, null, 2)}\n`);
     expect(total).toBeLessThanOrEqual(LIMITE);
+  });
+
+  it("OFF-09 la compilación de producción no expone el resultado en data-resultado (revisor de privacidad)", () => {
+    const conAtributo = listar(dist).filter((r) => /.(js|html)$/u.test(r) && readFileSync(join(dist, r), "utf8").includes("data-resultado"));
+    expect(conAtributo).toStrictEqual([]);
   });
 
   it("OFF-04 sin URLs de CDN ni tessdata en la compilación", () => {

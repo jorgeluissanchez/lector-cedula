@@ -16,3 +16,24 @@ h1 { font-size: 1.5rem; margin: 0; }
 .boton { min-width: 44px; min-height: 48px; padding: 12px 20px; font-size: 1rem; border: 0; border-radius: 8px; background: #15803d; color: #fff; cursor: pointer; }
 .boton.secundario { background: #374151; }
 .boton:focus-visible { outline: 3px solid #fde68a; outline-offset: 2px; }
+/* Lectura (pwa-lectura-offline, OFF-18): resultado con etiquetas visibles. */
+.offline { margin: 0; color: #d1d5db; }
+.resultado h2 { font-size: 1.25rem; margin: 0 0 8px; }
+.resultado dl { margin: 0; display: grid; gap: 8px; }
+.campo { display: grid; grid-template-columns: minmax(9rem, auto) 1fr; gap: 8px; }
+.campo dt { color: #d1d5db; }
+.campo dd { margin: 0; font-family: ui-monospace, monospace; }
+.enlace { color: #93c5fd; }
+.enlace:focus-visible { outline: 3px solid #fde68a; outline-offset: 2px; }
+.licencias h1 { margin-bottom: 8px; }
+.licencias h2 { font-size: 1.125rem; margin: 12px 0 4px; }
+.licencias p { margin: 4px 0; overflow-wrap: anywhere; }
+/* OFF-21: aviso de privacidad y autorización. */
+.aviso-privacidad { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #4b5563; border-radius: 8px; }
+.aviso-privacidad p { margin: 0; }
+.autorizacion { display: flex; gap: 12px; align-items: center; min-height: 44px; cursor: pointer; }
+.autorizacion input { width: 24px; height: 24px; flex: none; }
+.boton:disabled { background: #4b5563; color: #e5e7eb; cursor: not-allowed; }
+.descargo { margin: 0 0 8px; color: #fde68a; }
+.progreso { display: flex; gap: 12px; align-items: center; }
+.progreso progress { flex: 1; }

@@ -27,6 +27,7 @@ async function revisar(page: Page): Promise<void> {
 }
 
 test.describe("accesibilidad", { timeout: 60_000 }, () => {
+  test.describe.configure({ timeout: 60_000 });
   test("CAM-09 inicio, activo, pausado y listo @video:nitida-1080p", async ({ page }) => {
     await instrumentar(page);
     await page.goto("/");

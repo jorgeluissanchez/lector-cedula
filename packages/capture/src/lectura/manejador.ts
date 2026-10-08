@@ -56,6 +56,9 @@ export function crearManejadorLector(deps: DependenciasLectura): (mensaje: unkno
       enCurso.get(m.id as number)?.abort();
       return null;
     }
-    return esLeer(m) ? leer(m) : null;
+    if (esLeer(m)) return leer(m);
+    // Un mensaje mal formado también pudo transferir píxeles: se ponen a cero antes de descartarlo (OFF-11).
+    if (m.pixeles instanceof ArrayBuffer) new Uint8Array(m.pixeles).fill(0);
+    return null;
   };
 }

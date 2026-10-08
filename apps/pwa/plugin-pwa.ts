@@ -9,6 +9,8 @@ import { crc32, deflateSync } from "node:zlib";
 import { readFileSync } from "node:fs";
 import type { OutputBundle } from "rollup";
 import type { Plugin } from "vite";
+import { textoAvisosTerceros } from "./avisos-terceros";
+import { leerLegal, mdAHtml } from "./legal-paginas";
 import { construirManifiesto } from "./src/precache/manifiesto";
 
 function trozo(tipo: string, datos: Buffer): Buffer {
@@ -110,6 +112,11 @@ export function pluginPwa(): Plugin {
         if (wasm === undefined) throw new Error(`falta el wasm de tesseract-core-${variante}`);
         fijarTexto(a, (texto(a) ?? "").replaceAll(`tesseract-core-${variante}.wasm`, wasm.slice("assets/".length)));
       }
+      // OFF-20 (condición C3 de licencias): avisos de terceros, en la precaché y enlazados desde "Acerca de y licencias".
+      this.emitFile({ type: "asset", fileName: "assets/THIRD_PARTY_LICENSES.txt", source: textoAvisosTerceros() });
+      // OFF-21: política de tratamiento y términos de uso, en la precaché (disponibles sin conexión).
+      this.emitFile({ type: "asset", fileName: "assets/politica-tratamiento.html", source: mdAHtml(leerLegal("politica-tratamiento-datos.md"), "Política de tratamiento de datos") });
+      this.emitFile({ type: "asset", fileName: "assets/terminos-de-uso.html", source: mdAHtml(leerLegal("terminos-de-uso.md"), "Términos de uso") });
       const sw = bundle["sw.js"];
       if (sw === undefined || sw.type !== "chunk") throw new Error("sw.js no se emitió");
       const archivos = Object.values(bundle)

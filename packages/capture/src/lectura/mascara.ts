@@ -19,9 +19,16 @@ export function enmascararCamposMrz<T extends object>(campos: T): T {
   return { ...campos, nuip: enmascararUltimos2(c.nuip), serial: enmascararUltimos2(c.serial), apellidos: enmascararNombre(c.apellidos), nombres: enmascararNombre(c.nombres) };
 }
 
-/** Resultado del parser MRZ: campos enmascarados y sin las líneas ni las correcciones. */
+/** Cada dígito de control conserva solo su `estado`: `leido` y `calculado` revelarían dígitos del NUIP y del serial. */
+function soloEstados(digitos: unknown): unknown {
+  if (typeof digitos !== "object" || digitos === null) return digitos;
+  return Object.fromEntries(Object.entries(digitos).map(([k, d]) => [k, { estado: (d as { estado?: unknown } | null)?.estado }]));
+}
+
+/** Resultado del parser MRZ: campos enmascarados, dígitos de control solo con su estado y sin las líneas ni las correcciones. */
 export function enmascararResultadoMrz<T extends { readonly campos: object }>(resultado: T): T {
-  return { ...resultado, campos: enmascararCamposMrz(resultado.campos), lineasCorregidas: null, correcciones: null };
+  const r = { ...resultado, campos: enmascararCamposMrz(resultado.campos), lineasCorregidas: null, correcciones: null };
+  return "digitosControl" in resultado ? { ...r, digitosControl: soloEstados(resultado.digitosControl) } : r;
 }
 
 /** Campos del parser PDF417 de la amarilla. El lugar de nacimiento no se enmascara (LPI-08). */

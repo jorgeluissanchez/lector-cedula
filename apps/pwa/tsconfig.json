@@ -16,7 +16,9 @@
   "include": [
     "src",
     "vite.config.ts",
-    "plugin-pwa.ts"
+    "plugin-pwa.ts",
+    "avisos-terceros.ts",
+    "legal-paginas.ts"
   ],
   "references": [
     {

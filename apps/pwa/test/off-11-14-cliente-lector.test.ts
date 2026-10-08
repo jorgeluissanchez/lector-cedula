@@ -75,3 +75,10 @@ describe("Cliente del Worker lector", () => {
     expect(await a).toStrictEqual({ ok: false, error: "mrz-no-encontrada", tipo: "mrz" });
   });
 });
+
+describe("OFF-23 Presupuesto corto de lectura en la PWA", () => {
+  it("OFF-23 Presupuesto", async () => {
+    const { PRESUPUESTO_MRZ_PWA } = await import("../src/lectura");
+    expect(PRESUPUESTO_MRZ_PWA).toStrictEqual({ maxLlamadasOcr: 12, tiempoLimiteMs: 15_000 });
+  });
+});

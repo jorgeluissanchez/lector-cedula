@@ -23,6 +23,8 @@ export interface ClienteLector {
   terminar(): void;
 }
 
+export { PRESUPUESTO_MRZ_PWA } from "./presupuesto";
+
 /** Worker real; Vite lo emite como `assets/lector.worker-<hash>.js`. */
 export function nuevoWorkerLector(): Worker {
   return new Worker(new URL("./lector.worker.ts", import.meta.url), { type: "module" });

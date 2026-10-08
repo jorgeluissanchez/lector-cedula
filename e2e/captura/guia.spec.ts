@@ -8,6 +8,7 @@ const ESPERADAS: Record<"escritorio" | "pixel", { x: number; y: number; width: n
 };
 
 test.describe("guía de encuadre", { timeout: 60_000 }, () => {
+  test.describe.configure({ timeout: 60_000 });
   // El vídeo desenfocado tiene el mismo tamaño que nitida-1080p y mantiene la pantalla en activo para medir sin carrera.
   test("CAM-08 Guía en pantalla @video:desenfocada-1080p", async ({ page }, info) => {
     const dispositivo = info.project.name.endsWith("pixel") ? "pixel" : "escritorio";

@@ -5,6 +5,7 @@ import { contenedor, esperarPantalla, iniciarCamara, instrumentar, registro } fr
 const LITERAL = { audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
 
 test.describe("cámara", { timeout: 60_000 }, () => {
+  test.describe.configure({ timeout: 60_000 });
   test("CAM-02 Origen HTTP que no es localhost @video:nitida-1080p", async ({ page, baseURL }) => {
     await instrumentar(page);
     await page.route("http://lector.test/**", async (ruta) => {

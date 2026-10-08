@@ -83,3 +83,24 @@ describe("OFF-09 Resultado enmascarado", () => {
     );
   });
 });
+
+describe("OFF-09 Dígitos de control sin valores (revisor-privacidad, hallazgo 7)", () => {
+  it("OFF-09 digitosControl conserva solo el estado y la entrada no se muta", () => {
+    const dc = (estado: string, leido: string) => ({ estado, leido, calculado: Number(leido) });
+    const r = {
+      valido: false,
+      campos: { nuip: "9999123456" },
+      digitosControl: { documento: dc("valido", "7"), nacimiento: dc("invalido", "3"), vencimiento: dc("valido", "1"), compuesto: dc("ilegible", "9") },
+      lineasCorregidas: ["X"],
+      correcciones: [],
+    };
+    const copia = structuredClone(r);
+    expect(enmascararResultadoMrz(r).digitosControl).toStrictEqual({
+      documento: { estado: "valido" },
+      nacimiento: { estado: "invalido" },
+      vencimiento: { estado: "valido" },
+      compuesto: { estado: "ilegible" },
+    });
+    expect(r).toStrictEqual(copia);
+  });
+});

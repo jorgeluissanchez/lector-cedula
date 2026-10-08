@@ -47,6 +47,8 @@ async function descargar(ruta: string, deps: DependenciasInstalacion): Promise<R
 export async function instalar(manifiesto: ManifiestoPrecache, deps: DependenciasInstalacion): Promise<void> {
   const final = nombreCache(manifiesto.version);
   const pendiente = `${final}-pendiente`;
+  // Una reinstalación fallida de la misma versión no debe borrar la caché que ya sirve sin conexión (OFF-17).
+  const existia = (await deps.almacen.keys()).includes(final);
   try {
     const cache = await deps.almacen.open(pendiente);
     for (const entrada of manifiesto.entradas) {
@@ -62,7 +64,7 @@ export async function instalar(manifiesto: ManifiestoPrecache, deps: Dependencia
     const activa = await deps.almacen.open(final);
     for (const entrada of manifiesto.entradas) await activa.put(entrada.ruta, (await cache.match(entrada.ruta)) as Response);
   } catch (e) {
-    await deps.almacen.delete(final);
+    if (!existia) await deps.almacen.delete(final);
     throw e;
   } finally {
     await deps.almacen.delete(pendiente);

@@ -141,3 +141,12 @@ describe("OFF-04/OFF-05 respuesta a fetch solo para rutas del manifiesto", () =>
     expect(redFn).toHaveBeenCalledWith("/index.html");
   });
 });
+
+describe("OFF-17 reinstalación de la misma versión", () => {
+  it("un fallo no borra la caché activa de esa misma versión", async () => {
+    const { a, datos, claves } = almacen({ "lector-v1": CONTENIDOS });
+    await expect(instalar(MANIFIESTO, { almacen: a, descargar: red((r, c) => (r === "/" ? null : c)), registrar: vi.fn() })).rejects.toThrow();
+    expect([...datos.keys()]).toStrictEqual(["lector-v1"]);
+    expect(claves("lector-v1")).toStrictEqual(Object.keys(CONTENIDOS).sort());
+  });
+});

@@ -9,6 +9,7 @@ const N = 20;
 test.describe.configure({ mode: "serial" });
 
 test.describe("tiempo hasta listo", { timeout: 300_000 }, () => {
+  test.describe.configure({ timeout: 300_000 });
   test("CAL-13 Medición y umbral @video:nitida-1080p", async ({ page }, info) => {
     const muestras: number[] = [];
     for (let i = 0; i < N; i++) {

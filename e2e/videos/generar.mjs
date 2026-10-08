@@ -22,12 +22,10 @@ const escena = (ancho, alto, x, y, anchoT, altoT, extra) =>
 const b1080 = (extra) => escena(1920, 1080, 190, 54, 1541, 972, extra);
 
 export const ESCENAS = [
-  { nombre: "nitida-1080p", grafo: b1080(""), ancho: 1920, alto: 1080 },
   { nombre: "desenfocada-1080p", grafo: b1080("gblur=sigma=8"), ancho: 1920, alto: 1080 },
   { nombre: "reflejo-1080p", grafo: b1080("drawbox=x=500:y=300:w=300:h=200:color=white:t=fill"), ancho: 1920, alto: 1080 },
   { nombre: "sobreexpuesta-1080p", grafo: b1080("lutyuv=y='clip(val*0.05+245,0,255)':u=128:v=128"), ancho: 1920, alto: 1080 },
   { nombre: "oscura-1080p", grafo: b1080("lutyuv=y='val*0.05':u=128:v=128"), ancho: 1920, alto: 1080 },
-  { nombre: "nitida-720p", grafo: escena(1280, 720, 126, 36, 1028, 648, ""), ancho: 1280, alto: 720 },
 ];
 
 function cabecera(ruta) {
@@ -66,6 +64,8 @@ async function main() {
   try {
     writeFileSync(join(tmp, "amarilla.png"), fuentes.amarilla);
     writeFileSync(join(tmp, "digital.png"), fuentes.digital);
+    writeFileSync(join(tmp, "sin-documento.png"), fuentes.sinDocumento);
+    writeFileSync(join(tmp, "ilegible.png"), fuentes.ilegible);
     for (const e of ESCENAS_CEDULA) {
       const destino = `${SALIDA}/${e.nombre}.y4m`;
       docker([`${RAIZ}:/w`, `${tmp}:/src:ro`], ["-loop", "1", "-i", `/src/${e.fuente}.png`, "-filter_complex", e.filtro, "-frames:v", "10", "-pix_fmt", "yuv420p", "-y", destino]);

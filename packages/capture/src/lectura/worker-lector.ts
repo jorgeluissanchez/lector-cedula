@@ -17,6 +17,9 @@ export interface RutasLector {
   readonly tesseractCore: string;
   /** Directorio (URL) que contiene `mrz.traineddata`. */
   readonly modeloMrz: string;
+  /** OFF-23: presupuesto de la MRZ (por defecto el de LMI-13). */
+  readonly maxLlamadasOcr?: number;
+  readonly tiempoLimiteMs?: number;
 }
 
 export interface AlcanceLector {
@@ -39,7 +42,13 @@ function lectorZxing(rutaWasm: string): DecodificadorPdf417 {
 export function iniciarWorkerLector(alcance: AlcanceLector, rutas: RutasLector): void {
   const manejar = crearManejadorLector({
     decodificar: crearDecodificador({ readBarcodes: lectorZxing(rutas.zxingWasm) }),
-    lectorMrz: crearLectorMrz({ rutaModelo: rutas.modeloMrz, rutaWorker: rutas.tesseractWorker, rutaCore: rutas.tesseractCore }),
+    lectorMrz: crearLectorMrz({
+      rutaModelo: rutas.modeloMrz,
+      rutaWorker: rutas.tesseractWorker,
+      rutaCore: rutas.tesseractCore,
+      ...(rutas.maxLlamadasOcr === undefined ? {} : { maxLlamadasOcr: rutas.maxLlamadasOcr }),
+      ...(rutas.tiempoLimiteMs === undefined ? {} : { tiempoLimiteMs: rutas.tiempoLimiteMs }),
+    }),
     parsearPdf417: parsearPdf417Amarilla,
     buscarDivipol,
   });

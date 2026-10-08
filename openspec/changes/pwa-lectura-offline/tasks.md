@@ -27,16 +27,22 @@ Reglas para todas las tareas: TDD (principio II): la prueba se escribe y se ve f
 
 ## 5. Integración en la PWA
 
-- [ ] 5.1 Pantallas `leyendo`, `resultado` y `error-lectura` en `apps/pwa`, conectadas a la `CapturaAceptada` (con `liberar()`), cancelación y `visibilitychange` (decisiones 11, 12); indicador `data-offline`. Cubre OFF-03, OFF-09, OFF-11, OFF-13, OFF-14, OFF-18. Tipos de prueba: **unitaria** de estado (`apps/pwa/test/`). Verificación: `U` en verde; `npm run build -w apps/pwa` con código 0.
+- [x] 5.1 Pantallas `leyendo`, `resultado` y `error-lectura` en `apps/pwa`, conectadas a la `CapturaAceptada` (con `liberar()`), cancelación y `visibilitychange` (decisiones 11, 12); indicador `data-offline`. Cubre OFF-03, OFF-09, OFF-11, OFF-13, OFF-14, OFF-18. Tipos de prueba: **unitaria** de estado (`apps/pwa/test/`). Verificación: `U` en verde; `npm run build -w apps/pwa` con código 0.
+
+- [x] 5.2 Lectura automática al llegar a `listo` (OFF-19; decisión del usuario del 2026-10-07): reductor con `leyendo`, `resultado`, `error-lectura` y `licencias`, y deltas MODIFIED de `captura-camara` (CAM-01, CAM-09, CAM-10, CAM-11) y `calidad-captura` (CAL-15). Tipos de prueba: **unitaria**, **E2E**. Verificación: `U` y `E(lectura)` en verde; E2E de `e2e/captura` ajustadas en verde.
+- [x] 5.3 Pantalla "Acerca de y licencias", enlace desde `resultado` y `assets/THIRD_PARTY_LICENSES.txt` en la precaché (OFF-20; condiciones C1 a C3 del revisor de licencias). Tipos de prueba: **unitaria**, **E2E**, **accesibilidad**. Verificación: `U`, `E(licencias)` y `E(accesibilidad)` en verde.
+- [x] 5.4 Aviso de privacidad, casilla de autorización no persistida, política y términos en la precaché y descargo en el resultado (OFF-21), con textos de `docs/legal/publicacion/` o de los borradores. Tipos de prueba: **unitaria**, **E2E**, **accesibilidad**. Verificación: `U` y `E(legal)` en verde.
+
+- [x] 5.5 Presencia de cédula antes de `listo` en el Worker de calidad (OFF-22), presupuesto corto de MRZ con progreso (OFF-23), escenas `sin-documento-1080p` y `tarjeta-ilegible-1080p`, y `nitida-*` con la amarilla sintética. Tipos de prueba: **unitaria**, **rendimiento**, **E2E**. Verificación: `U`, `E(sin-documento)`, `E(errores)` y `E(lectura)` en verde.
 
 ## 6. E2E con Playwright (Chromium escritorio y Pixel 7)
 
-- [ ] 6.1 Plan con `playwright-test-planner` en `e2e/planes/pwa-lectura-offline.md` que cubre cada escenario E2E de la spec. Cubre: OFF-01 a OFF-18 (escenarios E2E). Tipos de prueba: plan E2E. Verificación: revisión del verificador; cada escenario E2E de la spec aparece en el plan.
-- [ ] 6.2 `e2e/lectura/precache.spec.ts` (todo en caché, activación bloqueada, recurso alterado, indicador, cuota) y `actualizacion.spec.ts`. Mutante manual: quitar la comparación de digest. Cubre OFF-01, OFF-02, OFF-03, OFF-16, OFF-17. Tipos de prueba: **E2E**. Verificación: `E(precache)` y `E(actualizacion)` en verde.
-- [ ] 6.3 `e2e/lectura/lectura.spec.ts` (amarilla, digital, digital girada, long tasks, cancelar) y `errores.spec.ts`. Mutante manual: desactivar la máscara del NUIP. Cubre OFF-09, OFF-10, OFF-13, OFF-14. Tipos de prueba: **E2E**, **rendimiento**. Verificación: `E(lectura)` y `E(errores)` en verde.
-- [ ] 6.4 `e2e/lectura/offline.spec.ts`: primera carga online, `context.setOffline(true)`, recarga y lectura de amarilla y digital con resultado idéntico; página nueva sin conexión. Mutante manual: excluir `mrz-*.traineddata` de la precaché (debe fallar la digital offline). Cubre OFF-12. Tipos de prueba: **E2E**. Verificación: `E(offline)` en verde en ambos proyectos.
-- [ ] 6.5 `e2e/lectura/red.spec.ts` y `privacidad.spec.ts` (sin terceros, `fromServiceWorker`, claves de caché, almacenamiento vacío, página oculta). Mutante manual: guardar el resultado en `sessionStorage`. Cubre OFF-04, OFF-05, OFF-11. Tipos de prueba: **E2E**, **privacidad**. Verificación: `E(red)` y `E(privacidad)` en verde.
-- [ ] 6.6 `e2e/lectura/accesibilidad.spec.ts` con axe en las tres pantallas. Cubre OFF-18. Tipos de prueba: **accesibilidad**. Verificación: `E(accesibilidad)` con 0 serious/critical.
+- [x] 6.1 Plan con `playwright-test-planner` en `e2e/planes/pwa-lectura-offline.md` que cubre cada escenario E2E de la spec. Cubre: OFF-01 a OFF-18 (escenarios E2E). Tipos de prueba: plan E2E. Verificación: revisión del verificador; cada escenario E2E de la spec aparece en el plan.
+- [x] 6.2 `e2e/lectura/precache.spec.ts` (todo en caché, activación bloqueada, recurso alterado, indicador, cuota) y `actualizacion.spec.ts`. Mutante manual: quitar la comparación de digest. Cubre OFF-01, OFF-02, OFF-03, OFF-16, OFF-17. Tipos de prueba: **E2E**. Verificación: `E(precache)` y `E(actualizacion)` en verde.
+- [x] 6.3 `e2e/lectura/lectura.spec.ts` (amarilla, digital, digital girada, long tasks, cancelar) y `errores.spec.ts`. Mutante manual: desactivar la máscara del NUIP. Cubre OFF-09, OFF-10, OFF-13, OFF-14. Tipos de prueba: **E2E**, **rendimiento**. Verificación: `E(lectura)` y `E(errores)` en verde.
+- [x] 6.4 `e2e/lectura/offline.spec.ts`: primera carga online, `context.setOffline(true)`, recarga y lectura de amarilla y digital con resultado idéntico; página nueva sin conexión. Mutante manual: excluir `mrz-*.traineddata` de la precaché (debe fallar la digital offline). Cubre OFF-12. Tipos de prueba: **E2E**. Verificación: `E(offline)` en verde en ambos proyectos.
+- [x] 6.5 `e2e/lectura/red.spec.ts` y `privacidad.spec.ts` (sin terceros, `fromServiceWorker`, claves de caché, almacenamiento vacío, página oculta). Mutante manual: guardar el resultado en `sessionStorage`. Cubre OFF-04, OFF-05, OFF-11. Tipos de prueba: **E2E**, **privacidad**. Verificación: `E(red)` y `E(privacidad)` en verde.
+- [x] 6.6 `e2e/lectura/accesibilidad.spec.ts` con axe en las tres pantallas. Cubre OFF-18. Tipos de prueba: **accesibilidad**. Verificación: `E(accesibilidad)` con 0 serious/critical.
 
 ## 7. Rendimiento y tamaño
 
@@ -45,8 +51,8 @@ Reglas para todas las tareas: TDD (principio II): la prueba se escribe y se ve f
 
 ## 8. Privacidad estática y coordinación
 
-- [ ] 8.1 Añadir a `tools/privacidad-check.mjs` la regla de OFF-11 (prohíbe `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie` en `apps/pwa/src` y `packages/capture/src/lectura`) con su prueba en `tools/test/`, vista fallar con un caso sintético. Cubre OFF-11. Tipos de prueba: **seguridad estática**, **unitaria**. Verificación: `npx vitest run tools` y `P` en verde.
-- [ ] 8.2 Cuando `captura-calidad-pwa` esté archivado, añadir a este cambio un delta `## MODIFIED Requirements` de `captura-camara` para CAM-01 ("Precarga sin el Worker de calidad") y CAM-12 ("Worker diferido") según design.md, decisión 8, y revalidar. Cubre OFF-01. Tipos de prueba: validación de spec. Verificación: `openspec validate pwa-lectura-offline --strict` y las E2E de `e2e/captura/pwa.spec.ts` ajustadas en verde.
+- [x] 8.1 Añadir a `tools/privacidad-check.mjs` la regla de OFF-11 (prohíbe `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie` en `apps/pwa/src` y `packages/capture/src/lectura`) con su prueba en `tools/test/`, vista fallar con un caso sintético. Cubre OFF-11. Tipos de prueba: **seguridad estática**, **unitaria**. Verificación: `npx vitest run tools` y `P` en verde.
+- [x] 8.2 Cuando `captura-calidad-pwa` esté archivado, añadir a este cambio un delta `## MODIFIED Requirements` de `captura-camara` para CAM-01 ("Precarga sin el Worker de calidad") y CAM-12 ("Worker diferido") según design.md, decisión 8, y revalidar. Cubre OFF-01. Tipos de prueba: validación de spec. Verificación: `openspec validate pwa-lectura-offline --strict` y las E2E de `e2e/captura/pwa.spec.ts` ajustadas en verde.
 
 ## 9. Revisiones obligatorias
 

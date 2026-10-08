@@ -5,6 +5,7 @@ import { contenedor, esperarCuadros, esperarPantalla, estadosPistas, iniciarCama
 const todasTerminadas = (estados: string[]) => estados.length > 0 && estados.every((e) => e === "ended");
 
 test.describe("ciclo de vida", { timeout: 60_000 }, () => {
+  test.describe.configure({ timeout: 60_000 });
   test("CAM-10 Pistas detenidas en listo @video:nitida-1080p", async ({ page }) => {
     await instrumentar(page);
     await page.goto("/");

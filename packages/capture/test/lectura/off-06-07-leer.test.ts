@@ -165,3 +165,15 @@ describe("OFF-07 / OFF-11 detalles (mutación)", () => {
     expect(parsear).not.toHaveBeenCalled();
   });
 });
+
+describe("OFF-11 Bytes a cero si el parser lanza (revisor-privacidad, hallazgo 4)", () => {
+  it("OFF-11 la excepción se propaga y los bytes del PDF417 quedan a cero", async () => {
+    const bytes = new Uint8Array(F.bytes);
+    const { d } = deps({ ok: true, bytes, intento: "original" });
+    const parsearPdf417 = (() => {
+      throw new Error("parser");
+    }) as unknown as DependenciasLectura["parsearPdf417"];
+    await expect(leerDocumento(PIXELES, { ...d, parsearPdf417 }, { fechaReferencia: FECHA })).rejects.toThrow("parser");
+    expect(bytes.every((b) => b === 0)).toBe(true);
+  });
+});

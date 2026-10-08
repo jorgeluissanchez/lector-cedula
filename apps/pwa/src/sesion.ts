@@ -20,7 +20,6 @@ import {
   type CapturaAceptada,
   type ClienteCalidad,
   type Cuadrilatero,
-  type ResultadoLectura,
 } from "@lector-cedula/capture";
 import type { Evento } from "./estado";
 import { conLienzoTemporal } from "./lienzo";
@@ -42,16 +41,21 @@ export interface Sesion {
   cancelar(): void;
   /** Página oculta o `pagehide`. */
   ocultar(): void;
-  /**
-   * Lee la captura aceptada en el Worker lector (pwa-lectura-offline, OFF-06) y la libera al terminar (OFF-11).
-   * Devuelve `null` si no hay captura. Aún no la invoca ninguna pantalla (tarea 5.1).
-   */
-  leer(fechaReferencia: string, senal?: AbortSignal): Promise<ResultadoLectura | null>;
+  /** "Cancelar" en `leyendo` (OFF-14): aborta la lectura y vuelve a la cámara. */
+  cancelarLectura(): Promise<void>;
 }
+
+/** Fecha de referencia: hoy en America/Bogota como AAAA-MM-DD (design.md, decisión 11). */
+export function hoyEnBogota(ahora: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" }).format(ahora);
+}
+
+const MARCA_LECTURA = "lectura:inicio";
 
 export function crearSesion(obs: Observador): Sesion {
   let cliente: ClienteCalidad | null = null;
   let lector: ClienteLector | null = null;
+  let lectura: AbortController | null = null;
   let camara: Camara | null = null;
   let video: HTMLVideoElement | null = null;
   let captura: CapturaAceptada | null = null;
@@ -76,6 +80,32 @@ export function crearSesion(obs: Observador): Sesion {
   function liberarCaptura(): void {
     captura?.liberar();
     captura = null;
+  }
+
+  function abortarLectura(): void {
+    lectura?.abort();
+    lectura = null;
+  }
+
+  /** OFF-19: la lectura empieza sola al llegar a `listo`. La captura se copia al Worker y se pone a cero (OFF-11). */
+  async function leerCaptura(): Promise<void> {
+    const c = captura;
+    if (c === null) return;
+    const control = new AbortController();
+    lectura = control;
+    performance.clearMarks(MARCA_LECTURA);
+    performance.mark(MARCA_LECTURA);
+    // Un cuadro para que `listo` llegue a pintarse (OFF-19: es transitorio, pero forma parte del historial).
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    if (control.signal.aborted || captura !== c) return;
+    obs.evento({ tipo: "leyendo" });
+    const pendiente = obtenerLector().leer({ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles }, hoyEnBogota(), control.signal);
+    liberarCaptura();
+    const r = await pendiente;
+    if (control.signal.aborted) return;
+    lectura = null;
+    if (r.ok) performance.measure("lectura:tiempo", MARCA_LECTURA);
+    obs.evento({ tipo: "leida", resultado: r });
   }
 
   function detener(): void {
@@ -118,6 +148,7 @@ export function crearSesion(obs: Observador): Sesion {
     performance.measure("captura:tiempo-a-listo", { start: MARCA, end: performance.now() });
     obs.feedback(feedback.listo());
     obs.evento({ tipo: "capturada" });
+    await leerCaptura();
   }
 
   async function analizar(v: HTMLVideoElement, c: ClienteCalidad, gen: number): Promise<void> {
@@ -143,8 +174,9 @@ export function crearSesion(obs: Observador): Sesion {
     animacion = requestAnimationFrame(() => bucle(gen));
   }
 
-  return {
+  const sesion: Sesion = {
     async iniciar() {
+      abortarLectura();
       detener();
       liberarCaptura();
       performance.clearMarks(MARCA);
@@ -177,24 +209,22 @@ export function crearSesion(obs: Observador): Sesion {
       if (v !== null && camara !== null) v.srcObject = camara.stream;
     },
     cancelar() {
+      abortarLectura();
       detener();
       liberarCaptura();
       obs.evento({ tipo: "cancelar" });
     },
     ocultar() {
+      abortarLectura();
       detener();
       liberarCaptura();
       obs.evento({ tipo: "oculta" });
     },
-    async leer(fechaReferencia, senal) {
-      const c = captura;
-      if (c === null) return null;
-      try {
-        return await obtenerLector().leer({ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles }, fechaReferencia, senal);
-      } finally {
-        if (captura === c) liberarCaptura();
-        else c.liberar();
-      }
+    async cancelarLectura() {
+      abortarLectura();
+      liberarCaptura();
+      await sesion.iniciar();
     },
   };
+  return sesion;
 }

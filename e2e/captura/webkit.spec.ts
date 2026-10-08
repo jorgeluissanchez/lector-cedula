@@ -4,6 +4,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("WebKit", { timeout: 60_000 }, () => {
+  test.describe.configure({ timeout: 60_000 });
   test("CAM-07 Motor WebKit", async ({ page }) => {
     await page.addInitScript(() => {
       const lienzo = document.createElement("canvas");
@@ -38,7 +39,9 @@ test.describe("WebKit", { timeout: 60_000 }, () => {
       });
     });
     await page.goto("/");
-    await page.getByRole("button", { name: "Iniciar cámara" }).click();
-    await expect(page.locator("[data-pantalla]")).toHaveAttribute("data-pantalla", "listo", { timeout: 30_000 });
+    // OFF-21: la casilla de autorización habilita "Iniciar cámara".
+  await page.getByRole("checkbox", { name: /^Autorizo/u }).check();
+  await page.getByRole("button", { name: "Iniciar cámara" }).click();
+    await expect(page.locator("[data-pantalla]")).toHaveAttribute("data-pantalla", /^(listo|leyendo|resultado|error-lectura)$/, { timeout: 30_000 }); // OFF-19: listo es transitorio
   });
 });

@@ -33,7 +33,7 @@ describe("OFF-13 Errores de lectura", () => {
   });
 
   it("OFF-13 textos fijos por código", () => {
-    expect(Object.keys(TEXTOS_ERROR_LECTURA).sort()).toStrictEqual(["motor", "no-encontrado", "no-valido", "tiempo-agotado"]);
+    expect(Object.keys(TEXTOS_ERROR_LECTURA).sort()).toStrictEqual(["menor-de-edad", "motor", "no-encontrado", "no-valido", "tiempo-agotado"]);
   });
 });
 
@@ -130,5 +130,16 @@ describe("OFF-11 validación del mensaje leer (mutación)", () => {
     const manejar = crearManejadorLector({ ...deps(new Uint8Array()), decodificar });
     expect(await manejar(base())).toStrictEqual({ tipo: "resultado", id: 1, resultado: { ok: false, error: "imagen-ilegible" } });
     expect(decodificar).toHaveBeenCalledWith({ data: expect.any(Uint8ClampedArray), width: 2, height: 2 });
+  });
+});
+
+describe("OFF-11 Mensaje inválido con píxeles (revisor-privacidad, hallazgo 5)", () => {
+  it("OFF-11 responde null y pone a cero el ArrayBuffer de un mensaje leer mal formado", async () => {
+    const manejar = crearManejadorLector(deps(new Uint8Array()));
+    for (const cambio of [{ id: 1.5 }, { ancho: "2" }, { fechaReferencia: 1 }, { tipo: "leerx" }]) {
+      const pixeles = new Uint8ClampedArray(16).fill(7).buffer;
+      expect(await manejar({ tipo: "leer", id: 1, ancho: 2, alto: 2, pixeles, fechaReferencia: FECHA, ...cambio })).toBeNull();
+      expect(new Uint8Array(pixeles).every((b) => b === 0)).toBe(true);
+    }
   });
 });

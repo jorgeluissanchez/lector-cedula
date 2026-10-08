@@ -16,6 +16,7 @@ export type ErrorLectura =
   | "fecha-referencia-invalida"
   | "pdf417-no-valido"
   | "mrz-no-valida"
+  | "menor-de-edad"
   | "cancelada"
   | "tiempo-agotado"
   | "motor";

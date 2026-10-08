@@ -2,16 +2,23 @@
 import { expect, test, type Request } from "@playwright/test";
 import { esperarPantalla, iniciarCamara, RUTA_PERMITIDA } from "./instrumentacion";
 
-test.describe("privacidad", { timeout: 60_000 }, () => {
+test.describe("privacidad", { timeout: 300_000 }, () => {
+  test.describe.configure({ timeout: 300_000 });
   test("CAM-11 Red y almacenamiento durante el flujo completo @video:nitida-1080p", async ({ page, context, baseURL }) => {
     const peticiones: Request[] = [];
     let websockets = 0;
     context.on("request", (r) => peticiones.push(r));
     page.on("websocket", () => websockets++);
+    const dePagina: string[] = [];
+    page.on("request", (r) => dePagina.push(new URL(r.url()).pathname));
     await page.goto("/");
     await iniciarCamara(page);
+    await esperarPantalla(page, "activo");
+    const antesDeListo = [...dePagina];
     await esperarPantalla(page, "listo", 30_000);
-    await page.getByRole("button", { name: "Repetir" }).click();
+    // OFF-19 y OFF-22: la lectura empieza sola; nitida-1080p lleva la amarilla sintética y termina en resultado.
+    await esperarPantalla(page, "resultado", 120_000);
+    await page.getByRole("button", { name: "Leer otra" }).click();
     await esperarPantalla(page, "listo", 30_000);
 
     const origen = new URL(baseURL ?? "").origin;
@@ -23,8 +30,9 @@ test.describe("privacidad", { timeout: 60_000 }, () => {
     expect(fuera).toStrictEqual([]);
     expect(websockets).toBe(0);
 
-    // CAL-15: ningún decodificador.
-    expect(peticiones.map((r) => r.url()).filter((u) => /zxing|barcode|\.wasm$/i.test(new URL(u).pathname))).toStrictEqual([]);
+    // CAL-15 (delta MODIFIED de pwa-lectura-offline): ningún decodificador antes de la captura en la página ni en sus
+    // Workers; la precarga del service worker no cuenta.
+    expect(antesDeListo.filter((r) => /zxing|barcode|lector\.worker|\.wasm$/i.test(r))).toStrictEqual([]);
 
     const almacenamiento = await page.evaluate(async () => {
       const raiz = await navigator.storage.getDirectory();

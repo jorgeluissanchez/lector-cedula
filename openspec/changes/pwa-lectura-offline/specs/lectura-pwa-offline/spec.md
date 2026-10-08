@@ -4,7 +4,7 @@
 
 Leer en el dispositivo la captura aceptada por la PWA (cédula amarilla por PDF417, cédula digital por MRZ TD1), mostrar el resultado enmascarado y funcionar exactamente igual sin conexión que con conexión después de la primera visita.
 
-Convenciones de los escenarios: todas las imágenes y vídeos son SINTÉTICOS, producidos por `@lector-cedula/fixtures` (`PERSONA_BASE`: NUIP `9999123456`, serial `999912345`, `PRUEBA EJEMPLO FICTICIA LUZ`, lugar `16001`) y renderizados por `evals/sinteticos/render-mrz.mjs` y el helper de PDF417 de las pruebas; nunca datos reales. Los vídeos `.y4m` de la cámara simulada son `amarilla-1080p`, `digital-1080p` y `digital-girada-90-1080p` (tarea 1.2). "Fecha de referencia" es la fecha del dispositivo en `America/Bogota`; en E2E se fija con `page.clock` a `2026-10-06`. "Resultado online" es el JSON de `data-resultado` obtenido con red; "resultado offline", el obtenido con `context.setOffline(true)`. El "manifiesto de precaché" es `/assets/precache-manifest.<hash>.json`, generado en la compilación. Los presupuestos de tiempo de OFF-15 y de tamaño de OFF-16 son metas provisionales, no hipótesis del formato. El orden de los campos y offsets del PDF417 y de la MRZ son los de los parsers existentes; toda hipótesis de formato sigue en `docs/decisiones/hipotesis-formato.md` y este cambio no añade ninguna.
+Convenciones de los escenarios: todas las imágenes y vídeos son SINTÉTICOS, producidos por `@lector-cedula/fixtures` (`PERSONA_BASE`: NUIP `9999123456`, serial `999912345`, `PRUEBA EJEMPLO FICTICIA LUZ`, lugar `16001`) y renderizados por `evals/sinteticos/render-mrz.mjs` y el helper de PDF417 de las pruebas; nunca datos reales. Los vídeos `.y4m` de la cámara simulada son `amarilla-1080p`, `digital-1080p` y `digital-girada-90-1080p` (tarea 1.2). "Fecha de referencia" es la fecha del dispositivo en `America/Bogota`; en E2E se fija con `page.clock` a `2026-10-06`. `data-resultado` en los escenarios designa el resultado visible: el JSON de `data-tipo` y los campos `dd[data-campo]` de `resultado`; la compilación de producción no emite ningún atributo con el resultado (revisor de privacidad). "Resultado online" es ese JSON obtenido con red; "resultado offline", el obtenido con `context.setOffline(true)`. "Historial de pantallas" es la lista de valores que toma `data-pantalla`, registrada por un `MutationObserver` de la instrumentación de la prueba (nunca código de producto); como `listo` es transitorio (OFF-19), "llegar a `listo`" significa que `listo` aparece en el historial. El "manifiesto de precaché" es `/assets/precache-manifest.<hash>.json`, generado en la compilación. Los presupuestos de tiempo de OFF-15 y de tamaño de OFF-16 son metas provisionales, no hipótesis del formato. El orden de los campos y offsets del PDF417 y de la MRZ son los de los parsers existentes; toda hipótesis de formato sigue en `docs/decisiones/hipotesis-formato.md` y este cambio no añade ninguna.
 
 ## ADDED Requirements
 
@@ -105,7 +105,11 @@ El PDF417 MUST interpretarse con `parsearPdf417Amarilla(bytes, { divipol: buscar
 - **THEN** `campos.lugarNacimiento` es `null` y `warnings` contiene `lugar-nacimiento-no-resuelto`
 
 ### Requirement: OFF-09 Resultado enmascarado
-La PWA MUST mostrar y exponer en `data-resultado` solo el resultado enmascarado con la máscara de la CLI (LPI-06), implementada una sola vez en `packages/capture` e importada por `tools/leer-foto.mjs`: NUIP y serial conservan los 2 últimos caracteres; cada palabra de nombres y apellidos conserva su primera letra; `lineasCorregidas` y `correcciones` son `null`. La PWA MUST NOT ofrecer modo sin máscara.
+La PWA MUST mostrar y exponer en `data-resultado` solo el resultado enmascarado con la máscara de la CLI (LPI-06), implementada una sola vez en `packages/capture` e importada por `tools/leer-foto.mjs`: NUIP y serial conservan los 2 últimos caracteres; cada palabra de nombres y apellidos conserva su primera letra; `lineasCorregidas` y `correcciones` son `null`; `digitosControl` conserva solo el `estado` de cada dígito (sin `leido` ni `calculado`, que revelarían dígitos del NUIP y del serial). La PWA MUST NOT ofrecer modo sin máscara.
+
+#### Scenario: Dígitos de control sin valores
+- **WHEN** se enmascara un resultado MRZ con `digitosControl: { documento: { estado: "valido", leido: "7", calculado: 7 }, … }`
+- **THEN** queda `digitosControl: { documento: { estado: "valido" }, … }` para los cuatro dígitos y la entrada no se muta
 
 #### Scenario: Máscara MRZ
 - **WHEN** se enmascaran los campos MRZ `{ nuip: "9999123456", serial: "999912345", apellidos: "PRUEBA EJEMPLO", nombres: "FICTICIA LUZ" }`
@@ -145,6 +149,14 @@ La PWA MUST NOT escribir en `localStorage`, `sessionStorage`, IndexedDB, cookies
 - **WHEN** se ejecuta el manejador del Worker lector con un buffer de píxeles sintético y un decodificador inyectado que devuelve bytes de PDF417
 - **THEN** al terminar, cada byte del buffer de píxeles y del buffer de bytes PDF417 vale 0
 
+#### Scenario: Bytes a cero si el parser lanza
+- **WHEN** `leerDocumento` recibe bytes de PDF417 y el parser inyectado lanza una excepción
+- **THEN** la excepción se propaga y cada byte del buffer PDF417 vale 0
+
+#### Scenario: Mensaje inválido con píxeles
+- **WHEN** el manejador del Worker lector recibe un mensaje `leer` mal formado (p. ej. `id` no entero) cuyo campo `pixeles` es un `ArrayBuffer`
+- **THEN** responde `null` y cada byte de ese `ArrayBuffer` vale 0
+
 #### Scenario: Página oculta
 - **WHEN** en `resultado` se dispara `visibilitychange` con `document.visibilityState` igual a `hidden` y luego `visible`
 - **THEN** `data-pantalla` vale `inicio` y ningún elemento contiene `********56`
@@ -165,18 +177,18 @@ Tras una primera visita con conexión, la lectura sin conexión MUST producir ex
 - **THEN** llega a `resultado` con el mismo `data-resultado` que online y la consola no registra errores de red
 
 ### Requirement: OFF-13 Errores de lectura
-La PWA MUST mostrar la pantalla `error-lectura` con `data-error` y un texto fijo por código, y un botón "Intentar de nuevo" que vuelve a la cámara. La tabla de códigos y textos está en el escenario "Mapeo de errores".
+La PWA MUST mostrar la pantalla `error-lectura` con `data-error` y un texto fijo por código, y un botón "Intentar de nuevo" que vuelve a la cámara (`activo`). La pantalla `resultado` MUST ofrecer un botón "Leer otra" que también vuelve a `activo`; ambos ponen a cero la captura anterior. La tabla de códigos y textos está en el escenario "Mapeo de errores".
 
 #### Scenario: Mapeo de errores
 - **WHEN** se clasifica cada uno de los cuatro errores de la tabla con `clasificarErrorLectura`
-- **THEN** devuelve: MRZ no encontrada tras `pdf417-no-encontrado` → `no-encontrado`, "No se encontró el código de la cédula ni la zona de lectura. Acerca el documento y evita reflejos."; `tiempo-agotado` (LMI-13) → `tiempo-agotado`, "La lectura tardó demasiado. Inténtalo de nuevo con mejor luz."; parser con `ok: false` → `no-valido`, "Se leyó un código, pero no corresponde a una cédula válida."; fallo del Worker o del WASM → `motor`, "No se pudo iniciar el lector en este dispositivo."; y cualquier otro valor (incluido `undefined`) → `motor`
+- **THEN** devuelve: MRZ no encontrada tras `pdf417-no-encontrado` → `no-encontrado`, "No se encontró el código de la cédula ni la zona de lectura. Acerca el documento y evita reflejos."; `tiempo-agotado` (LMI-13) → `tiempo-agotado`, "La lectura tardó demasiado. Inténtalo de nuevo con mejor luz."; parser con `ok: false` → `no-valido`, "Se leyó un código, pero no corresponde a una cédula válida."; fallo del Worker o del WASM → `motor`, "No se pudo iniciar el lector en este dispositivo."; `menor-de-edad` (OFF-24) → `menor-de-edad`, "Este lector solo admite cédulas de ciudadanía de mayores de edad."; y cualquier otro valor (incluido `undefined`) → `motor`
 
-#### Scenario: Vídeo sin documento
-- **WHEN** se completa el flujo con `nitida-1080p` (patrón sin cédula) hasta `listo` y la lectura termina
+#### Scenario: Tarjeta sin código legible
+- **WHEN** se completa el flujo con `tarjeta-ilegible-1080p` (tarjeta con barras que no forman un PDF417 válido; una escena sin cédula ya no llega a `listo` por OFF-22): llega a `listo`, la lectura empieza sola (OFF-19) y termina
 - **THEN** `data-pantalla` vale `error-lectura`, `data-error` vale `no-encontrado` y el botón "Intentar de nuevo" lleva a `data-pantalla="activo"`
 
 ### Requirement: OFF-14 Lectura fuera del hilo principal
-La decodificación, el OCR y el parseo MUST ejecutarse en el Worker lector. Durante la lectura la pantalla `leyendo` MUST mostrar "Leyendo documento…" en una región `aria-live="polite"` y un botón "Cancelar" que aborta la lectura con `AbortSignal` y vuelve a `activo`.
+La decodificación, el OCR y el parseo MUST ejecutarse en el Worker lector. La lectura MUST empezar sin acción del usuario al llegar a `listo` (OFF-19). Durante la lectura la pantalla `leyendo` MUST mostrar "Leyendo documento…" en una región `aria-live="polite"` y un botón "Cancelar" que aborta la lectura con `AbortSignal` y vuelve a `activo`.
 
 #### Scenario: Hilo principal libre
 - **WHEN** se mide con `PerformanceObserver` de tipo `longtask` desde que `data-pantalla` vale `leyendo` hasta `resultado` con `digital-1080p`
@@ -187,7 +199,11 @@ La decodificación, el OCR y el parseo MUST ejecutarse en el Worker lector. Dura
 - **THEN** `data-pantalla` vale `activo` en menos de 1 s y llega al Worker un mensaje `cancelar`; no se muestra resultado
 
 ### Requirement: OFF-15 Tiempos objetivo en Pixel 7 emulado
-Con el proyecto Playwright de Pixel 7, la CPU limitada a 4x con `Emulation.setCPUThrottlingRate` y sin conexión tras la primera visita, el tiempo desde la captura aceptada hasta `resultado` MUST cumplir en 20 lecturas: amarilla p95 <= 1500 ms; digital p95 <= 5000 ms; digital girada 90° p95 <= 10000 ms. El arranque del Worker lector (primera lectura de la sesión) MUST quedar incluido en la medida.
+Con el proyecto Playwright de Pixel 7, la CPU limitada a 4x con `Emulation.setCPUThrottlingRate` y sin conexión tras la primera visita, el tiempo desde la captura aceptada hasta `resultado` (medida `lectura:tiempo`) MUST cumplir en 20 lecturas: amarilla p95 <= 1500 ms; digital p95 <= 5000 ms; digital girada 90° p95 <= 10000 ms. El arranque del Worker lector (primera lectura de la sesión) MUST quedar incluido en la medida.
+
+#### Scenario: Medida desde listo
+- **WHEN** se completa una lectura con `amarilla-1080p`
+- **THEN** existe exactamente una medida `lectura:tiempo` de `performance`, que empieza al llegar a `listo` (cuando la lectura empieza sola, OFF-19) y termina al mostrarse `resultado`
 
 #### Scenario: Presupuesto
 - **WHEN** se ejecuta `npx playwright test e2e/lectura/tiempos.spec.ts --project=lectura-pixel7` y se escriben las 60 medidas en `reports/lectura/tiempos.json`
@@ -217,3 +233,114 @@ Las pantallas `leyendo`, `resultado` y `error-lectura` MUST tener 0 violaciones 
 #### Scenario: axe
 - **WHEN** se ejecuta `AxeBuilder` en cada una de las tres pantallas en Chromium escritorio y Pixel 7
 - **THEN** 0 violaciones con impacto `serious` o `critical`
+
+### Requirement: OFF-19 Lectura automática al llegar a listo
+Al aceptarse la captura, la PWA MUST pasar por `listo` (cámara y análisis detenidos, CAM-10) y empezar la lectura en el mismo momento, sin ninguna acción del usuario: `listo` es transitorio hacia `leyendo`. `listo` MUST NOT mostrar el botón "Repetir"; la vuelta a la cámara se hace desde `resultado` ("Leer otra"), desde `error-lectura` ("Intentar de nuevo") o con "Cancelar" en `leyendo`. Decisión del usuario del 2026-10-07 (como Truora y Veriff).
+
+#### Scenario: Transición automática
+- **WHEN** se completa el flujo con `amarilla-1080p` sin pulsar ningún botón después de "Iniciar cámara"
+- **THEN** el historial de pantallas contiene, en este orden, `activo`, `listo`, `leyendo` y `resultado`, y existe la medida `lectura:tiempo` de `performance`
+
+#### Scenario: Estados de la máquina de pantallas
+- **WHEN** se aplica el reductor de pantallas a `listo` con el evento `leyendo`, a `leyendo` con `leida` (resultado correcto), a `leyendo` con `leida` (error `mrz-no-encontrada` de tipo `mrz`), a `leyendo` con `leida` (`cancelada`), y a `leyendo`, `resultado` y `error-lectura` con `oculta`
+- **THEN** se obtienen `leyendo`, `resultado` con el resultado enmascarado, `error-lectura` con código `no-encontrado`, `leyendo` sin cambio, e `inicio` en los tres casos de `oculta`
+
+
+### Requirement: OFF-20 Atribución de datos y licencias de terceros
+La PWA MUST ofrecer una pantalla `licencias` ("Acerca de y licencias"), alcanzable desde `inicio` y desde `resultado`, que funciona sin conexión, con la atribución de los datos DIVIPOL y DIVIPOLA bajo CC BY-SA 4.0 y un enlace a `/assets/THIRD_PARTY_LICENSES.txt`. La compilación MUST generar ese archivo con los textos de licencia de los componentes redistribuidos y MUST incluirlo en la precaché. Veredicto condicional del revisor de licencias (condiciones C1 a C3).
+
+#### Scenario: Pantalla de licencias
+- **WHEN** en `inicio` se pulsa "Acerca de y licencias", y en `resultado` de la amarilla se pulsa el enlace "Fuentes: DANE y Registraduría (CC BY-SA 4.0)" junto a "Lugar de nacimiento"
+- **THEN** en ambos casos `data-pantalla` vale `licencias` y el texto visible contiene: "DANE", "DIVIPOLA Códigos municipios", "gdxc-w37w", "Material adaptado: solo pares de códigos DIVIPOL-DIVIPOLA", "Registraduría Nacional del Estado Civil", "vh8b-jfhg", "AZERBAIYAN", "VIETNAM", "SINGAPUR", "88195", "88480", "se ofrece tal cual", "sin aval", "CC BY-SA 4.0" y "MIT"; hay un enlace a `https://creativecommons.org/licenses/by-sa/4.0/legalcode.es` y otro a `/assets/THIRD_PARTY_LICENSES.txt`; y el botón "Volver" regresa a la pantalla anterior con el mismo `data-resultado`
+
+#### Scenario: Avisos de terceros en la compilación
+- **WHEN** se compila con `npm run build -w apps/pwa`
+- **THEN** existe `dist/assets/THIRD_PARTY_LICENSES.txt`, su ruta está en el manifiesto de precaché, y contiene "Apache License", "Version 2.0", "tesseract.js", "tesseract.js-core", "zxing-wasm", "zxing-cpp", "Preact", "Leptonica", "BSD-3-Clause", "tesseract-mrz", la fuente y el `sha256` de `models/manifest.json` y "MIT License"
+
+#### Scenario: Licencias sin conexión
+- **WHEN** tras la primera visita con `data-offline="lista"` se activa `context.setOffline(true)`, se recarga, se abre "Acerca de y licencias" y se pide `/assets/THIRD_PARTY_LICENSES.txt`
+- **THEN** la pantalla se muestra y la respuesta es 200 servida por el service worker
+
+#### Scenario: axe en la pantalla de licencias
+- **WHEN** se ejecuta `AxeBuilder` en `licencias` en Chromium escritorio y Pixel 7
+- **THEN** 0 violaciones con impacto `serious` o `critical`
+
+### Requirement: OFF-21 Aviso de privacidad, autorización y textos legales
+Antes de abrir la cámara, `inicio` MUST mostrar el aviso de privacidad corto y una casilla de autorización (finalidad "verificar identidad") sin marcar, que habilita "Iniciar cámara". La autorización MUST NOT persistirse (OFF-11); la prueba, si se exige, la registra el servidor o el integrador. La PWA MUST enlazar los textos legales, disponibles sin conexión, y mostrar un descargo en `resultado` (escenarios). Decisión del usuario del 2026-10-07.
+
+#### Scenario: Origen de los textos
+- **WHEN** se compila la PWA
+- **THEN** los textos salen de `docs/legal/publicacion/*.md` o, si no existen, de los borradores de `docs/legal/` con sus `[MARCADORES]` visibles; y en los escenarios de este cambio y de `captura-camara`, "pulsar Iniciar cámara" incluye marcar antes la casilla
+
+#### Scenario: Casilla obligatoria
+- **WHEN** se carga `/`
+- **THEN** es visible el título del aviso de la fuente ("Su privacidad" en `docs/legal/publicacion/aviso-privacidad.md`; "Tu privacidad" en el borrador), la casilla cuyo nombre accesible es el texto de autorización de la fuente (empieza por "Autorizo"; por defecto "Autorizo el tratamiento de mis datos para verificar mi identidad") no está marcada y el botón "Iniciar cámara" está deshabilitado; al marcarla se habilita y al desmarcarla se deshabilita de nuevo
+
+#### Scenario: Alcance visible
+- **WHEN** se carga `/`
+- **THEN** `inicio` muestra el texto exacto "Solo para cédulas de ciudadanía de mayores de edad."
+
+#### Scenario: Autorización no persistida
+- **WHEN** se marca la casilla, se recarga la página y se inspeccionan `localStorage`, `sessionStorage`, `indexedDB.databases()` y `document.cookie`
+- **THEN** la casilla vuelve a estar sin marcar, el botón está deshabilitado y el almacenamiento está vacío como en OFF-11
+
+#### Scenario: Textos legales sin conexión
+- **WHEN** tras la primera visita con `data-offline="lista"` se activa `context.setOffline(true)`, se recarga y se siguen los enlaces "Política de tratamiento" y "Términos de uso"
+- **THEN** cada página carga con estado 200 servida por el service worker, contiene el título del documento y sus rutas están en el manifiesto de precaché
+
+#### Scenario: Descargo en el resultado
+- **WHEN** se completa el flujo con `amarilla-1080p`
+- **THEN** la pantalla `resultado` contiene el descargo de la fuente (`## Descargo` de `docs/legal/publicacion/descargo-y-enlaces.md`; por defecto "No es una verificación oficial de la Registraduría."), que incluye "no es una verificación oficial de la Registraduría"
+
+#### Scenario: axe en inicio con el aviso y en las páginas legales
+- **WHEN** se ejecuta `AxeBuilder` en `inicio` y en las páginas de política y términos en Chromium escritorio y Pixel 7
+- **THEN** 0 violaciones con impacto `serious` o `critical`
+
+### Requirement: OFF-22 Presencia de documento antes de listo
+El Worker de calidad de la PWA MUST impedir `listo` si en la guía no hay una tarjeta con proporción ID-1 (horizontal o vertical, tolerancia 20 %) y contenido de cédula (patrón PDF417 o franja MRZ con evidencia LMI-14): en ese caso el score queda por debajo del umbral con motivo `acerca` ("Acerca la cédula"). La búsqueda solo corre en frames que ya superan el umbral. Reporte del usuario del 2026-10-07: la captura se disparaba con cualquier escena nítida.
+
+#### Scenario: Escenas sin cédula
+- **WHEN** se evalúa la presencia en frames de análisis de 640x360 nítidos de una cara dibujada, una pared, una hoja en blanco con proporción ID-1 y una hoja con renglones de texto
+- **THEN** ninguno tiene presencia, y en el Worker de calidad con la presencia activada la pared da score < 70 y motivo `acerca`
+
+#### Scenario: Cédulas sintéticas
+- **WHEN** se evalúa la presencia en la amarilla, la digital y la digital girada 90 grados sintéticas de `PERSONA_BASE` colocadas en la guía
+- **THEN** las tres tienen presencia, con contenido `pdf417` la amarilla y `mrz` las digitales
+
+#### Scenario: Coste
+- **WHEN** se mide la evaluación en Node sobre el frame de análisis
+- **THEN** tarda menos de 20 ms sin tarjeta o con PDF417 y menos de 150 ms cuando busca la MRZ
+
+#### Scenario: Vídeo sin cédula en E2E
+- **WHEN** se pulsa "Iniciar cámara" con el vídeo `sin-documento-1080p` (cara dibujada y pared nítidas) y se analizan al menos 30 frames
+- **THEN** `listo` no aparece en el historial de pantallas, el feedback es "Acerca la cédula" y `amarilla-1080p` y `digital-1080p` sí llegan a `listo` (OFF-19)
+
+### Requirement: OFF-23 Presupuesto corto de lectura en la PWA
+El Worker lector de la PWA MUST usar un presupuesto de MRZ de 12 llamadas OCR y 15 000 ms (en lugar de 40 y 60 000 de LMI-13), aprovechando el orden por evidencia, y la pantalla `leyendo` MUST mostrar el progreso (segundos transcurridos) fuera de la región `aria-live`.
+
+#### Scenario: Presupuesto
+- **WHEN** se leen las constantes del Worker lector de la PWA
+- **THEN** `maxLlamadasOcr` es 12 y `tiempoLimiteMs` es 15000
+
+#### Scenario: Error rápido con una tarjeta ilegible
+- **WHEN** se completa el flujo con `tarjeta-ilegible-1080p` (tarjeta con barras que no forman un PDF417 válido)
+- **THEN** llega a `error-lectura` y "Intentar de nuevo" vuelve a `activo`; mientras lee, `leyendo` muestra un contador de segundos
+
+### Requirement: OFF-24 Solo cédulas de ciudadanía de mayores de edad
+El lector MUST admitir solo cédulas de ciudadanía de mayores de edad; la tarjeta de identidad (TI) MUST NOT admitirse. En la MRZ, un código de documento distinto de `IC` + `COL` se rechaza con `no-es-cedula-digital` (MZ). En el PDF417 no hay forma fiable de distinguir una TI (hipótesis H10 de `docs/decisiones/hipotesis-formato.md`), así que `leerDocumento` MUST aplicar la regla de edad a ambos tipos: si en la `fechaReferencia` la persona no ha cumplido 18 años, devuelve `{ ok: false, tipo, error: "menor-de-edad" }` sin campos. Quien nace el 29 de febrero cumple años el 1 de marzo en años no bisiestos.
+
+#### Scenario: Exactamente 18 años
+- **WHEN** se lee la amarilla sintética (y, aparte, la digital) con `fechaNacimiento` `2008-10-06` y `fechaReferencia` `2026-10-06`
+- **THEN** el resultado es `ok: true`
+
+#### Scenario: Un día menos de 18 años
+- **WHEN** se lee la amarilla sintética (y, aparte, la digital) con `fechaNacimiento` `2008-10-07` y `fechaReferencia` `2026-10-06`
+- **THEN** el resultado es `{ ok: false, tipo: "pdf417" | "mrz", error: "menor-de-edad" }` y los bytes del PDF417 quedan a cero
+
+#### Scenario: Tarjeta de identidad en PDF417
+- **WHEN** se lee un PDF417 sintético con el layout de la amarilla (H10) de una persona de 12 años
+- **THEN** el resultado es `menor-de-edad`
+
+#### Scenario: Tarjeta de identidad en MRZ
+- **WHEN** se parsean líneas MRZ sintéticas cuyo código de documento no es `IC` (p. ej. `IT` o `TI`)
+- **THEN** el parser devuelve `{ ok: false, motivo: "no-es-cedula-digital" }`

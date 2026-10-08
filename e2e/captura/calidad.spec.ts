@@ -1,8 +1,8 @@
 // CAL-10 (cadencia real), CAL-11 (auto-captura) y CAL-12 (feedback con cada vídeo) en la PWA.
 import { expect, test, type Page } from "@playwright/test";
-import { contenedor, esperarPantalla, iniciarCamara, medidasCalidad } from "./instrumentacion";
+import { contenedor, esperarPantalla, iniciarCamara, medidasCalidad, regionEstado, registrarTextosEstado, textosEstado } from "./instrumentacion";
 
-const estado = (page: Page) => page.getByRole("status");
+const estado = regionEstado;
 const inicios = (page: Page) => page.evaluate(() => performance.getEntriesByName("calidad:frame", "measure").map((m) => m.startTime));
 
 const FEEDBACK = [
@@ -14,14 +14,20 @@ const FEEDBACK = [
 ] as const;
 
 test.describe("calidad en vivo", { timeout: 60_000 }, () => {
+  test.describe.configure({ timeout: 60_000 });
   for (const [video, texto] of FEEDBACK) {
     test(`CAL-12 Feedback con cada vídeo: ${video} @video:${video}`, async ({ page }) => {
+      await registrarTextosEstado(page);
       await page.goto("/");
       await iniciarCamara(page);
+      if (texto === "Listo") {
+        // OFF-19: "Listo" es transitorio hacia la lectura; se comprueba en el registro de textos.
+        await expect.poll(() => textosEstado(page), { timeout: 30_000 }).toContain("Listo");
+        return;
+      }
       await expect(estado(page)).toHaveText(texto, { timeout: 30_000 });
-      if (texto === "Listo") return;
       // El motivo se sostiene: durante 5 análisis más, todo texto que toma la región de estado es el mismo.
-      await page.getByRole("status").evaluate((el) => {
+      await estado(page).evaluate((el) => {
         const textos: string[] = [];
         (window as unknown as { __textos: string[] }).__textos = textos;
         new MutationObserver(() => textos.push(el.textContent ?? "")).observe(el, { childList: true, characterData: true, subtree: true });
@@ -36,10 +42,11 @@ test.describe("calidad en vivo", { timeout: 60_000 }, () => {
   }
 
   test("CAL-11 nitida-1080p llega a listo @video:nitida-1080p", async ({ page }) => {
+    await registrarTextosEstado(page);
     await page.goto("/");
     await iniciarCamara(page);
     await esperarPantalla(page, "listo", 30_000);
-    await expect(estado(page)).toHaveText("Listo");
+    await expect.poll(() => textosEstado(page)).toContain("Listo");
   });
 
   test("CAL-11 Vídeo desenfocado nunca llega a listo @video:desenfocada-1080p", async ({ page }) => {

@@ -1,11 +1,12 @@
 // Clasificación de errores de lectura (OFF-13): código y texto fijo de la pantalla `error-lectura`.
 
-export type CodigoErrorLectura = "no-encontrado" | "tiempo-agotado" | "no-valido" | "motor";
+export type CodigoErrorLectura = "no-encontrado" | "tiempo-agotado" | "no-valido" | "menor-de-edad" | "motor";
 
 export const TEXTOS_ERROR_LECTURA: Readonly<Record<CodigoErrorLectura, string>> = Object.freeze({
   "no-encontrado": "No se encontró el código de la cédula ni la zona de lectura. Acerca el documento y evita reflejos.",
   "tiempo-agotado": "La lectura tardó demasiado. Inténtalo de nuevo con mejor luz.",
   "no-valido": "Se leyó un código, pero no corresponde a una cédula válida.",
+  "menor-de-edad": "Este lector solo admite cédulas de ciudadanía de mayores de edad.",
   motor: "No se pudo iniciar el lector en este dispositivo.",
 });
 
@@ -16,6 +17,7 @@ function codigo(r: unknown): CodigoErrorLectura {
   if (error === "mrz-no-encontrada" && tipo === "mrz") return "no-encontrado";
   if (error === "tiempo-agotado") return "tiempo-agotado";
   if (error === "pdf417-no-valido" || error === "mrz-no-valida") return "no-valido";
+  if (error === "menor-de-edad") return "menor-de-edad";
   return "motor";
 }
 

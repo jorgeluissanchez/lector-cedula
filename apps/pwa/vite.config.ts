@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
+import { textosLegales } from "./legal-paginas";
 import { chunkDivipol, nombreRecurso, pluginPwa } from "./plugin-pwa";
 
 // design.md, decisión 1: JSX de Preact con el esbuild de Vite, sin @preact/preset-vite.
@@ -9,6 +10,8 @@ export default defineConfig({
   resolve: {
     alias: { "@lector-cedula/capture": fileURLToPath(new URL("../../packages/capture/src/index.ts", import.meta.url)) },
   },
+  // OFF-21: aviso, autorización y descargo, extraídos en la compilación de docs/legal (sin duplicar el texto).
+  define: { __TEXTOS_LEGALES__: JSON.stringify(textosLegales()) },
   esbuild: { jsx: "automatic", jsxImportSource: "preact" },
   // pwa-lectura-offline (OFF-01): recursos de lectura con hash; la tabla DIVIPOL en su propio chunk del Worker lector.
   worker: { format: "es", plugins: () => [], rollupOptions: { output: { assetFileNames: nombreRecurso, chunkFileNames: "assets/[name]-[hash].js", manualChunks: chunkDivipol } } },

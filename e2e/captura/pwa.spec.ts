@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { contenedor, esperarPantalla, iniciarCamara, RUTA_PERMITIDA } from "./instrumentacion";
 
 test.describe("PWA instalable", { timeout: 60_000 }, () => {
+  test.describe.configure({ timeout: 60_000 });
   test("CAM-01 Manifiesto @video:nitida-1080p", async ({ request }) => {
     const r = await request.get("/manifest.webmanifest");
     expect(r.status()).toBe(200);

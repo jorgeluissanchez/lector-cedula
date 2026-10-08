@@ -95,11 +95,40 @@ export async function estadosPistas(page: Page): Promise<string[]> {
 }
 
 export async function iniciarCamara(page: Page): Promise<void> {
+  // OFF-21: la casilla de autorización habilita "Iniciar cámara".
+  await page.getByRole("checkbox", { name: /^Autorizo/u }).check();
   await page.getByRole("button", { name: "Iniciar cámara" }).click();
 }
 
+/**
+ * `listo` es transitorio hacia la lectura (pwa-lectura-offline, OFF-19; delta MODIFIED de CAM-01, CAM-09, CAM-10 y
+ * CAM-11): "llegar a `listo`" se comprueba aceptando `listo` o cualquier pantalla de lectura, a las que el reductor
+ * solo llega desde `listo` (prueba unitaria apps/pwa/test/off-19-estado.test.ts).
+ */
+export const PANTALLAS_TRAS_LISTO = /^(listo|leyendo|resultado|error-lectura)$/;
+
+/**
+ * Registra cada texto que toma la región de estado de la captura (`.estado`) desde la carga: "Listo" es transitorio
+ * porque la lectura empieza sola (OFF-19).
+ */
+export async function registrarTextosEstado(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __textosEstado: string[] };
+    w.__textosEstado = [];
+    new MutationObserver(() => {
+      const t = document.querySelector(".estado")?.textContent ?? "";
+      if (t !== "" && w.__textosEstado.at(-1) !== t) w.__textosEstado.push(t);
+    }).observe(document, { subtree: true, childList: true, characterData: true });
+  });
+}
+
+export const textosEstado = (page: Page) => page.evaluate(() => (window as unknown as { __textosEstado: string[] }).__textosEstado);
+
+/** Región de estado de la captura (en `inicio` también existe el indicador sin conexión de OFF-03, otro `status`). */
+export const regionEstado = (page: Page) => page.getByRole("status").and(page.locator(".estado"));
+
 export async function esperarPantalla(page: Page, pantalla: string, timeout = 20_000): Promise<void> {
-  await expect(contenedor(page)).toHaveAttribute("data-pantalla", pantalla, { timeout });
+  await expect(contenedor(page)).toHaveAttribute("data-pantalla", pantalla === "listo" ? PANTALLAS_TRAS_LISTO : pantalla, { timeout });
 }
 
 /** Expresión de CAM-01 para las rutas permitidas. */
