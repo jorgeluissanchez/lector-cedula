@@ -18,5 +18,14 @@
     "atribucion": "DANE - DIVIPOLA Códigos municipios (datos.gov.co gdxc-w37w). Departamento Administrativo Nacional de Estadística. Licencia CC BY-SA 4.0.",
     "archivo": "divipola-dane.csv",
     "titulo": "DANE - DIVIPOLA Códigos municipios (datos.gov.co gdxc-w37w)"
+  },
+  {
+    "id": "registraduria-consulados-2018",
+    "url": "https://www.datos.gov.co/resource/vh8b-jfhg.csv?$select=dd,mm,municipio&$group=dd,mm,municipio&$order=mm&$limit=500",
+    "sha256": "135dee55ab72b439500ebad609c825404f1d4fa6aefbf127da684fa652704724",
+    "licencia": "CC-BY-SA-4.0",
+    "atribucion": "Registraduría Nacional del Estado Civil - Divipole Exterior Presidente 2018 (datos.gov.co vh8b-jfhg). Extracto de las columnas dd, mm y municipio. Licencia CC BY-SA 4.0.",
+    "archivo": "consulados-2018.csv",
+    "titulo": "Registraduría Nacional del Estado Civil - Divipole Exterior Presidente 2018 (datos.gov.co vh8b-jfhg)"
   }
 ]

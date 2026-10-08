@@ -1,13 +1,14 @@
 # Avisos de terceros de @lector-cedula/parsers
 
-El código de este paquete es MIT. Dos conjuntos de datos generados derivan de fuentes de terceros (cambio OpenSpec `divipol-registraduria`, design.md decisión 6). Por eso el campo `license` del paquete es `MIT AND CC-BY-SA-4.0`.
+El código de este paquete es MIT. Tres conjuntos de datos generados derivan de fuentes de terceros (cambio OpenSpec `divipol-registraduria`, design.md decisión 6). Por eso el campo `license` del paquete es `MIT AND CC-BY-SA-4.0`.
 
 | Datos | Archivo generado | Punto de entrada | Fuente | Licencia |
 |---|---|---|---|---|
 | Tabla DIVIPOL (códigos de lugar de la Registraduría) | `src/divipol/tabla.generated.ts` | `@lector-cedula/parsers` | Eitol/colombian-cedula-reader | MIT |
 | Equivalencia DIVIPOL -> DIVIPOLA | `src/divipola/equivalencias.generated.ts` | `@lector-cedula/parsers/divipola` | DANE, DIVIPOLA | CC BY-SA 4.0 |
+| Consulados DIVIPOL 2018 | `src/divipol-2018/consulados.generated.ts` | `@lector-cedula/parsers/divipol-2018` | Registraduría, Divipole Exterior 2018 | CC BY-SA 4.0 |
 
-El punto de entrada principal no importa la equivalencia: quien solo usa `buscarDivipol` no recibe datos CC BY-SA 4.0.
+El punto de entrada principal no importa la equivalencia ni los consulados 2018: quien solo usa `buscarDivipol` no recibe datos CC BY-SA 4.0.
 
 ## Tabla DIVIPOL: Eitol/colombian-cedula-reader (MIT)
 
@@ -55,3 +56,12 @@ Los datos de `@lector-cedula/parsers/divipola` son material adaptado de:
 - Sin garantías: el DANE ofrece el material tal cual, según la sección 5 de la licencia.
 
 Compartir igual: quien redistribuya estos datos de equivalencia, modificados o no, debe hacerlo bajo CC BY-SA 4.0 (o una licencia compatible), conservar esta atribución y no añadir términos ni medidas tecnológicas que restrinjan esos datos. El código MIT que los consulta y la tabla DIVIPOL no quedan sujetos a esa licencia.
+
+## Consulados DIVIPOL 2018: Registraduría Nacional del Estado Civil (CC BY-SA 4.0)
+
+- Obra: Divipole Exterior Presidente 2018 (datos.gov.co, conjunto `vh8b-jfhg`), Registraduría Nacional del Estado Civil.
+- URL del extracto: https://www.datos.gov.co/resource/vh8b-jfhg.csv?$select=dd,mm,municipio&$group=dd,mm,municipio&$order=mm&$limit=500
+- SHA-256 de los bytes usados: `135dee55ab72b439500ebad609c825404f1d4fa6aefbf127da684fa652704724`
+- Licencia: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/. Quien redistribuya estos datos MUST hacerlo bajo CC BY-SA 4.0.
+- Cambios: solo códigos y nombres de consulado; erratas corregidas `88135` ARZERBAIYAN -> AZERBAIYAN, `88688` REPUBLICA DE SINGAPUR -> SINGAPUR, `88690` REPUBLICA SOCIALISTA DEVIETNAM -> VIETNAM; códigos alternos añadidos `88195` (Belice) y `88480` (Irlanda).
+- Sin garantías, según la sección 5 de la licencia.

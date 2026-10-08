@@ -22,10 +22,13 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ErrorDivipol,
+  construirConsulados2018,
   contrastar,
   emparejar,
+  parsearConsulados2018,
   parsearDivipola,
   parsearLocalities,
+  serializarConsulados2018,
   serializarEquivalencias,
   serializarTabla,
   verificarFuente,
@@ -42,6 +45,7 @@ const OPCIONES_CON_VALOR = new Set(["--manifiesto", "--fuentes", "--salida", "--
 const MODOS = new Set(["--descargar", "--verificar"]);
 const ARCHIVO_TABLA = "divipol/tabla.generated.ts";
 const ARCHIVO_EQUIVALENCIAS = "divipola/equivalencias.generated.ts";
+const ARCHIVO_CONSULADOS_2018 = "divipol-2018/consulados.generated.ts";
 
 function leerArgumentos(argv) {
   const opciones = { ...POR_DEFECTO, modo: "generar" };
@@ -204,9 +208,16 @@ function generarArchivos(opciones) {
     licencia: divipola.fuente.licencia,
     sha256: divipola.fuente.sha256.toLowerCase(),
   };
+  const consulados = leerInstantanea(opciones, manifiesto, "registraduria-consulados-2018");
+  exigirCampos(consulados.fuente, ["titulo", "licencia"]);
+  const filasConsulados = construirConsulados2018(parsearConsulados2018(consulados.texto));
   return [
     { nombre: ARCHIVO_TABLA, contenido: serializarTabla(filas, { ...localities.fuente, sha256: localities.fuente.sha256.toLowerCase() }) },
     { nombre: ARCHIVO_EQUIVALENCIAS, contenido: serializarEquivalencias(equivalencias, atribucion) },
+    {
+      nombre: ARCHIVO_CONSULADOS_2018,
+      contenido: serializarConsulados2018(filasConsulados, { ...consulados.fuente, sha256: consulados.fuente.sha256.toLowerCase() }),
+    },
   ];
 }
 

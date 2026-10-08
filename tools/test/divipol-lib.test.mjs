@@ -67,7 +67,7 @@ describe("instantáneas versionadas de las fuentes (DV-11, DV-12)", () => {
   const RAIZ_DIVIPOL = fileURLToPath(new URL("../divipol/", import.meta.url));
   const manifiesto = () => JSON.parse(readFileSync(join(RAIZ_DIVIPOL, "fuentes.json"), "utf8"));
 
-  it("DV-11 el manifiesto fija las dos fuentes con las URLs, licencias y SHA-256 del diseño", () => {
+  it("DV-11 y DC-06 el manifiesto fija las tres fuentes con las URLs, licencias y SHA-256 del diseño", () => {
     const fuentes = manifiesto();
     expect(fuentes.map((f) => [f.id, f.url, f.sha256, f.licencia, f.archivo])).toStrictEqual([
       [
@@ -83,6 +83,13 @@ describe("instantáneas versionadas de las fuentes (DV-11, DV-12)", () => {
         SHA_DANE,
         "CC-BY-SA-4.0",
         "divipola-dane.csv",
+      ],
+      [
+        "registraduria-consulados-2018",
+        "https://www.datos.gov.co/resource/vh8b-jfhg.csv?$select=dd,mm,municipio&$group=dd,mm,municipio&$order=mm&$limit=500",
+        "135dee55ab72b439500ebad609c825404f1d4fa6aefbf127da684fa652704724",
+        "CC-BY-SA-4.0",
+        "consulados-2018.csv",
       ],
     ]);
     for (const f of fuentes) expect(typeof f.atribucion === "string" && f.atribucion.length > 0).toBe(true);

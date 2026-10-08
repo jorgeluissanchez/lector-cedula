@@ -413,3 +413,122 @@ export function contrastar(bytes, filas) {
     .map((codigo) => ({ codigo, tabla: tabla.get(codigo), contraste: contraste.get(codigo) }));
   return { soloEnTabla, soloEnContraste, nombresDistintos };
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Consulados DIVIPOL 2018 de la Registraduría (cambio divipol-consulados-2018, DC-03, DC-04, DC-06, DC-07, DC-09).
+
+const CABECERA_CONSULADOS_2018 = '"dd","mm","municipio"';
+const FILAS_CONSULADOS_2018 = 69;
+
+/** Correcciones de erratas de la fuente (DC-09); cada una se declara como cambio en la atribución CC BY-SA. */
+export const CORRECCIONES_CONSULADOS_2018 = Object.freeze([
+  Object.freeze({ codigo: "88135", original: "ARZERBAIYAN", corregido: "AZERBAIYAN" }),
+  Object.freeze({ codigo: "88688", original: "REPUBLICA DE SINGAPUR", corregido: "SINGAPUR" }),
+  Object.freeze({ codigo: "88690", original: "REPUBLICA SOCIALISTA DEVIETNAM", corregido: "VIETNAM" }),
+]);
+
+/** Excepción literal (DC-04): código histórico de Eitol -> código de 2018 del mismo consulado. */
+export const ALTERNOS_CONSULADOS_2018 = Object.freeze({ "88195": "88415", "88480": "88470" });
+
+/** Consulados con nombre vigente distinto del de la tabla principal (DC-03). */
+export const RENOMBRADOS_2018 = Object.freeze(["88140", "88160", "88370", "88435"]);
+
+/**
+ * Lee el extracto CSV de consulados 2018 (DC-06): cabecera exacta, 3 campos, `dd` = 88, `mm` de 3 dígitos sin
+ * repetidos, nombre no vacío y exactamente 69 filas.
+ * @param {string} texto
+ * @returns {{codigo: string, municipio: string}[]}
+ */
+export function parsearConsulados2018(texto) {
+  const lineas = texto.split(/\r?\n/);
+  if (lineas.at(-1) === "") lineas.pop();
+  if (lineas[0] !== CABECERA_CONSULADOS_2018) {
+    throw new ErrorDivipol(`consulados 2018: cabecera inesperada: ${lineas[0] ?? "(vacía)"}`);
+  }
+  const filas = [];
+  const vistos = new Set();
+  for (let i = 1; i < lineas.length; i++) {
+    const numero = i + 1;
+    const campos = camposCsv(lineas[i], numero);
+    if (campos.length !== 3) throw new ErrorDivipol(`consulados 2018, línea ${numero}: se esperaban 3 campos y hay ${campos.length}`);
+    const [dd, mm, municipio] = campos;
+    if (dd !== "88" || !/^[0-9]{3}$/.test(mm)) throw new ErrorDivipol(`consulados 2018, línea ${numero}: códigos inválidos (${dd}, ${mm})`);
+    const codigo = dd + mm;
+    if (municipio.trim() === "") throw new ErrorDivipol(`consulados 2018, línea ${numero}: nombre vacío en el código ${codigo}`);
+    if (vistos.has(codigo)) throw new ErrorDivipol(`consulados 2018, línea ${numero}: código ${codigo} repetido`);
+    vistos.add(codigo);
+    filas.push({ codigo, municipio });
+  }
+  if (filas.length !== FILAS_CONSULADOS_2018) {
+    throw new ErrorDivipol(`consulados 2018: ${filas.length} filas de datos; se esperaban ${FILAS_CONSULADOS_2018}`);
+  }
+  return filas;
+}
+
+/**
+ * Aplica las correcciones (DC-09) y los alternos (DC-04), y comprueba que los renombrados estén (DC-03).
+ * @param {{codigo: string, municipio: string}[]} filas
+ * @returns {{codigo: string, municipio: string}[]} en orden de código
+ */
+export function construirConsulados2018(filas) {
+  const mapa = new Map(filas.map((f) => [f.codigo, f.municipio]));
+  for (const { codigo, original, corregido } of CORRECCIONES_CONSULADOS_2018) {
+    if (mapa.get(codigo) !== original) {
+      throw new ErrorDivipol(`consulados 2018: la corrección de ${codigo} espera "${original}" y la fuente trae "${mapa.get(codigo) ?? "(ausente)"}"`);
+    }
+    mapa.set(codigo, corregido);
+  }
+  for (const codigo of RENOMBRADOS_2018) {
+    if (!mapa.has(codigo)) throw new ErrorDivipol(`consulados 2018: el renombrado ${codigo} no está en la fuente`);
+  }
+  for (const [alterno, destino] of Object.entries(ALTERNOS_CONSULADOS_2018)) {
+    if (mapa.has(alterno)) throw new ErrorDivipol(`consulados 2018: el código alterno ${alterno} ya está en la fuente`);
+    if (!mapa.has(destino)) throw new ErrorDivipol(`consulados 2018: el destino ${destino} del alterno ${alterno} no está en la fuente`);
+    mapa.set(alterno, mapa.get(destino));
+  }
+  return [...mapa].map(([codigo, municipio]) => ({ codigo, municipio })).sort((a, b) => porCodigo(a.codigo, b.codigo));
+}
+
+/** Texto de cambios de la atribución CC BY-SA (sección 3(a)) del módulo 2018. */
+export function cambiosConsulados2018() {
+  const correcciones = CORRECCIONES_CONSULADOS_2018.map((c) => `${c.codigo} ${c.original} -> ${c.corregido}`).join("; ");
+  const alternos = Object.entries(ALTERNOS_CONSULADOS_2018).map(([a, d]) => `${a} (alterno de ${d})`).join(", ");
+  return `Extracto de las columnas dd, mm y municipio. Erratas corregidas: ${correcciones}. Códigos alternos añadidos: ${alternos}.`;
+}
+
+/**
+ * Serializa el módulo de consulados 2018 (DC-07): cabecera de atribución con cambios, metadatos, renombrados y
+ * filas `[codigo, municipio]` en orden de código; LF y `\n` final.
+ * @param {{codigo: string, municipio: string}[]} filas
+ * @param {{titulo: string, url: string, licencia: string, sha256: string}} fuente
+ * @returns {string}
+ */
+export function serializarConsulados2018(filas, fuente) {
+  const texto = JSON.stringify;
+  const cambios = cambiosConsulados2018();
+  return [
+    "// Generado por tools/divipol/generar-divipol.mjs; no editar.",
+    "// Consulados DIVIPOL 2018: material adaptado de la Registraduría Nacional del Estado Civil, CC BY-SA 4.0.",
+    `// Fuente: ${fuente.titulo}`,
+    `// URL: ${fuente.url}`,
+    `// Licencia: ${fuente.licencia} (https://creativecommons.org/licenses/by-sa/4.0/). Avisos en packages/parsers/THIRD_PARTY_NOTICES.md.`,
+    `// SHA-256: ${fuente.sha256}`,
+    `// Cambios: ${cambios}`,
+    "",
+    "export const FUENTE_CONSULADOS_2018 = {",
+    `  fuente: ${texto(fuente.titulo)},`,
+    `  url: ${texto(fuente.url)},`,
+    `  licencia: ${texto(fuente.licencia)},`,
+    `  sha256: ${texto(fuente.sha256)},`,
+    `  cambios: ${texto(cambios)},`,
+    "} as const;",
+    "",
+    `export const RENOMBRADOS_2018_GENERADO: readonly string[] = ${texto(RENOMBRADOS_2018)};`,
+    "",
+    "/** Filas [código de 5 dígitos, consulado] en orden de código. */",
+    "export const FILAS_CONSULADOS_2018: readonly (readonly [string, string])[] = [",
+    ...filas.map((f) => `  ${texto([f.codigo, f.municipio])},`),
+    "];",
+    "",
+  ].join("\n");
+}

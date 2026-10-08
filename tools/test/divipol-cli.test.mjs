@@ -242,7 +242,7 @@ describe("generar-divipol: generación y verificación (DV-13, DV-14)", { timeou
     expect(ra.stderr).toBe("");
     expect(ra.status).toBe(0);
     expect(rb.status).toBe(0);
-    for (const archivo of [TABLA, EQUIVALENCIAS]) {
+    for (const archivo of [TABLA, EQUIVALENCIAS, "divipol-2018/consulados.generated.ts"]) {
       const bytesA = readFileSync(join(a, archivo));
       const bytesB = readFileSync(join(b, archivo));
       expect(bytesA.equals(bytesB)).toBe(true);
@@ -250,7 +250,11 @@ describe("generar-divipol: generación y verificación (DV-13, DV-14)", { timeou
       expect(bytesA.at(-1)).toBe(0x0a);
       expect(bytesA.at(-2)).not.toBe(0x0a);
     }
-    expect(Object.keys(fotografia(a))).toStrictEqual(["divipol/tabla.generated.ts", "divipola/equivalencias.generated.ts"]);
+    expect(Object.keys(fotografia(a))).toStrictEqual([
+      "divipol/tabla.generated.ts",
+      "divipol-2018/consulados.generated.ts",
+      "divipola/equivalencias.generated.ts",
+    ]);
   });
 
   it("DV-16 deriva de la equivalencia detectada: código alterado en una copia -> código 1 con el nombre del archivo", () => {
