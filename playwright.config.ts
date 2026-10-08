@@ -47,12 +47,16 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never", outputFolder: "reports/playwright" }]],
   snapshotPathTemplate: "e2e/visual/assets-ui/{testFileName}/{arg}-{projectName}{ext}",
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: "disabled" } },
-  webServer: {
-    command: "npm run build -w apps/pwa && npm run preview -w apps/pwa -- --port 4173 --strictPort",
-    url: "http://localhost:4173",
-    reuseExistingServer: !process.env.CI,
-    timeout: 400_000,
-  },
+  webServer: [
+    {
+      command: "npm run build -w apps/pwa && npm run preview -w apps/pwa -- --port 4173 --strictPort",
+      url: "http://localhost:4173",
+      reuseExistingServer: !process.env.CI,
+      timeout: 400_000,
+    },
+    // despliegue-produccion (DP-07): el mismo build con exactamente las cabeceras de vercel.json.
+    { command: "node tools/despliegue/servir-vercel.mjs 4180", url: "http://localhost:4180", reuseExistingServer: !process.env.CI, timeout: 60_000 },
+  ],
   use: {
     trace: "on-first-retry",
     screenshot: "only-on-failure",
@@ -60,10 +64,12 @@ export default defineConfig({
     launchOptions: { args: CAMARA },
   },
   projects: [
-    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/], use: { ...devices["Desktop Chrome"] } },
-    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/], use: { ...devices["Pixel 7"] } },
+    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/], use: { ...devices["Desktop Chrome"] } },
+    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/], use: { ...devices["Pixel 7"] } },
     ...proyectosCaptura,
     ...proyectosLectura,
+    // despliegue-produccion (DP-07): PWA servida con las cabeceras de producción (CSP incluida).
+    { name: "despliegue-chromium", testDir: "e2e/despliegue", use: { ...DISPOSITIVOS.escritorio, baseURL: "http://localhost:4180", launchOptions: { args: CAMARA } } },
     ...(CON_WEBKIT ? [{
       name: "captura-webkit",
       testMatch: /captura\/webkit\.spec\.ts/,
