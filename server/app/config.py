@@ -24,6 +24,8 @@ class Config:
     limite_peticiones_por_minuto: int = 60
     retencion_resultados_s: int = 86_400
     base_tipos_problema: str = "https://lector-cedula.example/problemas/"
+    # MS-19: `node` activa el lector de packages/capture en modo live; sin valor, live responde 503.
+    lector_live: str | None = None
 
     @classmethod
     def desde_entorno(cls, entorno: Mapping[str, str]) -> "Config":
@@ -42,6 +44,10 @@ class Config:
             valores["retencion_resultados_s"] = int(entorno["RETENCION_RESULTADOS_S"])
         if "BASE_TIPOS_PROBLEMA" in entorno:
             valores["base_tipos_problema"] = entorno["BASE_TIPOS_PROBLEMA"]
+        if "LECTOR_LIVE" in entorno:
+            if entorno["LECTOR_LIVE"] != "node":
+                raise ValueError("LECTOR_LIVE solo admite el valor node")
+            valores["lector_live"] = "node"
         return cls(**valores)
 
     def con_cambios(self, **cambios: Any) -> "Config":

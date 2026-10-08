@@ -26,6 +26,25 @@ async function leerEntrada() {
   }
 }
 
+// Minimización (revisión de privacidad): solo los campos que usa el documento del contrato.
+const CAMPOS_PDF417 = [
+  "numeroDocumento",
+  "primerApellido",
+  "segundoApellido",
+  "primerNombre",
+  "segundoNombre",
+  "sexo",
+  "fechaNacimiento",
+  "rh",
+  "codigoDepartamentoNacimiento",
+  "codigoMunicipioNacimiento",
+];
+const CAMPOS_MRZ = ["nuip", "apellidos", "nombres", "sexo", "fechaNacimiento", "fechaVencimiento"];
+
+function proyectar(campos, claves) {
+  return Object.fromEntries(claves.map((c) => [c, campos[c] ?? null]));
+}
+
 function interpretarPdf417(parsers, peticion) {
   if (typeof peticion.datos_b64 !== "string") return { ok: false, motivo: "entrada-no-valida" };
   const bytes = new Uint8Array(Buffer.from(peticion.datos_b64, "base64"));
@@ -33,7 +52,7 @@ function interpretarPdf417(parsers, peticion) {
   if (!r.ok) return { ok: false, motivo: r.error };
   return {
     ok: true,
-    campos: r.campos,
+    campos: proyectar(r.campos, CAMPOS_PDF417),
     validaciones: r.validaciones.map((v) => ({ id: v.id, estado: v.estado })),
     warnings: r.warnings,
   };
@@ -46,7 +65,7 @@ function interpretarMrz(parsers, peticion) {
   return {
     ok: true,
     valido: r.valido,
-    campos: r.campos,
+    campos: proyectar(r.campos, CAMPOS_MRZ),
     digitos_control: {
       serial: d.serial.estado,
       nacimiento: d.nacimiento.estado,
@@ -69,4 +88,11 @@ async function principal() {
   process.stdout.write(JSON.stringify(salida));
 }
 
-await principal();
+// Cualquier fallo (por ejemplo, parsers no cargables) sale como respuesta fija y código 1, sin mensaje ni
+// traza en la salida de errores: el mensaje podría llevar datos (revisión de privacidad).
+try {
+  await principal();
+} catch {
+  process.stdout.write(JSON.stringify({ ok: false, motivo: "error-interno" }));
+  process.exitCode = 1;
+}

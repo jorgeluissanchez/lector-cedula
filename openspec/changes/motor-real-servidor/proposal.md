@@ -10,7 +10,7 @@ El servidor de respaldo (Fase 4 de `PLAN.md`) ya expone el contrato `api-validac
 - La imagen Docker del servidor compila `packages/parsers` desde el código fuente y copia Node 24 (MIT) y el resultado compilado. TypeScript (Apache-2.0) solo se usa en la etapa de compilación.
 - `MotorReal` en `server/app/motor_real.py`: puerto `Lector` (imagen a payload o líneas), puerto `Interprete` y la tabla que traduce el resultado de los parsers a `status`, `declined_reason`, `checks` y `document` del contrato.
 - El modo live usa `MotorReal` solo cuando hay un `Lector` configurado; sin lector, AV-22 no cambia (503).
-- Los lectores concretos con zxing-cpp 3.1.1 (re-decodificación PDF417) y RapidOCR 3.9 (OCR de la MRZ) quedan como tareas **bloqueadas** hasta la aprobación del agente `revisor-licencias`: no se instala nada sin ella.
+- Lector del servidor: el mismo de `packages/capture` (zxing-wasm 3.1.5 para PDF417, tesseract.js 7 con `mrz.traineddata` para la MRZ), ejecutado con Node en el contenedor como `tools/leer-foto.mjs`. Reemplaza el plan anterior de zxing-cpp y RapidOCR (decisión humana del 2026-10-07): sin dependencias nuevas y con resultados iguales a la CLI y la PWA. WASM, worker y modelo van en la imagen (modelo con SHA-256 verificado en la compilación); en ejecución no hay red. Se activa con `LECTOR_LIVE=node`.
 
 Fuera de alcance: document liveness, calidad de imagen y comparación facial reales (Fase 5), persistencia, cambios del contrato OpenAPI y del cliente (`apps/pwa`, `packages/capture`).
 
@@ -27,4 +27,4 @@ Fuera de alcance: document liveness, calidad de imagen y comparación facial rea
 - Código: `server/app/motor_real.py`, `server/app/puertos.py`, `server/interprete/`, `server/Dockerfile`, `server/compose.yaml`, `server/tests/`.
 - Imagen: Node 24 y los parsers compilados; contexto adicional `parsers` (`../packages/parsers`) en Compose.
 - Privacidad: el `revisor-privacidad` debe revisar el cambio (el intérprete recibe datos personales del documento por tubería).
-- Licencias: el `revisor-licencias` debe aprobar zxing-cpp y RapidOCR (con sus modelos) antes de las tareas del grupo 4.
+- Licencias: el `revisor-licencias` aprobó TypeScript y, con la condición de llevar su LICENSE completo, Node 24; zxing-wasm, tesseract.js y el modelo ya estaban aprobados.

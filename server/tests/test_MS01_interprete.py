@@ -63,6 +63,52 @@ def test_MS01_mrz_sintetica_con_apellido_compuesto() -> None:
     assert set(respuesta) == {"ok", "valido", "campos", "digitos_control", "errores", "warnings"}
 
 
+def test_MS01_solo_los_campos_que_usa_el_documento() -> None:
+    """Minimización: el intérprete no devuelve serial, lugar, nacionalidad ni otros campos sin uso."""
+    payload = bytes.fromhex(fixture("pdf417-amarilla/apellido-compuesto")["entrada"])
+    pdf417 = _interpretar({"fuente": "pdf417", "datos_b64": base64.b64encode(payload).decode()})
+    lineas = fixture("mrz-cedula-digital/apellido-compuesto")["entrada"]
+    mrz = _interpretar({"fuente": "mrz", "lineas": lineas, "fecha_referencia": "2026-10-06"})
+    assert set(pdf417["campos"]) == {
+        "numeroDocumento",
+        "primerApellido",
+        "segundoApellido",
+        "primerNombre",
+        "segundoNombre",
+        "sexo",
+        "fechaNacimiento",
+        "rh",
+        "codigoDepartamentoNacimiento",
+        "codigoMunicipioNacimiento",
+    }
+    assert set(mrz["campos"]) == {
+        "nuip",
+        "apellidos",
+        "nombres",
+        "sexo",
+        "fechaNacimiento",
+        "fechaVencimiento",
+    }
+
+
+def test_MS01_error_interno_del_interprete() -> None:
+    """Sin parsers cargables: `error-interno`, código distinto de 0 y salida de errores vacía."""
+    import os
+
+    entorno = {**os.environ, "RUTA_PARSERS": "/srv/no-existe/index.js"}
+    proceso = subprocess.run(  # noqa: S603 - argumentos fijos, sin shell
+        [NODE, SCRIPT_INTERPRETE],
+        input=b'{"fuente": "mrz"}',
+        capture_output=True,
+        timeout=30,
+        check=False,
+        env=entorno,
+    )
+    assert proceso.returncode != 0
+    assert json.loads(proceso.stdout) == {"ok": False, "motivo": "error-interno"}
+    assert proceso.stderr == b""
+
+
 def test_MS01_entrada_no_valida() -> None:
     """`no es json` y `{"fuente": "otra"}` dan su motivo con código 0."""
     assert _ejecutar(b"no es json") == (0, {"ok": False, "motivo": "entrada-no-valida"})

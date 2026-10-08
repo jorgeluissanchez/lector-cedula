@@ -13,10 +13,10 @@ Reglas: TDD (principio II), Python solo en Docker, datos sintéticos de `evals/f
 ## 3. Activación y privacidad
 
 - [x] 3.1 `Puertos(lector=...)` crea `motor_live`. Pruebas primero: los 3 escenarios de MS-03 y los 3 primeros de MS-04. Cubre MS-03 y MS-04. Tipos de prueba: **unitaria**, **privacidad**. Verificación: `P` en verde.
-- [ ] 3.2 Verificación en contenedor: escenario "Contenedor de solo lectura con Node" y "Sin dependencias no aprobadas"; `G`, `C`, `Z`, `npm run check:privacidad`, `npm run check` y `openspec validate motor-real-servidor --strict`. Cubre MS-04 y MS-05. Tipos de prueba: **integración**, **seguridad**, **contrato**. Verificación: los comandos citados en verde y `find /tmp -type f` vacío. Revisión del `revisor-privacidad`.
+- [x] 3.2 Verificación en contenedor: escenario "Contenedor de solo lectura con Node" y "Sin dependencias no aprobadas"; `G`, `C`, `Z`, `npm run check:privacidad`, `npm run check` y `openspec validate motor-real-servidor --strict`. Cubre MS-04 y MS-05. Tipos de prueba: **integración**, **seguridad**, **contrato**. Verificación: los comandos citados en verde y `find /tmp -type f` vacío. Revisión del `revisor-privacidad`.
 
-## 4. Lectores concretos (BLOQUEADO: requiere aprobación del agente `revisor-licencias`)
+## 4. Lector Node de packages/capture (decisión 9: reemplaza zxing-cpp y RapidOCR)
 
-- [ ] 4.1 Informe del `revisor-licencias` sobre zxing-cpp 3.1.1 (Python), RapidOCR 3.9 y los pesos PP-OCR que use, con `models/manifest.json`. Sin informe aprobatorio no se empieza 4.2 ni 4.3. Cubre MS-05. Tipos de prueba: **seguridad** (licencias). Verificación: informe adjunto y `npm run check:licencias` sin infracciones.
-- [ ] 4.2 `LectorPdf417Zxing`: re-decodificación del reverso a resolución completa en memoria, con escenarios propios (añadirlos a la spec antes de implementar) sobre imágenes sintéticas de `@lector-cedula/fixtures`. Cubre MS-03. Tipos de prueba: **unitaria**, **metamórfica**, **eval**. Verificación: `P` y `npm run eval:quick` en verde.
-- [ ] 4.3 `LectorMrzRapidOcr`: OCR de la franja MRZ en memoria, con escenarios propios en la spec. Cubre MS-03. Tipos de prueba: **unitaria**, **metamórfica**, **eval**. Verificación: `P` y `npm run eval:quick` en verde.
+- [x] 4.1 Licencias: LICENSE de Node en la imagen y modelo `tesseract-mrz` empaquetado con su SHA-256. Pruebas primero: escenarios de MS-05. Cubre MS-05. Tipos de prueba: **seguridad** (licencias). Verificación: P y `npm run check:licencias` en verde.
+- [x] 4.2 `server/lector/leer.mjs`, etapas `fuente` (HEAD del repositorio) y `lector` del Dockerfile, `LectorNode` y activación por `LECTOR_LIVE`. Pruebas primero: escenarios de MS-16 (los dos en contenedor), MS-17, MS-18 y MS-19. Cubre MS-16 a MS-19. Tipos de prueba: **unitaria**, **integración**, **privacidad**. Verificación: P en verde; `find /tmp -type f` vacío en `api-pruebas` tras una lectura.
+- [x] 4.3 Equivalencia con la CLI (MS-16) en `tools/test/lector-servidor.test.mjs`. Tipos de prueba: **integración**, **diferencial**. Verificación: `npx vitest run tools/test/lector-servidor.test.mjs` y `npm run check` en verde.

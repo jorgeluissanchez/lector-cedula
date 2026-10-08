@@ -3,18 +3,25 @@ services:
     build:
       context: .
       target: dev
-      # Parsers TypeScript compilados en la imagen (motor-real-servidor, decisión 4).
+      # Parsers y lector TypeScript de HEAD compilados en la imagen (motor-real-servidor, decisiones 4 y 10).
       additional_contexts:
-        fuente_parsers: ../packages/parsers/src
+        repo_git: ../.git
     # --frozen: usa el uv.lock montado tal cual (nunca lo reescribe).
+    # Solo lectura (revisión de privacidad): caches desactivadas y /tmp en memoria.
+    read_only: true
+    tmpfs: ["/tmp"]
+    environment:
+      UV_CACHE_DIR: /tmp/uv
+      UV_NO_SYNC: "1"
     command: >-
-      sh -c "uv run --frozen ruff check . && uv run --frozen ruff format --check .
-      && uv run --frozen pytest -q"
+      sh -c "uv run --frozen ruff check --no-cache . && uv run --frozen ruff format --no-cache --check .
+      && uv run --frozen pytest -q -p no:cacheprovider"
     volumes:
       - ./app:/srv/app:ro
       - ./tests:/srv/tests:ro
       - ./openapi:/srv/openapi:ro
       - ./interprete:/srv/interprete:ro
+      - ./lector/leer.mjs:/srv/lector/leer.mjs:ro
       # MS-01 a MS-15: fixtures sintéticos de los parsers (personas ficticias, números 9999...).
       - ../evals/fixtures/sinteticos:/srv/fixtures_sinteticos:ro
       - ./pyproject.toml:/srv/pyproject.toml:ro
@@ -28,12 +35,15 @@ services:
     build:
       context: .
       target: produccion
-      # Parsers TypeScript compilados en la imagen (motor-real-servidor, decisión 4).
+      # Parsers y lector TypeScript de HEAD compilados en la imagen (motor-real-servidor, decisiones 4 y 10).
       additional_contexts:
-        fuente_parsers: ../packages/parsers/src
+        repo_git: ../.git
     ports: ["8000:8000"]
     read_only: true
     tmpfs: ["/tmp"]
+    environment:
+      # MS-19: motor real con el lector Node de packages/capture.
+      LECTOR_LIVE: node
 
   # Misma imagen que `api`, con claves sintéticas, para Schemathesis, ZAP y Locust (decisión 16).
   # Ninguna clave ni secreto de este servicio es real (skill fixture-sintetico).
@@ -41,9 +51,9 @@ services:
     build:
       context: .
       target: produccion
-      # Parsers TypeScript compilados en la imagen (motor-real-servidor, decisión 4).
+      # Parsers y lector TypeScript de HEAD compilados en la imagen (motor-real-servidor, decisiones 4 y 10).
       additional_contexts:
-        fuente_parsers: ../packages/parsers/src
+        repo_git: ../.git
     command:
       - /srv/.venv/bin/uvicorn
       - app.main:app
@@ -69,6 +79,7 @@ services:
       SECRETO_SUBIDA: secreto_subida_sintetico_solo_pruebas_0000000000
       URL_PUBLICA: http://host.docker.internal:8000
       LIMITE_PETICIONES_POR_MINUTO: "100000"
+      LECTOR_LIVE: node
     healthcheck:
       test:
         - CMD

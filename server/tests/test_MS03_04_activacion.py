@@ -165,3 +165,26 @@ def test_MS05_sin_dependencias_no_aprobadas() -> None:
         texto = (RAIZ_SERVIDOR / nombre).read_text(encoding="utf-8").lower()
         assert "zxing" not in texto
         assert "rapidocr" not in texto
+
+
+def test_MS04_servicio_de_pruebas_de_solo_lectura() -> None:
+    import yaml
+
+    from tests.utilidades import RAIZ_SERVIDOR
+
+    servicios = yaml.safe_load((RAIZ_SERVIDOR / "compose.yaml").read_text(encoding="utf-8"))["services"]
+    pruebas = servicios["pruebas"]
+    assert pruebas["read_only"] is True
+    assert pruebas["tmpfs"] == ["/tmp"]  # noqa: S108
+    assert pruebas["command"].count("--no-cache") == 2
+    assert "-p no:cacheprovider" in pruebas["command"]
+
+
+def test_MS05_licencia_de_node_en_la_imagen() -> None:
+    """Condición del revisor de licencias: el LICENSE completo de Node viaja con el binario."""
+    from pathlib import Path
+
+    texto = Path("/srv/licencias/node-LICENSE").read_text(encoding="utf-8")
+    assert texto.startswith("Node.js is licensed for use as follows:")
+    for aviso in ("V8", "OpenSSL", "ICU", "c-ares"):
+        assert aviso in texto

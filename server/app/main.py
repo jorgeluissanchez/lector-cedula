@@ -25,6 +25,17 @@ from app.servicio import ServicioValidaciones
 from app.webhooks import ServicioWebhooks
 
 
+def _puertos_por_defecto(config: Config) -> Puertos:
+    """Con `LECTOR_LIVE=node`, el modo live usa el lector Node de packages/capture (MS-19)."""
+    if config.lector_live != "node":
+        return Puertos()
+    from app.motor_real import LectorNode
+    from app.puertos import RelojSistema
+
+    reloj = RelojSistema()
+    return Puertos(reloj=reloj, lector=LectorNode(reloj))
+
+
 def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> FastAPI:
     configurar_logs()
     config = config or Config.desde_entorno(os.environ)
@@ -38,7 +49,7 @@ def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> F
     )
     aplicacion.state.config = config
     aplicacion.state.almacen = Almacen()
-    aplicacion.state.puertos = puertos or Puertos()
+    aplicacion.state.puertos = puertos or _puertos_por_defecto(config)
     aplicacion.state.idempotencia = RegistroIdempotencia()
     aplicacion.state.limitador = VentanaDeslizante(config.limite_peticiones_por_minuto)
     aplicacion.state.servicio = ServicioValidaciones(

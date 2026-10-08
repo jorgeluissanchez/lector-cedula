@@ -26,6 +26,9 @@ NODE = "/usr/local/bin/node"
 SCRIPT_INTERPRETE = "/srv/interprete/interpretar.mjs"
 LIMITE_INTERPRETE_S = 5.0
 MAX_SALIDA_INTERPRETE = 65_536
+SCRIPT_LECTOR = "/srv/lector/leer.mjs"
+# MS-18: el lector MRZ tiene 20 s de presupuesto; el proceso se mata a los 25 s.
+LIMITE_LECTOR_S = 25.0
 
 AMARILLA = "co_national-id-2000"
 DIGITAL = "co_national-id-2020"
@@ -54,6 +57,13 @@ class Interprete(Protocol):
     async def interpretar(self, peticion: dict[str, Any]) -> dict[str, Any]: ...
 
 
+class ErrorLector(Exception):
+    """El lector de imagen falló. El mensaje es fijo: nunca lleva datos (MS-17)."""
+
+    def __init__(self) -> None:
+        super().__init__("el lector de imagen falló")
+
+
 class ErrorInterprete(Exception):
     """El intérprete falló. El mensaje es fijo: nunca lleva datos del documento (MS-08)."""
 
@@ -64,37 +74,82 @@ class ErrorInterprete(Exception):
 Lanzador = Callable[..., Awaitable[Any]]
 
 
+async def _ejecutar_node(
+    lanzar: Lanzador, script: str, peticion: dict[str, Any], limite_s: float, error: type[Exception]
+) -> dict[str, Any]:
+    """Un proceso Node con argumentos fijos; datos solo por la entrada estándar y salida de errores
+    descartada (MS-07, MS-17). Cualquier fallo lanza `error`, cuyo mensaje es fijo."""
+    entrada = json.dumps(peticion).encode()
+    proceso = await lanzar(
+        NODE,
+        script,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        salida, _ = await asyncio.wait_for(proceso.communicate(entrada), timeout=limite_s)
+    except TimeoutError:
+        del entrada
+        proceso.kill()
+        await proceso.wait()
+        raise error from None
+    # La petición lleva datos del documento o imágenes: no se retiene más allá de la llamada (privacidad).
+    del entrada
+    if proceso.returncode != 0 or len(salida) > MAX_SALIDA_INTERPRETE:
+        raise error
+    try:
+        respuesta = json.loads(salida)
+    except ValueError:
+        raise error from None
+    if not isinstance(respuesta, dict) or not isinstance(respuesta.get("ok"), bool):
+        raise error
+    return respuesta
+
+
 class InterpreteNode:
-    """Un proceso Node por petición, argumentos fijos y datos solo por la entrada estándar (MS-07)."""
+    """Intérprete de los parsers TypeScript: un proceso Node por petición (MS-01, MS-07)."""
 
     def __init__(self, lanzar: Lanzador | None = None, limite_s: float = LIMITE_INTERPRETE_S) -> None:
         self.lanzar: Lanzador = lanzar or asyncio.create_subprocess_exec
         self.limite_s = limite_s
 
     async def interpretar(self, peticion: dict[str, Any]) -> dict[str, Any]:
-        entrada = json.dumps(peticion).encode()
-        proceso = await self.lanzar(
-            NODE,
-            SCRIPT_INTERPRETE,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-        )
-        try:
-            salida, _ = await asyncio.wait_for(proceso.communicate(entrada), timeout=self.limite_s)
-        except TimeoutError:
-            proceso.kill()
-            await proceso.wait()
-            raise ErrorInterprete from None
-        if proceso.returncode != 0 or len(salida) > MAX_SALIDA_INTERPRETE:
-            raise ErrorInterprete
-        try:
-            respuesta = json.loads(salida)
-        except ValueError:
-            raise ErrorInterprete from None
-        if not isinstance(respuesta, dict) or not isinstance(respuesta.get("ok"), bool):
-            raise ErrorInterprete
-        return respuesta
+        return await _ejecutar_node(self.lanzar, SCRIPT_INTERPRETE, peticion, self.limite_s, ErrorInterprete)
+
+
+class LectorNode:
+    """Lector de packages/capture en Node: un proceso por subida, imágenes por la entrada estándar en el
+    orden `back`, `front` (MS-16, MS-17)."""
+
+    def __init__(
+        self, reloj: Reloj, lanzar: Lanzador | None = None, limite_s: float = LIMITE_LECTOR_S
+    ) -> None:
+        self.reloj = reloj
+        self.lanzar: Lanzador = lanzar or asyncio.create_subprocess_exec
+        self.limite_s = limite_s
+
+    async def leer(self, tipo: str, imagenes: Imagenes) -> Lectura:
+        peticion = {
+            "tipo": tipo,
+            "fecha_referencia": _hoy(self.reloj),
+            "imagenes_b64": [base64.b64encode(i).decode() for i in (imagenes.back, imagenes.front)],
+        }
+        respuesta = await _ejecutar_node(self.lanzar, SCRIPT_LECTOR, peticion, self.limite_s, ErrorLector)
+        del peticion
+        if respuesta["ok"] is not True:
+            if respuesta.get("motivo") == "no-encontrado":
+                return Lectura()
+            raise ErrorLector
+        pdf417, mrz = respuesta.get("pdf417_b64"), respuesta.get("mrz")
+        if isinstance(pdf417, str):
+            try:
+                return Lectura(pdf417=base64.b64decode(pdf417, validate=True))
+            except ValueError:
+                raise ErrorLector from None
+        if isinstance(mrz, list) and len(mrz) == 3 and all(isinstance(linea, str) for linea in mrz):
+            return Lectura(mrz=(mrz[0], mrz[1], mrz[2]))
+        raise ErrorLector
 
 
 class MotorReal:
@@ -109,12 +164,16 @@ class MotorReal:
         if face_match:
             return _sin_comparacion_facial()
         lectura = await self.lector.leer(tipo, imagenes)
-        hoy = datetime.datetime.fromtimestamp(self.reloj.ahora(), tz=datetime.UTC).date().isoformat()
+        hoy = _hoy(self.reloj)
         peticion = _peticion(tipo, lectura, hoy)
         if peticion is None:
             return _ilegible()
         interpretacion = await self.interprete.interpretar(peticion)
         return resultado_desde_interpretacion(tipo, interpretacion, hoy)
+
+
+def _hoy(reloj: Reloj) -> str:
+    return datetime.datetime.fromtimestamp(reloj.ahora(), tz=datetime.UTC).date().isoformat()
 
 
 def _peticion(tipo: str, lectura: Lectura, hoy: str) -> dict[str, Any] | None:

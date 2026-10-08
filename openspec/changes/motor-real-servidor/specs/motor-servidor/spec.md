@@ -25,6 +25,14 @@ El motor SHALL interpretar el payload PDF417 y las líneas MRZ ejecutando `@lect
 - **WHEN** el intérprete recibe `{"fuente": "mrz", "lineas": <entrada de FX/mrz-cedula-digital/apellido-compuesto>, "fecha_referencia": "2026-10-06"}`
 - **THEN** responde `ok` `true`, `valido` `true`, `campos.nuip` `"9999123456"`, `campos.apellidos` `"DE LA OSSA FICTICIO"`, `campos.nombres` `"ANA"`, los 4 dígitos de control `valido`, `errores` `[]` y `warnings` `["M03"]`
 
+#### Scenario: Solo los campos que usa el documento
+- **WHEN** el intérprete interpreta FX/pdf417-amarilla/apellido-compuesto y FX/mrz-cedula-digital/apellido-compuesto
+- **THEN** `campos` tiene exactamente las claves `numeroDocumento`, `primerApellido`, `segundoApellido`, `primerNombre`, `segundoNombre`, `sexo`, `fechaNacimiento`, `rh`, `codigoDepartamentoNacimiento` y `codigoMunicipioNacimiento` en el PDF417, y `nuip`, `apellidos`, `nombres`, `sexo`, `fechaNacimiento` y `fechaVencimiento` en la MRZ (minimización, revisión de privacidad)
+
+#### Scenario: Error interno del intérprete
+- **WHEN** el intérprete no puede cargar los parsers (`RUTA_PARSERS` apunta a un archivo inexistente)
+- **THEN** escribe `{"ok": false, "motivo": "error-interno"}`, termina con código distinto de 0 y no escribe nada en la salida de errores
+
 #### Scenario: Entrada no válida
 - **WHEN** el intérprete recibe `no es json` o `{"fuente": "otra"}`
 - **THEN** responde `{"ok": false, "motivo": "entrada-no-valida"}` y `{"ok": false, "motivo": "fuente-desconocida"}` respectivamente, con código 0
@@ -136,16 +144,72 @@ El motor MUST pasar al intérprete solo el payload o las líneas (nunca bytes de
 - **WHEN** termina el escenario "Flujo live completo con lector"
 - **THEN** al recorrer la validación almacenada no aparece ningún valor `bytes`, `bytearray` ni `memoryview`, ni las claves `campos`, `validaciones` o `datos_b64`
 
+#### Scenario: Servicio de pruebas de solo lectura
+- **WHEN** se lee `server/compose.yaml`
+- **THEN** el servicio `pruebas` tiene `read_only: true` y `tmpfs` `["/tmp"]`, y su orden ejecuta ruff con `--no-cache` y pytest con `-p no:cacheprovider`, de modo que la puerta del servidor corre sin escribir fuera de `/tmp`
+
 #### Scenario: Contenedor de solo lectura con Node
 - **WHEN** se ejecuta el intérprete dentro del servicio `api-pruebas` (`docker compose -f server/compose.yaml exec api-pruebas /usr/local/bin/node /srv/interprete/interpretar.mjs` con la entrada de "PDF417 sintético con apellido compuesto")
 - **THEN** responde `ok` `true` y `docker compose -f server/compose.yaml exec api-pruebas find /tmp -type f` no lista ningún archivo
 
-### Requirement: MS-05 Lectores concretos sujetos a licencias
-Los lectores concretos (zxing-cpp 3.1.1 para PDF417 y RapidOCR 3.9 con sus modelos para la MRZ) MUST NOT añadirse a `server/pyproject.toml` ni a la imagen sin un informe del agente `revisor-licencias` que los apruebe (principio IV). Node 24 (MIT) y TypeScript (Apache-2.0, solo compilación) se verifican con `licencia-check`.
+### Requirement: MS-05 Licencias del motor real
+Los lectores del servidor MUST usar solo dependencias ya aprobadas de `packages/capture` (zxing-wasm 3.1.5, tesseract.js 7.0.0, jpeg-js 0.4.4, pngjs 7.0.0) y el modelo `tesseract-mrz` de `models/manifest.json`; zxing-cpp y RapidOCR MUST NOT añadirse (decisión 9, que reemplaza la autorización previa de esas dependencias). La imagen MUST llevar el LICENSE completo de Node.
+
+#### Scenario: Licencia de Node en la imagen
+- **WHEN** se lee `/srv/licencias/node-LICENSE` en la imagen del servidor
+- **THEN** existe, empieza por `Node.js is licensed for use as follows:` y contiene los avisos de V8, OpenSSL, ICU y c-ares (condición del revisor de licencias)
 
 #### Scenario: Sin dependencias no aprobadas
-- **WHEN** se inspecciona `server/pyproject.toml` y `server/uv.lock` antes de la aprobación
+- **WHEN** se inspeccionan `server/pyproject.toml` y `server/uv.lock`
 - **THEN** no contienen `zxing` ni `rapidocr`
+
+#### Scenario: Modelo empaquetado y verificado
+- **WHEN** se lee `/srv/modelos/tesseract/mrz.traineddata` en la imagen
+- **THEN** su SHA-256 es el de `tesseract-mrz` en `models/manifest.json` (`e44f5b7a6bdd3f382ef3bfa84ee0057f5897946a84a094c26910e0a124f3a9bd`)
+
+### Requirement: MS-16 Lector Node de packages/capture
+El lector del servidor SHALL ser el de `packages/capture` (`decodificarPdf417Imagen` para la amarilla; `crearLectorMrz` con su plan de giros y su presupuesto LMI-13 para la digital), ejecutado con Node en un proceso por subida (`/srv/lector/leer.mjs`), que devuelve el payload PDF417 o las 3 líneas MRZ corregidas de la primera imagen legible entre `back` y `front`.
+
+#### Scenario: PDF417 sintético leído en el contenedor
+- **WHEN** el lector recibe como `back` un PNG sintético con el PDF417 de FX/pdf417-amarilla/apellido-compuesto escrito por zxing-wasm y como `front` `IMG_PNG`
+- **THEN** devuelve `ok` `true` y `pdf417_b64` cuyos bytes son el payload del fixture
+
+#### Scenario: Imagen sin documento
+- **WHEN** el lector recibe `IMG_PNG` como `back` y `front` para cada tipo
+- **THEN** devuelve `{"ok": false, "motivo": "no-encontrado"}` y el motor da `document_unreadable`
+
+#### Scenario: Equivalencia con la CLI
+- **WHEN** sobre la imagen sintética S de `PERSONA_BASE` (PDF417) y el reverso R renderizado de `PERSONA_BASE` (MRZ) se ejecutan `tools/leer-foto.mjs --sin-mascara` y `server/lector/leer.mjs` seguido del intérprete
+- **THEN** los campos interpretados por el servidor son iguales a los de la CLI (`resultado.campos` del PDF417 sin `lugarNacimiento`, y los campos de la MRZ que proyecta el intérprete)
+
+### Requirement: MS-17 Aislamiento del proceso lector
+El proceso lector MUST recibir las imágenes solo por la entrada estándar, con argumentos fijos y salida de errores descartada, MUST poner a cero sus copias de las imágenes tras leerlas y MUST NOT usar la red en ejecución. Si falla, el motor MUST lanzar una excepción sin datos (vía de error interno de AV-29).
+
+#### Scenario: Imágenes solo por la entrada estándar
+- **WHEN** el lector Node lee una subida con el lanzador de procesos instrumentado
+- **THEN** el proceso se lanza con los argumentos `("/usr/local/bin/node", "/srv/lector/leer.mjs")`, entrada por tubería, salida de errores descartada, y la entrada tiene exactamente las claves `tipo`, `fecha_referencia` e `imagenes_b64`, con `back` primero
+
+#### Scenario: Fallo del lector
+- **WHEN** el proceso lector termina con código 1, escribe `[]`, responde `{"ok": false, "motivo": "modelo-no-disponible"}` o excede el tiempo límite
+- **THEN** `leer` lanza `ErrorLector` sin datos en su mensaje
+
+#### Scenario: Entrada no válida del lector
+- **WHEN** el lector recibe `no es json`
+- **THEN** responde `{"ok": false, "motivo": "entrada-no-valida"}` con código 0, sin escribir en la salida de errores
+
+### Requirement: MS-18 Presupuesto de la MRZ en el servidor
+El lector MRZ del servidor SHALL usar el presupuesto de LMI-13 con un tiempo límite de 20 s para toda la subida (repartido entre `back` y `front`: cada imagen recibe lo que queda), menor que los 60 s de la CLI, y el proceso lector se mata a los 25 s.
+
+#### Scenario: Presupuesto configurado
+- **WHEN** se leen `server/lector/leer.mjs` y `server/app/motor_real.py`
+- **THEN** el lector pasa `tiempoLimiteMs` de 20 000 a `crearLectorMrz` y `LIMITE_LECTOR_S` es 25
+
+### Requirement: MS-19 Activación del lector en producción
+Con la variable de entorno `LECTOR_LIVE=node`, la aplicación SHALL crear `Puertos` con el lector Node; sin ella, el modo live sigue en 503 (AV-22). Los servicios `api` y `api-pruebas` de `server/compose.yaml` la definen.
+
+#### Scenario: Lector activado por entorno
+- **WHEN** se crea la aplicación sin puertos inyectados con `LECTOR_LIVE=node`, y otra vez sin la variable
+- **THEN** la primera tiene `motor_live` `MotorReal` con `LectorNode` y la segunda `motor_live` `None`
 
 ## Pruebas
 
@@ -157,5 +221,8 @@ Los lectores concretos (zxing-cpp 3.1.1 para PDF417 y RapidOCR 3.9 con sus model
 | MS-02 | Propiedad: toda interpretación generada produce un resultado válido contra el esquema `Validation` del contrato | Hypothesis + validador del contrato | ídem | max_examples 500; 100 % válidos |
 | MS-03 | Unitaria HTTP | pytest | ídem | 3 de 3 |
 | MS-04 | Privacidad unitaria e integración en contenedor | pytest, Docker Compose | ídem; `docker compose -f server/compose.yaml up -d --build --wait api-pruebas` y los `exec` del escenario | 4 de 4; `find` vacío |
-| MS-05 | Licencias | `licencia-check`, pytest | `npm run check:licencias`, ídem | 0 infracciones; 0 apariciones |
+| MS-05 | Licencias y modelo | `licencia-check`, pytest | `npm run check:licencias`, P | 0 infracciones; 3 de 3 |
+| MS-16 | Integración en contenedor (PDF417 real, imagen sin documento) | pytest | P | 2 de 2 |
+| MS-16 | Equivalencia con la CLI sobre sintéticos | Vitest (host, Chromium de Playwright para el reverso R) | `npx vitest run tools/test/lector-servidor.test.mjs` | campos iguales en PDF417 y MRZ |
+| MS-17, MS-18, MS-19 | Unitaria con lanzador instrumentado y configuración | pytest | P | 5 de 5 |
 | Todos | Seguridad y contrato | ruff S y T20, Semgrep, Schemathesis, ZAP | comandos `G`, `C`, `Z` de `api-validaciones-contrato` | 0 hallazgos; 0 fallos; 0 alertas High |
