@@ -1,0 +1,10 @@
+Tesseract OCR (Apache-2.0), compilado dentro del binario WebAssembly de tesseract.js-core 7.0.0
+Fuente: https://github.com/Balearica/tesseract/tree/2a9c1c49c360462733c386d2a44fcd22c4e21411
+(submódulo third_party/tesseract de naptha/tesseract.js-core en la etiqueta v7.0.0). El repositorio no tiene archivo
+NOTICE en ese commit. Avisos de copyright de sus fuentes:
+
+(C) Copyright 1992, Hewlett-Packard Ltd.
+(C) Copyright 2006-2013, Google Inc.
+
+Licencia: Apache License, Version 2.0. Texto completo en la sección de tesseract.js; el LICENSE de Tesseract solo difiere
+en los corchetes de la plantilla del apéndice ("[]" en lugar de "{}").

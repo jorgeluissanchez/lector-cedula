@@ -1,0 +1,11 @@
+zxing-cpp (Apache-2.0), compilado dentro de zxing_reader.wasm de zxing-wasm 3.1.5
+Fuente: https://github.com/zxing-cpp/zxing-cpp/tree/2ecec3f5be0ee803f6e14a5a2c7028c0cfe525b4
+(commit exportado por zxing-wasm como ZXING_CPP_COMMIT). El repositorio no tiene archivo NOTICE en ese commit.
+Avisos de copyright de sus fuentes:
+
+Copyright 2016 Nu-book Inc.
+Copyright 2016 ZXing authors
+Copyright Axel Waggershauser
+
+Licencia: Apache License, Version 2.0. El texto completo de su LICENSE en ese commit coincide con el de la sección
+de tesseract.js (salvo una línea en blanco final) y se reproduce allí.
