@@ -185,6 +185,19 @@ function revisarDependenciasProduccion(raiz) {
   return errores;
 }
 
+/**
+ * Licencias distintas en la salida de `npm view <spec> license`. Con una versión exacta es la licencia sola;
+ * con un rango (`fastify@^5`) es una línea `nombre@versión 'LICENCIA'` por versión.
+ */
+export function licenciasDeNpmView(salida) {
+  const lineas = String(salida).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const licencias = lineas.map((l) => {
+    const m = /^\S+@\S+\s+'(.*)'$/.exec(l);
+    return m ? m[1] : l;
+  });
+  return [...new Set(licencias)];
+}
+
 function revisarPaqueteRemoto(nombre) {
   const porNombre = evaluarNombre(nombre.replace(/@[^@/]+$/, ""));
   if (!porNombre.ok) return porNombre.motivo;
@@ -193,9 +206,12 @@ function revisarPaqueteRemoto(nombre) {
     return `${nombre}: nombre de paquete no válido`;
   }
   try {
-    const lic = execSync(`npm view ${nombre} license`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    const r = evaluarLicencia(lic);
-    return r.ok ? null : `${nombre}: ${r.motivo}`;
+    // Entre comillas dobles: ni cmd (^, <, >) ni sh interpretan los caracteres del rango.
+    const salida = execSync(`npm view "${nombre}" license`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const licencias = licenciasDeNpmView(salida);
+    if (licencias.length === 0) return `${nombre}: el registro no declara licencia`;
+    const malas = licencias.map(evaluarLicencia).filter((r) => !r.ok);
+    return malas.length === 0 ? null : `${nombre}: ${malas.map((r) => r.motivo).join("; ")}`;
   } catch {
     return `${nombre}: no se pudo consultar la licencia en el registro`;
   }

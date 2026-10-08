@@ -68,16 +68,23 @@ services:
     read_only: true
     tmpfs: ["/tmp"]
     environment:
-      # sha256 de KT, KT2 y KL de la spec (sk_test_0..., sk_test_1..., sk_live_2...).
+      # sha256 de KT, KT2 y KL de la spec (sk_test_0..., sk_test_1..., sk_live_2...). KT es el aplicativo A y
+      # KT2 el B (sdk-integracion, SDK-16); KL conserva la forma anterior, sin orígenes ni retornos.
       CLAVES_API_JSON: >-
         [{"sha256": "9e7856735d2236cd8512842bd06a1515fa62426519a64c6705bffeb9d010337c",
-        "secreto_webhook": "whsec_sintetico_0123456789abcdef"},
+        "secreto_webhook": "whsec_sintetico_0123456789abcdef",
+        "origenes": ["https://app-a.example"],
+        "retornos": ["https://app-a.example/volver", "com.ejemplo.appa://lector/retorno"]},
         {"sha256": "ae8bec1baed6cd650cfce35842f4122a7117e789544f6e1966170a4526d28f8a",
-        "secreto_webhook": "whsec_sintetico_fedcba9876543210"},
+        "secreto_webhook": "whsec_sintetico_fedcba9876543210",
+        "origenes": ["https://app-b.example"],
+        "retornos": ["https://app-b.example/fin"]},
         {"sha256": "5903d094b21970fafc45862ba3da53ead886f9997b7e9304f9c72f166d944990",
         "secreto_webhook": "whsec_sintetico_live_0000000000"}]
       SECRETO_SUBIDA: secreto_subida_sintetico_solo_pruebas_0000000000
-      URL_PUBLICA: http://host.docker.internal:8000
+      # Dominio de ejemplo de la spec (SDK-13, SDK-19): `hosted_url` y `upload.url` lo llevan; los clientes de
+      # prueba usan solo la ruta y la query de `upload.url`.
+      URL_PUBLICA: https://api.lector-cedula.example
       LIMITE_PETICIONES_POR_MINUTO: "100000"
       LECTOR_LIVE: node
     healthcheck:

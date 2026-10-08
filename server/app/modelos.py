@@ -54,6 +54,8 @@ class CrearValidacion(BaseModel):
     # Ambos son cadenas en el contrato: un `null` explícito se rechaza en `reglas_de_creacion`.
     webhook_url: StrictStr | None = None
     sandbox_scenario: EscenarioSandbox | None = None
+    # SDK-13: retorno de la sesión alojada; debe estar exactamente en `retornos` de la clave.
+    return_url: StrictStr | None = None
 
 
 def convertir_rfc3339(texto: str) -> datetime | None:
@@ -105,7 +107,7 @@ def url_de_webhook_valida(url: str) -> bool:
 
 
 def reglas_de_creacion(
-    cuerpo: CrearValidacion, sandbox: bool, ahora: float
+    cuerpo: CrearValidacion, sandbox: bool, ahora: float, retornos: tuple[str, ...] = ()
 ) -> tuple[list[dict[str, str]], datetime | None]:
     """Errores `{pointer, code}` de las reglas de valor y la `otorgada_en` ya convertida."""
     errores: list[dict[str, str]] = []
@@ -136,4 +138,10 @@ def reglas_de_creacion(
             escenario == "review_face_mismatch" and not cuerpo.face_match
         ):
             errores.append({"pointer": "/sandbox_scenario", "code": "incompatible_scenario"})
+    if "return_url" in presentes:
+        if cuerpo.return_url is None:
+            errores.append({"pointer": "/return_url", "code": "invalid_type"})
+        elif cuerpo.return_url not in retornos:
+            # Lista exacta por clave, sin prefijos ni comodines (SDK-13, T4: redirect abierto).
+            errores.append({"pointer": "/return_url", "code": "return_url_not_allowed"})
     return errores, otorgada

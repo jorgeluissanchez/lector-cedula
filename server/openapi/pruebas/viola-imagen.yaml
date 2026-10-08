@@ -63,6 +63,8 @@ tags:
   description: Ciclo de vida de una validación de documento.
 - name: webhooks
   description: Eventos que el servidor envía al cliente.
+- name: sdk
+  description: Recursos del motor del componente web.
 security:
 - claveApi: []
 paths:
@@ -173,6 +175,8 @@ paths:
                       url: https://api.lector-cedula.example/v1/validations/val_0123456789abcdef0123456789abcdef/images?token=AAAAAGkm0yxzaW50ZXRpY28tc29sby1lamVtcGxvLW5vLXZhbGlkbw
                       expires_at: '2026-10-06T15:35:00Z'
                     webhook_url: null
+                    return_url: https://app-a.example/volver
+                    hosted_url: https://api.lector-cedula.example/v/AAAAAGqaElwBI0VniavN7wEjRWeJq83vc2ludGV0aWNvLXNvbG8tZWplbXBsby1uby12YWxpZG8
                     created_at: '2026-10-06T15:20:00Z'
                     updated_at: '2026-10-06T15:20:00Z'
                     completed_at: null
@@ -197,6 +201,8 @@ paths:
           $ref: '#/components/responses/SolicitudInvalida'
         '401':
           $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
         '409':
           $ref: '#/components/responses/Conflicto'
         '413':
@@ -287,12 +293,16 @@ paths:
                       registrada_en: '2026-10-06T15:20:00Z'
                     upload: null
                     webhook_url: null
+                    return_url: null
+                    hosted_url: null
                     created_at: '2026-10-06T15:20:00Z'
                     updated_at: '2026-10-06T15:20:00Z'
                     completed_at: '2026-10-06T15:20:00Z'
                     expires_at: '2026-10-07T15:20:00Z'
         '401':
           $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
         '404':
           $ref: '#/components/responses/NoEncontrado'
         '429':
@@ -324,6 +334,8 @@ paths:
               $ref: '#/components/headers/ReferrerPolicy'
         '401':
           $ref: '#/components/responses/NoAutorizado'
+        '403':
+          $ref: '#/components/responses/Prohibido'
         '404':
           $ref: '#/components/responses/NoEncontrado'
         '429':
@@ -341,7 +353,11 @@ paths:
       description: 'Recibe en una sola petición `multipart/form-data` las partes `front` y `back` y, solo
         si la
 
-        validación pidió comparación facial, `selfie`. Cada parte es JPEG o PNG de 1 a 8 388 608
+        validación pidió comparación facial, `selfie`. Cualquier otra parte o campo de texto (por ejemplo
+
+        `document` o `nuip`) se rechaza con 422 (`unexpected_field` o `unexpected_part`): el resultado
+
+        lo calcula solo el servidor a partir de las imágenes. Cada parte es JPEG o PNG de 1 a 8 388 608
 
         bytes; el cuerpo completo mide como máximo 20 971 520 bytes. La validación se procesa de
 
@@ -404,6 +420,68 @@ paths:
           $ref: '#/components/responses/ErrorInterno'
         '503':
           $ref: '#/components/responses/MotorNoDisponible'
+  /sdk/v1/{archivo}:
+    get:
+      operationId: obtenerRecursoSdk
+      tags:
+      - sdk
+      summary: Recurso del motor del componente web
+      description: 'Sirve los recursos con hash del motor del componente `<lector-cedula>` (WASM, módulos
+        y
+
+        datos) con `Cache-Control: public, max-age=31536000, immutable` y
+
+        `Cross-Origin-Resource-Policy: cross-origin`. Anuncia `Access-Control-Allow-Origin` solo
+
+        si el `Origin` está en los orígenes de alguna clave. No requiere clave. Un archivo
+
+        inexistente responde 404.
+
+        '
+      security: []
+      parameters:
+      - name: archivo
+        in: path
+        required: true
+        description: Nombre del recurso con su hash.
+        schema:
+          type: string
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)+$
+      responses:
+        '200':
+          description: El recurso, inmutable.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Cache-Control:
+              description: '`public, max-age=31536000, immutable`.'
+              schema:
+                type: string
+                const: public, max-age=31536000, immutable
+            Cross-Origin-Resource-Policy:
+              description: '`cross-origin`: el componente vive en el origen del integrador.'
+              schema:
+                type: string
+                const: cross-origin
+            X-Content-Type-Options:
+              $ref: '#/components/headers/XContentTypeOptions'
+          content:
+            application/wasm:
+              schema:
+                type: string
+                format: binary
+            text/javascript:
+              schema:
+                type: string
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErrorInterno'
 webhooks:
   validation.completed:
     post:
@@ -601,7 +679,14 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     Prohibido:
-      description: Token de subida inválido o vencido (`upload-token-invalid`, `upload-token-expired`).
+      description: 'Token de subida inválido o vencido (`upload-token-invalid`, `upload-token-expired`),
+        o petición
+
+        de navegador cuyo `Origin` no está en los orígenes configurados para la clave
+
+        (`origin-not-allowed`). Las peticiones de servidor no envían `Origin`.
+
+        '
       headers:
         X-Request-Id:
           $ref: '#/components/headers/XRequestId'
@@ -1094,6 +1179,18 @@ components:
             '
         sandbox_scenario:
           $ref: '#/components/schemas/SandboxScenario'
+        return_url:
+          type: string
+          maxLength: 2048
+          pattern: ^[a-z][a-z0-9+.-]*://
+          description: 'Destino al terminar la sesión alojada (`hosted_url`). Debe ser exactamente una
+            de las URL
+
+            `retornos` configuradas para la clave (`https` o deeplink con esquema propio); si no, 422
+
+            con `return_url_not_allowed`. Solo `validation_id` y `estado` viajan al retornar.
+
+            '
     Upload:
       type: object
       description: URL firmada de un solo uso para subir las imágenes.
@@ -1112,10 +1209,15 @@ components:
           description: Vencimiento del token, 900 s después de la creación.
     DivipolPlace:
       type: object
-      description: |
-        Lugar codificado con DIVIPOL (departamento y municipio). `department_name` y `municipality_name` son el
-        nombre vigente cuando el código se resuelve (consulados de 2018 incluidos); datos del DANE y de la
+      description: 'Lugar codificado con DIVIPOL (departamento y municipio). `department_name` y `municipality_name`
+        son el
+
+        nombre vigente cuando el código se resuelve (consulados de 2018 incluidos); datos del DANE y de
+        la
+
         Registraduría bajo CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/legalcode.es).
+
+        '
       required:
       - divipol_department
       - divipol_municipality
@@ -1273,6 +1375,8 @@ components:
       - autorizacion
       - upload
       - webhook_url
+      - return_url
+      - hosted_url
       - created_at
       - updated_at
       - completed_at
@@ -1316,6 +1420,25 @@ components:
           - 'null'
           format: uri
           maxLength: 2048
+        return_url:
+          type:
+          - string
+          - 'null'
+          maxLength: 2048
+          description: Retorno de la sesión alojada pedido al crear, o `null`.
+        hosted_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+          pattern: /v/[A-Za-z0-9_-]{43,}$
+          description: 'Página alojada `<URL_PUBLICA>/v/<token>` para leer el documento sin integrar el
+
+            componente. Su token es distinto del de `upload.url`, identifica la validación y vence con
+
+            `upload.expires_at`. `null` fuera de `pending`.
+
+            '
         created_at:
           type: string
           format: date-time

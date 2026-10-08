@@ -33,6 +33,9 @@ CLAVES_VALIDACION = {
     "autorizacion",
     "upload",
     "webhook_url",
+    # sdk-integracion, SDK-13.
+    "return_url",
+    "hosted_url",
     "created_at",
     "updated_at",
     "completed_at",

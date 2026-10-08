@@ -3,7 +3,8 @@
 No usa `request.form()` de Starlette, que vuelca a `SpooledTemporaryFile` (disco en `/tmp`) toda parte
 de más de 1 MiB. Usa el parser en streaming de `python-multipart` con callbacks que acumulan cada parte
 en un `bytearray` y abortan en cuanto una parte supera 8 MiB o el cuerpo 20 MiB. `Content-Length` se
-comprueba antes de leer. Ningún error reproduce nombres, tipos ni contenido enviados por el cliente.
+comprueba antes de leer. Las partes sin `filename` (campos de texto) se rechazan con `unexpected_field`
+(SDK-17). Ningún error reproduce nombres, tipos ni contenido enviados por el cliente.
 """
 
 import re
@@ -66,6 +67,11 @@ class _Lector:
     def on_headers_finished(self) -> None:
         _, opciones = parse_options_header(self.cabeceras.get(b"content-disposition", b""))
         nombre = opciones.get(b"name", b"").decode("latin-1")
+        if b"filename" not in opciones:
+            # SDK-17: un campo de texto (sin archivo) nunca es una imagen. El cliente no aporta datos del
+            # documento (`document`, `nuip`, `resultado`...): el resultado lo calcula solo el servidor.
+            puntero = f"/{nombre}" if _NOMBRE_SEGURO.fullmatch(nombre) else ""
+            raise _error(422, "invalid-request", puntero, "unexpected_field")
         if nombre not in NOMBRES:
             puntero = f"/{nombre}" if _NOMBRE_SEGURO.fullmatch(nombre) else ""
             raise _error(422, "invalid-request", puntero, "unexpected_part")

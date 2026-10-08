@@ -15,7 +15,7 @@ from fastapi import Request
 from fastapi.responses import Response
 
 from app.almacen import Validacion
-from app.auth import aplicar_limite, cliente_requerido
+from app.auth import aplicar_limite, cliente_requerido, exigir_origen
 from app.errores import ErrorApi
 from app.multipart import comprobar_antes_de_leer, leer_imagenes
 from app.representacion import representar, serializar
@@ -41,6 +41,9 @@ async def _validacion_autorizada(
         if validacion is None:
             raise ErrorApi(404, "not-found")
         request.state.sandbox = validacion.sandbox
+        config = request.app.state.config
+        creadora = config.claves.get(validacion.propietario)
+        exigir_origen(request, config.origenes_de(creadora) if creadora is not None else ())
         aplicar_limite(request, validacion.propietario)
     else:
         cliente = await cliente_requerido(request)

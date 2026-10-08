@@ -1,18 +1,43 @@
-"""Configuración por variables de entorno (decisión 7). Nada se lee de disco salvo el contrato."""
+"""Configuración por variables de entorno (decisión 7). Nada se lee de disco salvo el contrato.
+
+`CLAVES_API_JSON` (sdk-integracion, SDK-16) es una lista de entradas por clave:
+`{"sha256", "secreto_webhook", "origenes"?, "retornos"?}`. La forma anterior (sin `origenes` ni
+`retornos`) sigue siendo válida: sus orígenes son los globales de `ORIGENES_CORS` y no admite
+`return_url`. Un comodín o una URL que no sea exacta detienen el arranque; los mensajes nunca
+reproducen claves, hashes ni secretos.
+"""
 
 import json
+import re
 import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
+
+# Recursos del motor del componente web (SDK-05). Vacío hasta que la fase 3 copie el motor en la imagen.
+DIRECTORIO_SDK = Path(__file__).resolve().parents[1] / "sdk" / "v1"
+
+# Origen exacto: `https://host[:puerto]`, sin ruta, credenciales ni comodines.
+_ORIGEN = re.compile(r"^https://[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:[0-9]{1,5})?$")
+# Esquema personalizado de deeplink nativo (`com.ejemplo.app://...`).
+_ESQUEMA_PERSONALIZADO = re.compile(r"^[a-z][a-z0-9+.-]*://")
+# Esquemas que no son deeplinks: navegación insegura o ejecución de código.
+_ESQUEMAS_PROHIBIDOS = frozenset({"http", "javascript", "data", "file", "vbscript", "blob", "about"})
+LONGITUD_MAXIMA_URL = 2048
 
 
 @dataclass(frozen=True)
 class ClaveConfigurada:
-    """Clave de API configurada. Solo se conoce su hash; la clave en claro nunca se guarda."""
+    """Clave de API configurada. Solo se conoce su hash; la clave en claro nunca se guarda.
+
+    `origenes` es `None` en la forma anterior de la configuración (usa `ORIGENES_CORS`)."""
 
     sha256: str
     secreto_webhook: str = field(repr=False)
+    origenes: tuple[str, ...] | None = None
+    retornos: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -26,6 +51,7 @@ class Config:
     base_tipos_problema: str = "https://lector-cedula.example/problemas/"
     # MS-19: `node` activa el lector de packages/capture en modo live; sin valor, live responde 503.
     lector_live: str | None = None
+    directorio_sdk: Path = DIRECTORIO_SDK
 
     @classmethod
     def desde_entorno(cls, entorno: Mapping[str, str]) -> "Config":
@@ -35,9 +61,10 @@ class Config:
         if "URL_PUBLICA" in entorno:
             valores["url_publica"] = entorno["URL_PUBLICA"].rstrip("/")
         if "ORIGENES_CORS" in entorno:
-            valores["origenes_cors"] = tuple(
-                o.strip() for o in entorno["ORIGENES_CORS"].split(",") if o.strip()
-            )
+            origenes = tuple(o.strip() for o in entorno["ORIGENES_CORS"].split(",") if o.strip())
+            if not all(origen_valido(o) for o in origenes):
+                raise ValueError("ORIGENES_CORS: cada origen debe ser exacto (https://host[:puerto])")
+            valores["origenes_cors"] = origenes
         if "LIMITE_PETICIONES_POR_MINUTO" in entorno:
             valores["limite_peticiones_por_minuto"] = int(entorno["LIMITE_PETICIONES_POR_MINUTO"])
         if "RETENCION_RESULTADOS_S" in entorno:
@@ -48,10 +75,56 @@ class Config:
             if entorno["LECTOR_LIVE"] != "node":
                 raise ValueError("LECTOR_LIVE solo admite el valor node")
             valores["lector_live"] = "node"
+        if "DIRECTORIO_SDK" in entorno:
+            valores["directorio_sdk"] = Path(entorno["DIRECTORIO_SDK"])
         return cls(**valores)
 
     def con_cambios(self, **cambios: Any) -> "Config":
         return replace(self, **cambios)
+
+    def origenes_de(self, clave: ClaveConfigurada) -> tuple[str, ...]:
+        """Orígenes de navegador admitidos para la clave (forma anterior: los de `ORIGENES_CORS`)."""
+        return clave.origenes if clave.origenes is not None else self.origenes_cors
+
+    def origenes_de_alguna_clave(self) -> frozenset[str]:
+        """Unión de los orígenes de todas las claves: los que pueden cargar los recursos del motor."""
+        return frozenset(o for clave in self.claves.values() for o in self.origenes_de(clave))
+
+
+def origen_valido(origen: object) -> bool:
+    if not isinstance(origen, str) or not _ORIGEN.fullmatch(origen):
+        return False
+    try:
+        puerto = urlsplit(origen).port
+    except ValueError:
+        return False
+    return puerto is None or 0 < puerto <= 65535
+
+
+def retorno_valido(retorno: object) -> bool:
+    """URL `https` exacta (sin credenciales ni fragmento) o deeplink con esquema personalizado."""
+    if not isinstance(retorno, str) or not retorno or len(retorno) > LONGITUD_MAXIMA_URL:
+        return False
+    if "*" in retorno or "#" in retorno or any(c <= " " or c == "\x7f" for c in retorno):
+        return False
+    if not _ESQUEMA_PERSONALIZADO.match(retorno):
+        return False
+    try:
+        partes = urlsplit(retorno)
+        partes.port  # noqa: B018 - valida el puerto
+    except ValueError:
+        return False
+    if "@" in partes.netloc:
+        return False
+    if partes.scheme == "https":
+        return origen_valido(f"https://{partes.netloc}")
+    return partes.scheme not in _ESQUEMAS_PROHIBIDOS
+
+
+def _lista_de_textos(valor: object, valido: Any) -> tuple[str, ...] | None:
+    if not isinstance(valor, list) or not all(valido(v) for v in valor):
+        return None
+    return tuple(valor)
 
 
 def _leer_claves(texto: str) -> dict[str, ClaveConfigurada]:
@@ -72,5 +145,25 @@ def _leer_claves(texto: str) -> dict[str, ClaveConfigurada]:
             raise ValueError(
                 f"CLAVES_API_JSON: la entrada {posicion} no tiene sha256 y secreto_webhook válidos"
             )
-        claves[hash_clave.lower()] = ClaveConfigurada(sha256=hash_clave.lower(), secreto_webhook=secreto)
+        assert isinstance(entrada, dict)  # noqa: S101 - comprobado arriba
+        origenes: tuple[str, ...] | None = None
+        if "origenes" in entrada:
+            origenes = _lista_de_textos(entrada["origenes"], origen_valido)
+            if origenes is None:
+                raise ValueError(
+                    f"CLAVES_API_JSON: la entrada {posicion} tiene origenes no válidos "
+                    "(lista de orígenes exactos https://host[:puerto], sin comodines)"
+                )
+        retornos: tuple[str, ...] = ()
+        if "retornos" in entrada:
+            leidos = _lista_de_textos(entrada["retornos"], retorno_valido)
+            if leidos is None:
+                raise ValueError(
+                    f"CLAVES_API_JSON: la entrada {posicion} tiene retornos no válidos "
+                    "(URL https exactas o deeplinks esquema://, sin comodines)"
+                )
+            retornos = leidos
+        claves[hash_clave.lower()] = ClaveConfigurada(
+            sha256=hash_clave.lower(), secreto_webhook=secreto, origenes=origenes, retornos=retornos
+        )
     return claves

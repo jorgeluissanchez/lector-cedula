@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from fastapi import Request
 
-from app.config import ClaveConfigurada
+from app.config import ClaveConfigurada, Config
 from app.errores import ErrorApi
 
 PREFIJOS_MODO = {"sk_test_": True, "sk_live_": False}
@@ -23,9 +23,15 @@ class Cliente:
     hash_clave: str
     sandbox: bool
     secreto_webhook: str = field(repr=False)
+    # SDK-16: orígenes de navegador admitidos (ya resueltos con `ORIGENES_CORS` en la forma anterior)
+    # y retornos exactos de la sesión alojada.
+    origenes: tuple[str, ...] = ()
+    retornos: tuple[str, ...] = ()
 
 
-def autenticar(cabecera: str | None, claves: Mapping[str, ClaveConfigurada]) -> Cliente | None:
+def autenticar(
+    cabecera: str | None, claves: Mapping[str, ClaveConfigurada], config: Config | None = None
+) -> Cliente | None:
     """Devuelve el cliente de `Authorization: Bearer <clave>` o `None` si no es una clave configurada."""
     if not cabecera:
         return None
@@ -40,15 +46,29 @@ def autenticar(cabecera: str | None, claves: Mapping[str, ClaveConfigurada]) -> 
     if configurada is None:
         return None
     return Cliente(
-        hash_clave=configurada.sha256, sandbox=sandbox, secreto_webhook=configurada.secreto_webhook
+        hash_clave=configurada.sha256,
+        sandbox=sandbox,
+        secreto_webhook=configurada.secreto_webhook,
+        origenes=config.origenes_de(configurada) if config is not None else (),
+        retornos=configurada.retornos,
     )
+
+
+def exigir_origen(request: Request, origenes: tuple[str, ...]) -> None:
+    """SDK-16: una petición de navegador (con `Origin`) desde un origen no configurado para la clave
+    recibe 403 `origin-not-allowed`. Las peticiones de servidor no envían `Origin` y no se ven afectadas."""
+    origen = request.headers.get("origin")
+    if origen is not None and origen not in origenes:
+        raise ErrorApi(403, "origin-not-allowed")
 
 
 async def cliente_requerido(request: Request) -> Cliente:
     """Dependencia de FastAPI para las rutas `/v1`: 401 `unauthorized` sin una clave configurada."""
-    cliente = autenticar(request.headers.get("authorization"), request.app.state.config.claves)
+    config = request.app.state.config
+    cliente = autenticar(request.headers.get("authorization"), config.claves, config)
     if cliente is None:
         raise ErrorApi(401, "unauthorized", cabeceras={"WWW-Authenticate": "Bearer"})
+    exigir_origen(request, cliente.origenes)
     request.state.cliente = cliente
     return cliente
 

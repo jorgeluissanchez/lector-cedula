@@ -26,6 +26,8 @@ class Validacion:
     subida_vence_en: int
     escenario: str | None = None
     webhook_url: str | None = None
+    # SDK-13: URL exacta de la lista `retornos` de la clave creadora (no es un dato del titular).
+    return_url: str | None = None
     status: str = "pending"
     declined_reason: str | None = None
     checks: list[dict[str, Any]] = field(default_factory=list)

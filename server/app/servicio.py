@@ -62,6 +62,7 @@ class ServicioValidaciones:
             subida_vence_en=int(ahora) + VIGENCIA_SUBIDA_S,
             escenario=cuerpo.sandbox_scenario if sandbox else None,
             webhook_url=cuerpo.webhook_url,
+            return_url=cuerpo.return_url,
         )
         self.almacen.guardar(validacion)
         planificador = self.puertos.planificador

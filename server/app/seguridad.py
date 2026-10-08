@@ -3,6 +3,8 @@ interno genérico.
 
 AV-33: toda respuesta lleva `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`,
 `Referrer-Policy: no-referrer` (el token de subida viaja en la query) y `X-Request-Id` (UUID v4).
+Excepción (SDK-05): un recurso del motor servido con éxito en `/sdk/v1/` conserva su `Cache-Control`
+inmutable; sus errores siguen con `no-store`.
 AV-29: una excepción no controlada se convierte aquí en 500 `internal-error` sin traza ni mensaje,
 antes de llegar al `ServerErrorMiddleware` de Starlette (que la registraría con su traza).
 AV-32: una línea de log por petición con `route` como plantilla; nunca la ruta pedida, la query, las
@@ -18,6 +20,8 @@ from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.errores import TIPO_PROBLEMA, cuerpo_problema
+
+PREFIJO_SDK = "/sdk/v1/"
 
 CABECERAS_SEGURIDAD = {
     "Cache-Control": "no-store",
@@ -60,8 +64,14 @@ class MiddlewareSeguridad:
                 respuesta["iniciada"] = True
                 respuesta["status"] = mensaje["status"]
                 cabeceras = MutableHeaders(scope=mensaje)
+                inmutable = (
+                    mensaje["status"] == 200
+                    and scope.get("path", "").startswith(PREFIJO_SDK)
+                    and "cache-control" in cabeceras
+                )
                 for nombre, valor in CABECERAS_SEGURIDAD.items():
-                    cabeceras[nombre] = valor
+                    if not (inmutable and nombre == "Cache-Control"):
+                        cabeceras[nombre] = valor
                 cabeceras["X-Request-Id"] = request_id
             await send(mensaje)
 

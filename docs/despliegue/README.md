@@ -44,10 +44,14 @@ El servicio corre con raíz de **solo lectura**, `/tmp` en memoria (64 MB), `mem
 1. En Dokploy: **Create Project**, luego **Create Service > Compose**.
 2. **Provider**: GitHub (o Git) con este repositorio y la rama `main`. **Compose Path**: `./server/compose.dokploy.yaml`.
 3. **Environment**: copia las claves de `server/dokploy.env.example` y pon los valores reales **solo aquí**:
-   - `CLAVES_API_JSON`: lista JSON con el **sha256** de cada clave de API (nunca la clave en claro) y su `secreto_webhook`. Genera la clave en tu máquina y calcula su hash con `printf '%s' "$CLAVE" | sha256sum`.
+   - `CLAVES_API_JSON`: lista JSON con el **sha256** de cada clave de API (nunca la clave en claro) y su `secreto_webhook`. Genera la clave en tu máquina y calcula su hash con `printf '%s' "$CLAVE" | sha256sum`. Con varios aplicativos (SDK, cambio `sdk-integracion`), cada entrada admite además:
+     - `origenes`: orígenes de navegador exactos del aplicativo (`https://host[:puerto]`, sin barra final ni ruta). Solo ellos pueden subir con esa clave, cargar `/sdk/v1/` con CORS y llamar a la API desde el navegador; cualquier otro `Origin` recibe 403 `origin-not-allowed`. Sin este campo (forma anterior), la clave usa `ORIGENES_CORS`.
+     - `retornos`: URL exactas a las que vuelve la sesión alojada (`return_url`): `https://...` o deeplinks `com.tu.app://ruta`. Sin prefijos ni comodines; sin este campo, la clave no admite `return_url`.
+     - Ejemplo (valores ficticios): `[{"sha256":"<64 hex>","secreto_webhook":"<secreto>","origenes":["https://app-a.example"],"retornos":["https://app-a.example/volver","com.ejemplo.appa://lector/retorno"]}]`.
+     - Un `*` o una URL no exacta en `origenes` o `retornos` detiene el arranque con un mensaje que nombra el campo (nunca la clave ni el secreto).
    - `SECRETO_SUBIDA`: `openssl rand -hex 32`.
    - `URL_PUBLICA`: `https://api.tu-dominio`.
-   - `ORIGENES_CORS`: `https://tu-app.vercel.app` (y el dominio propio, separado por coma).
+   - `ORIGENES_CORS`: `https://tu-app.vercel.app` (y el dominio propio, separado por coma). Aplica a las claves sin `origenes` propios. Nada de `*` (el servidor no arranca).
    - `LECTOR_LIVE` ya vale `node` en el compose.
    Si falta alguna obligatoria, Compose se niega a arrancar (`${VAR:?}`).
 4. **Domains**: añade `api.tu-dominio`, servicio `api`, puerto `8000`, **HTTPS activado** con Let's Encrypt. Traefik de Dokploy termina TLS.

@@ -13,13 +13,13 @@ from fastapi import FastAPI
 from app.almacen import Almacen
 from app.config import Config
 from app.contrato import cargar_contrato
-from app.cors import MiddlewareCorsSubida
+from app.cors import MiddlewareCors
 from app.errores import registrar_manejadores
 from app.idempotencia import RegistroIdempotencia
 from app.limite import VentanaDeslizante
 from app.logs import configurar_logs
 from app.puertos import Puertos
-from app.rutas import validaciones
+from app.rutas import sdk, validaciones
 from app.seguridad import MiddlewareSeguridad
 from app.servicio import ServicioValidaciones
 from app.webhooks import ServicioWebhooks
@@ -61,7 +61,7 @@ def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> F
     registrar_manejadores(aplicacion)
     # Orden: el último añadido es el más externo. Seguridad envuelve a CORS para que el preflight también
     # lleve las cabeceras de AV-33 y su línea de log.
-    aplicacion.add_middleware(MiddlewareCorsSubida, origenes=config.origenes_cors)
+    aplicacion.add_middleware(MiddlewareCors)
     aplicacion.add_middleware(MiddlewareSeguridad, base_tipos_problema=config.base_tipos_problema)
 
     def servir_contrato() -> dict[str, Any]:
@@ -75,6 +75,7 @@ def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> F
         return {"estado": "ok"}
 
     validaciones.registrar(aplicacion)
+    sdk.registrar(aplicacion)
     return aplicacion
 
 

@@ -66,7 +66,7 @@ def validar_creacion(cuerpo: bytes, cliente: Cliente, ahora: float) -> tuple[Cre
         modelo = CrearValidacion.model_validate_json(cuerpo)
     except ValidationError as error:
         raise ErrorApi(422, "invalid-request", traducir_errores(error.errors())) from None
-    errores, otorgada = reglas_de_creacion(modelo, cliente.sandbox, ahora)
+    errores, otorgada = reglas_de_creacion(modelo, cliente.sandbox, ahora, cliente.retornos)
     if errores:
         raise ErrorApi(422, "invalid-request", errores)
     return modelo, otorgada

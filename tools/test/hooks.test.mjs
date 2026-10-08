@@ -256,3 +256,22 @@ describe("stop y subagent-stop", { timeout: 60_000 }, () => {
     expect(hook("subagent-stop.mjs", { stop_hook_active: true }).codigo).toBe(0);
   });
 });
+
+describe("pre-bash: licencia con rango de versiones (falso positivo de `npm install -D fastify@^5`)", () => {
+  it("con un rango, npm view devuelve una línea por versión y cada licencia se evalúa por separado", async () => {
+    const { licenciasDeNpmView } = await import("../../tools/licencia-check.mjs");
+    const salida = "fastify@5.0.0 'MIT'\nfastify@5.1.0 'MIT'\nfastify@5.2.0 'MIT'\n";
+    expect(licenciasDeNpmView(salida)).toStrictEqual(["MIT"]);
+  });
+
+  it("con una versión exacta, la salida es la licencia sola", async () => {
+    const { licenciasDeNpmView } = await import("../../tools/licencia-check.mjs");
+    expect(licenciasDeNpmView("Apache-2.0\n")).toStrictEqual(["Apache-2.0"]);
+  });
+
+  it("si alguna versión del rango tiene una licencia prohibida, se detecta", async () => {
+    const { licenciasDeNpmView } = await import("../../tools/licencia-check.mjs");
+    const salida = "x@1.0.0 'MIT'\nx@2.0.0 'AGPL-3.0'\n";
+    expect(licenciasDeNpmView(salida)).toStrictEqual(["MIT", "AGPL-3.0"]);
+  });
+});

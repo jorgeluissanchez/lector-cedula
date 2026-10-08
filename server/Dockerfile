@@ -71,6 +71,8 @@ COPY app ./app
 COPY openapi/api-validaciones.yaml ./openapi/api-validaciones.yaml
 COPY interprete/interpretar.mjs ./interprete/interpretar.mjs
 COPY lector/leer.mjs ./lector/leer.mjs
+# Recursos del motor del componente web servidos en /sdk/v1/ (sdk-integracion, SDK-05); vacío hasta la fase 3.
+COPY sdk ./sdk
 RUN useradd --create-home --uid 10001 api
 USER api
 EXPOSE 8000

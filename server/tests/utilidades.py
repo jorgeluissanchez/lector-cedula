@@ -251,3 +251,48 @@ def subir(
 ) -> Any:
     archivos = {nombre: (f"{nombre}.bin", datos, tipo) for nombre, (datos, tipo) in partes.items()}
     return cliente.post(ruta, files=archivos, headers=cabeceras or {})
+
+
+# --- Multi-aplicativo (sdk-integracion, SDK-13 y SDK-16): orígenes y retornos por clave -----------------
+
+ORIGEN_A = "https://app-a.example"
+ORIGEN_B = "https://app-b.example"
+RETORNO_A = "https://app-a.example/volver"
+DEEPLINK_A = "com.ejemplo.appa://lector/retorno"
+RETORNO_B = "https://app-b.example/fin"
+URL_PUBLICA_SDK = "https://api.lector-cedula.example"
+
+
+def claves_multi() -> list[dict[str, Any]]:
+    """KT es el aplicativo A y KT2 el B (forma nueva); KL conserva la forma anterior (sin orígenes)."""
+    return [
+        {
+            "sha256": hash_clave(KT),
+            "secreto_webhook": SECRETO_WEBHOOK_KT,
+            "origenes": [ORIGEN_A],
+            "retornos": [RETORNO_A, DEEPLINK_A],
+        },
+        {
+            "sha256": hash_clave(KT2),
+            "secreto_webhook": SECRETO_WEBHOOK_KT2,
+            "origenes": [ORIGEN_B],
+            "retornos": [RETORNO_B],
+        },
+        {"sha256": hash_clave(KL), "secreto_webhook": SECRETO_WEBHOOK_KL},
+    ]
+
+
+def config_multi(**cambios: Any) -> "Config":
+    from app.config import Config
+
+    config = Config.desde_entorno(
+        {"CLAVES_API_JSON": json.dumps(claves_multi()), "URL_PUBLICA": URL_PUBLICA_SDK}
+    )
+    return config.con_cambios(**cambios) if cambios else config
+
+
+def crear_cliente_multi(puertos: Any = None, **cambios: Any) -> TestClient:
+    from app.main import crear_app
+
+    aplicacion = crear_app(config_multi(**cambios), puertos or puertos_de_prueba())
+    return TestClient(aplicacion, raise_server_exceptions=False)

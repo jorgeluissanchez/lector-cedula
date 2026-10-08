@@ -60,6 +60,10 @@ PROBLEMAS: dict[str, tuple[str, str]] = {
         "Tipo de imagen no admitido",
         "Cada imagen debe ser JPEG o PNG y coincidir con el tipo declarado. Revise `errors`.",
     ),
+    "origin-not-allowed": (
+        "Origen no permitido",
+        "El origen del navegador no está configurado para esta clave.",
+    ),
     "engine-unavailable": (
         "Motor no disponible",
         "El modo live no tiene motor de procesamiento configurado.",
@@ -106,6 +110,7 @@ CODIGOS_PROPIOS = frozenset(
         "incompatible_scenario",
         "sandbox_only",
         "invalid_webhook_url",
+        "return_url_not_allowed",
     }
 )
 

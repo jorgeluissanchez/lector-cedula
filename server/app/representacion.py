@@ -6,6 +6,7 @@ from typing import Any
 
 from app.almacen import Validacion
 from app.config import Config
+from app.token_alojado import emitir_token_alojado
 from app.token_subida import emitir_token
 
 _EPOCA = datetime(1970, 1, 1, tzinfo=UTC)
@@ -35,6 +36,12 @@ def url_de_subida(config: Config, validacion: Validacion) -> str:
     return f"{config.url_publica}/v1/validations/{validacion.id}/images?token={token}"
 
 
+def url_alojada(config: Config, validacion: Validacion) -> str:
+    """SDK-13: `<URL_PUBLICA>/v/<token>`, con un token de propósito distinto al de subida."""
+    token = emitir_token_alojado(config.secreto_subida, validacion.id, validacion.subida_vence_en)
+    return f"{config.url_publica}/v/{token}"
+
+
 def representar(validacion: Validacion, config: Config) -> dict[str, Any]:
     pendiente = validacion.status == "pending"
     completada = validacion.completada_en
@@ -58,6 +65,8 @@ def representar(validacion: Validacion, config: Config) -> dict[str, Any]:
             else None
         ),
         "webhook_url": validacion.webhook_url,
+        "return_url": validacion.return_url,
+        "hosted_url": url_alojada(config, validacion) if pendiente else None,
         "created_at": instante(validacion.creada_en),
         "updated_at": instante(validacion.actualizada_en),
         "completed_at": instante(completada) if completada is not None else None,
