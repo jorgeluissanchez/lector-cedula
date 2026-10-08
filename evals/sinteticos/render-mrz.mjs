@@ -1,6 +1,6 @@
 // Renderizador sintético de la MRZ TD1 (cambio leer-mrz-desde-imagen, spec lectura-mrz-imagen, Convenciones; design.md,
 // decisión 7). Dibuja con canvas 2D y FontFace en el Chromium de Playwright lanzado desde Node: reverso R(L), foto F y
-// las 8 distorsiones leves del eval. Todo en memoria: devuelve bytes PNG/JPEG; nada se escribe a disco.
+// las 9 distorsiones del eval (8 leves y el reverso al revés). Todo en memoria: devuelve bytes PNG/JPEG; nada se escribe a disco.
 // Solo para pruebas y evals: los datos son de @lector-cedula/fixtures (sintéticos) y la fuente OCR-B es de prueba.
 import { readFileSync } from "node:fs";
 import { chromium } from "@playwright/test";
@@ -12,7 +12,7 @@ export const ANCHO_R = 1011;
 export const ALTO_R = 638;
 
 /** Distorsiones leves del conjunto E (LMI-06). */
-export const DISTORSIONES = ["rotacion+2", "rotacion-2", "blur1", "brillo+20", "brillo-20", "jpeg70", "escala0.8", "ruido8"];
+export const DISTORSIONES = ["rotacion+2", "rotacion-2", "blur1", "brillo+20", "brillo-20", "jpeg70", "escala0.8", "ruido8", "rotacion180"];
 
 /** Ruido gaussiano (Box-Muller) con el PRNG mulberry32 de @lector-cedula/fixtures, redondeado a Int8. */
 function ruidoGaussiano(n, sigma, semilla) {
@@ -66,6 +66,11 @@ window.__mrz = {
       x.fillStyle = "#F2EFE6"; x.fillRect(0, 0, w, h);
       x.translate(w / 2, h / 2); x.rotate(((distorsion === "rotacion+2" ? 2 : -2) * Math.PI) / 180); x.translate(-w / 2, -h / 2);
       x.drawImage(c, 0, 0); return o;
+    }
+    if (distorsion === "rotacion180") {
+      // mrz-giro-180 (LMI-06b): el reverso al revés.
+      const o = this.lienzo(w, h); const x = o.getContext("2d");
+      x.translate(w, h); x.rotate(Math.PI); x.drawImage(c, 0, 0); return o;
     }
     const filtros = { "blur1": "blur(1px)", "brillo+20": "brightness(1.2)", "brillo-20": "brightness(0.8)" };
     if (distorsion in filtros) {

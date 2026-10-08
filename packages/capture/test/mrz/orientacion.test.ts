@@ -73,12 +73,34 @@ describe("LMI-14a Evidencia de orientación por vista", { timeout: 60_000 }, () 
 
 describe("LMI-14b Orden de vistas por evidencia", { timeout: 60_000 }, () => {
   it("LMI-14b Vista derecha primero sin evidencia en ninguna vista", () => {
-    expect(ordenVistas(blanco())).toStrictEqual([0, 90, 270]);
+    expect(ordenVistas(blanco())).toStrictEqual([0, 90, 270, 180]);
   });
 
   it("LMI-14b Vista derecha primero cuando tiene evidencia", () => {
     expect(localizarConEvidencia(R).evidencia).not.toBeNull();
-    expect(ordenVistas(R)).toStrictEqual([0, 90, 270]);
+    expect(ordenVistas(R)).toStrictEqual([0, 180, 90, 270]);
+  });
+
+  it("LMI-14c Reverso al revés (girado 180)", () => {
+    expect(ordenVistas(girar(R, 180))).toStrictEqual([180, 0, 90, 270]);
+  });
+
+  it("LMI-14c MRZ arriba (lienzo de rectángulos girado 180)", async () => {
+    const p = girar(rectangulos(), 180);
+    expect(ordenVistas(p)[0]).toBe(180);
+    let llamadas = 0;
+    const lector = crearLectorMrz({
+      rutaModelo: "/modelo-falso",
+      crearWorker: async (): Promise<WorkerOcr> => ({
+        setParameters: async () => undefined,
+        recognize: async () => (llamadas++, { data: { text: P.lineasSinErrores.join("\n") } }),
+        terminate: async () => undefined,
+      }),
+    });
+    const r = await lector.leer(p, REF);
+    await lector.terminar();
+    expect(r.ok && r.intento.endsWith("@180")).toBe(true);
+    expect(llamadas).toBe(1);
   });
 
   it("LMI-14b MRZ a la izquierda", async () => {
@@ -149,6 +171,29 @@ describe("LMI-11e y LMI-11f Umbral de borde relativo y diagnóstico de ventana",
   it("LMI-11f Ventana sin tinta", () => {
     const r = analizarVentana(luminancias(blanco()), 1000, { metodo: "franja", caja: { x: 0, y: 850, ancho: 1000, alto: 150 } });
     expect([r.umbral, r.motivo, r.bandas, r.medidas]).toStrictEqual([12, "menos-de-3-bandas", 0, null]);
+  });
+});
+
+describe("LMI-14c Vistas opuestas comparten el eje (mrz-giro-180)", { timeout: 60_000 }, () => {
+  it("LMI-14c Una ventana de más en la vista opuesta no la adelanta", () => {
+    const n = (giro: 0 | 90 | 180 | 270) => ({ giro, ventanasMrz: 0, evidencia: null });
+    expect(
+      ordenVistasPorEvidencia([{ giro: 0, ventanasMrz: 5, evidencia: 0.86 }, n(90), n(270), { giro: 180, ventanasMrz: 6, evidencia: 0.14 }]),
+    ).toStrictEqual([0, 180, 90, 270]);
+    expect(
+      ordenVistasPorEvidencia([{ giro: 0, ventanasMrz: 6, evidencia: 0.14 }, n(90), n(270), { giro: 180, ventanasMrz: 5, evidencia: 0.86 }]),
+    ).toStrictEqual([180, 0, 90, 270]);
+  });
+
+  it("LMI-14c El eje con más ventanas va primero; dentro del eje decide la evidencia", () => {
+    expect(
+      ordenVistasPorEvidencia([
+        { giro: 0, ventanasMrz: 1, evidencia: 0.41 },
+        { giro: 90, ventanasMrz: 6, evidencia: 0.19 },
+        { giro: 270, ventanasMrz: 5, evidencia: 0.81 },
+        { giro: 180, ventanasMrz: 1, evidencia: 0.6 },
+      ]),
+    ).toStrictEqual([270, 90, 180, 0]);
   });
 });
 

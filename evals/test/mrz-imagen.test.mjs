@@ -111,7 +111,7 @@ describe("LMI-06 Corredor del eval", { timeout: 60_000 }, () => {
   });
 
   it("Constantes: distorsiones de la spec y ruta del reporte", () => {
-    expect(DISTORSIONES).toStrictEqual(["rotacion+2", "rotacion-2", "blur1", "brillo+20", "brillo-20", "jpeg70", "escala0.8", "ruido8"]);
+    expect(DISTORSIONES).toStrictEqual(["rotacion+2", "rotacion-2", "blur1", "brillo+20", "brillo-20", "jpeg70", "escala0.8", "ruido8", "rotacion180"]);
     expect(SALIDA).toBe(fileURLToPath(new URL("../reports/mrz-imagen.json", import.meta.url)));
   });
 
@@ -126,7 +126,7 @@ describe("LMI-06 Corredor del eval", { timeout: 60_000 }, () => {
       conjunto: E.slice(0, 3),
       nDistorsion: 2,
     });
-    expect(llamadas).toHaveLength(3 + 2 * 8);
+    expect(llamadas).toHaveLength(3 + 2 * 9);
     expect(llamadas.filter((o) => o.distorsion === "ruido8").map((o) => o.semillaRuido)).toStrictEqual([1, 2]);
     expect(llamadas.filter((o) => o.distorsion === undefined)).toHaveLength(3);
     expect(r.limpias.n).toBe(3);
@@ -140,7 +140,7 @@ describe("LMI-06 Corredor del eval", { timeout: 60_000 }, () => {
     expect(JSON.parse(readFileSync(salida, "utf8")).limpias.n).toBe(200);
     expect(lineas[0]).toBe("limpias      200/200 correctas, 0 falsas");
     expect(lineas[1]).toBe("rotacion+2   50/50 correctas, 0 falsas");
-    expect(lineas).toHaveLength(10);
+    expect(lineas).toHaveLength(11);
     expect(lineas.at(-1)).toBe("eval:mrz-imagen: OK");
     const malo = [];
     await correr({ lectores: [lectorFalso(() => null)], renderizar, conjunto: E.slice(0, 2), salida, log: (m) => malo.push(m) });

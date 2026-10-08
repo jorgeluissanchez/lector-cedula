@@ -3,7 +3,7 @@
  * 1. Tarjeta: líneas rectas largas (bordes) alrededor de la guía cuyo rectángulo exterior tiene proporción ID-1,
  *    horizontal o vertical.
  * 2. Contenido: patrón PDF417 (muchas columnas con bordes verticales largos) o franja MRZ (evidencia de LMI-14 con
- *    `localizarConEvidencia`, también girada 90 y 270 si la tarjeta está vertical).
+ *    `localizarConEvidencia`, en las 4 orientaciones: derecha y 180 si la tarjeta está horizontal, 90 y 270 si vertical).
  * Sin las dos señales el frame no puede pasar a `listo`: la calidad se limita por debajo del umbral con motivo `acerca`.
  */
 import { PROPORCION_ID1 } from "../flujo/guia.js";
@@ -174,13 +174,17 @@ function subimagen(f: FrameAnalisis, r: Rect): PixelesRgba {
   return { data, width: r.ancho, height: r.alto };
 }
 
-/** MRZ: evidencia de LMI-14 sobre la tarjeta (y girada si está vertical). */
+const trioUnico = (e: { ventanasMrz: number }): boolean => e.ventanasMrz > 0 && e.ventanasMrz <= MAX_VENTANAS_MRZ;
+const esMrz = (e: { ventanasMrz: number; evidencia: number | null }): boolean => trioUnico(e) && (e.evidencia ?? 0) >= EVIDENCIA_MINIMA_MRZ;
+
+/**
+ * MRZ: evidencia de LMI-14 sobre la tarjeta en las 4 orientaciones (OFF-22b): vertical, 90 y 270; horizontal, la
+ * derecha y, solo si tiene el trío pero arriba (evidencia baja), la girada 180 (las vistas opuestas ven las mismas líneas).
+ */
 export function hayMrz(p: PixelesRgba): boolean {
-  const vistas = p.width >= p.height ? [p] : [girar(p, 90), girar(p, 270)];
-  return vistas.some((v) => {
-    const e = localizarConEvidencia(v);
-    return e.ventanasMrz > 0 && e.ventanasMrz <= MAX_VENTANAS_MRZ && (e.evidencia ?? 0) >= EVIDENCIA_MINIMA_MRZ;
-  });
+  if (p.width < p.height) return esMrz(localizarConEvidencia(girar(p, 90))) || esMrz(localizarConEvidencia(girar(p, 270)));
+  const derecha = localizarConEvidencia(p);
+  return esMrz(derecha) || (trioUnico(derecha) && esMrz(localizarConEvidencia(girar(p, 180))));
 }
 
 export function detectarPresencia(frame: FrameAnalisis, guia: Cuadrilatero): Presencia {

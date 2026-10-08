@@ -15,6 +15,8 @@ const FONDO = "color=c=0x303030:s=1920x1080:r=10[f]";
 
 /** Filtro de ffmpeg: la entrada 0 es la PNG fuente (en bucle); sale la escena 1920x1080. */
 const enGuia = `${FONDO};[0:v]scale=${GUIA.ancho}:${GUIA.alto},${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=${GUIA.x}:${GUIA.y}:shortest=1`;
+// mrz-giro-180: la digital al revés (hflip + vflip = 180 grados) en la guía.
+const alRevesEnGuia = enGuia.replace("[0:v]scale=", "[0:v]hflip,vflip,scale=");
 const giradaEnGuia = `${FONDO};[0:v]transpose=1,scale=-2:${GUIA.alto},${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=(W-w)/2:${GUIA.y}:shortest=1`;
 
 // OFF-25: cámara de celular real (más suave que los vídeos nítidos): desenfoque y ruido temporal; la amarilla además
@@ -30,6 +32,7 @@ export const ESCENAS_CEDULA = [
   { nombre: "amarilla-1080p", fuente: "amarilla", filtro: enGuia, ancho: 1920, alto: 1080 },
   { nombre: "digital-1080p", fuente: "digital", filtro: enGuia, ancho: 1920, alto: 1080 },
   { nombre: "digital-girada-90-1080p", fuente: "digital", filtro: giradaEnGuia, ancho: 1920, alto: 1080 },
+  { nombre: "digital-girada-180-1080p", fuente: "digital", filtro: alRevesEnGuia, ancho: 1920, alto: 1080 },
   // OFF-22: la escena nítida de las pruebas de captura lleva la amarilla sintética; sin cédula nunca hay `listo`.
   { nombre: "nitida-1080p", fuente: "amarilla", filtro: enGuia, ancho: 1920, alto: 1080 },
   { nombre: "nitida-720p", fuente: "amarilla", filtro: enGuia720, ancho: 1280, alto: 720 },

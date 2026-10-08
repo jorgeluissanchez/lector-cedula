@@ -33,6 +33,12 @@ describe("OFF-22 Presencia de documento", { timeout: 60_000 }, () => {
     expect(presencia(tarjetaVerticalEnGuia(girar90(digital)))).toMatchObject({ presente: true, contenido: "mrz" });
   });
 
+  it("OFF-22 Cédula digital en las cuatro orientaciones (mrz-giro-180)", () => {
+    const g180 = girar90(girar90(digital));
+    expect(presencia(tarjetaEnGuia(g180))).toMatchObject({ presente: true, contenido: "mrz" });
+    expect(presencia(tarjetaVerticalEnGuia(girar90(g180)))).toMatchObject({ presente: true, contenido: "mrz" });
+  });
+
   it("OFF-22 Escenas sin cédula nítidas: cara, pared, hoja en blanco y texto cualquiera", () => {
     for (const [nombre, f] of [["cara", cara()], ["pared", pared()], ["hoja", hojaEnBlanco()], ["texto", texto()]] as const) {
       expect(presencia(f).presente, nombre).toBe(false);
@@ -54,6 +60,8 @@ describe("OFF-22 Presencia de documento", { timeout: 60_000 }, () => {
     expect(medir(cara())).toBeLessThan(20);
     expect(medir(tarjetaEnGuia(amarilla))).toBeLessThan(20);
     expect(medir(tarjetaEnGuia(digital))).toBeLessThan(150);
+    // OFF-22b: al revés se miran dos vistas (derecha y 180), el doble que la derecha; medido unos 100 ms sin carga.
+    expect(medir(tarjetaEnGuia(girar90(girar90(digital))))).toBeLessThan(250);
   });
 
   it("OFF-22 aplicarPresencia: sin documento nunca llega al umbral; con documento o por debajo no cambia", () => {

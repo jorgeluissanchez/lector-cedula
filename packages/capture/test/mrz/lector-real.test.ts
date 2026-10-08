@@ -381,8 +381,23 @@ describe("Lector MRZ con el modelo real", { timeout: 120_000 }, () => {
     expect(llamadas).toBeLessThanOrEqual(12);
   }, 300_000);
 
+  it("LMI-12c Las cuatro orientaciones de la foto con madera y R centrado (mrz-giro-180)", async () => {
+    const png = PNG.sync.read(Buffer.from(T));
+    const foto = { width: png.width, height: png.height, data: new Uint8ClampedArray(png.data) };
+    const casos = [[0, "", 4], [90, "@270", 4], [180, "@180", 4], [270, "@90", 4]] as const;
+    for (const [giro, sufijo, maximo] of casos) {
+      const g = giro === 0 ? foto : girar(foto, giro);
+      const salida = new PNG({ width: g.width, height: g.height });
+      salida.data.set(g.data);
+      const { r, llamadas } = await leerContando(new Uint8Array(PNG.sync.write(salida)));
+      lecturaCorrecta(r);
+      expect(r.ok && (sufijo === "" ? !r.intento.includes("@") : r.intento.endsWith(sufijo)), String(giro)).toBe(true);
+      expect(llamadas, String(giro)).toBeLessThanOrEqual(maximo);
+    }
+  }, 600_000);
+
   it("LMI-14b Vista derecha primero cuando tiene evidencia (madera con R centrado)", () => {
     const giros = [...new Set(planIntentosMrz(PNG.sync.read(Buffer.from(T))).map((i) => i.giro))];
-    expect(giros).toStrictEqual([0, 90, 270]);
+    expect(giros).toStrictEqual([0, 180, 90, 270]);
   });
 });

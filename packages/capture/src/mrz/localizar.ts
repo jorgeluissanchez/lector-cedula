@@ -366,14 +366,20 @@ export function ventanasFranja(w: number, h: number): CandidatoMrz[] {
   return r;
 }
 
-/** Giros de LMI-12, en grados en sentido horario. */
-export const GIROS = [90, 270] as const;
+/** Giros de LMI-12 y LMI-12c, en grados en sentido horario, en el orden de entrada de LMI-14b. */
+export const GIROS = [90, 270, 180] as const;
 export type Giro = (typeof GIROS)[number];
 
-/** LMI-12: copia de `p` girada `grados` en sentido horario (90 o 270). No modifica la entrada. */
+/** LMI-12 y LMI-12c: copia de `p` girada `grados` en sentido horario (90, 180 o 270). No modifica la entrada. */
 export function girar(p: PixelesRgba, grados: Giro): PixelesRgba {
   const { width: w, height: h } = p;
   const data = new Uint8ClampedArray(w * h * 4);
+  if (grados === 180) {
+    // (x, y) viene de (w - 1 - x, h - 1 - y): el píxel i viene del n - 1 - i.
+    const n = w * h;
+    for (let i = 0; i < n; i++) data.set(p.data.subarray((n - 1 - i) * 4, (n - i) * 4), i * 4);
+    return { width: w, height: h, data };
+  }
   // Destino de h x w: en 90 horario, (xd, yd) viene de (yd, h - 1 - xd); en 270, de (w - 1 - yd, xd).
   for (let yd = 0; yd < w; yd++) {
     for (let xd = 0; xd < h; xd++) {

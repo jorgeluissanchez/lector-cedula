@@ -1,0 +1,6 @@
+## 1. Lectura y presencia en las cuatro orientaciones
+
+- [x] 1.1 Pruebas en rojo de LMI-12c y LMI-14c (giro 180 puro, plan de 4 vistas, lienzo de rectángulos al revés con OCR inyectado, orden por eje, R y la foto de madera en las 4 orientaciones con OCR real y <= 4 llamadas), implementar `girar(p, 180)`, `GIROS` y `ordenVistasPorEvidencia` por eje. Tipos: unitaria e integración con OCR. Verificación: `npx vitest run packages/capture/test/mrz --maxWorkers=2`.
+- [x] 1.2 Prueba en rojo de OFF-22b (digital al revés horizontal y vertical, coste < 250 ms), implementar `hayMrz` con la vista 180 condicionada. Tipos: unitaria y rendimiento. Verificación: `npx vitest run packages/capture/test/lectura --maxWorkers=2`.
+- [x] 1.3 LMI-06b: distorsión `rotacion180` en el renderizador y el corredor del eval. Tipos: unitaria del corredor y eval. Verificación: `npx vitest run evals/test/mrz-imagen.test.mjs` y `npm run eval:mrz-imagen`.
+- [x] 1.4 Vídeo `digital-girada-180-1080p` y su E2E en `lectura-girada-180.spec.ts`. Tipos: unitaria de escenas y E2E. Verificación: `npx vitest run tools/test/videos-cedula.test.mjs` y `npx playwright test e2e/lectura/lectura-girada.spec.ts e2e/lectura/lectura-girada-180.spec.ts --project=lectura-chromium --workers=1`.

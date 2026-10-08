@@ -70,7 +70,7 @@ export type ErrorLectorMrz =
   | "lector-terminado"
   | "fecha-referencia-invalida";
 
-/** Método del candidato que leyó la MRZ; con sufijo `@90` o `@270` si se leyó sobre la imagen girada (LMI-12). */
+/** Método del candidato que leyó la MRZ; con sufijo `@90`, `@180` o `@270` si se leyó sobre la imagen girada (LMI-12, LMI-12c). */
 export type IntentoMrz = MetodoLocalizacion | `${MetodoLocalizacion}@${Giro}`;
 
 export type ResultadoParserMrz = Extract<ResultadoMrzCedulaDigital, { ok: true }>;
@@ -148,22 +148,24 @@ export interface EvidenciaVista {
 }
 
 /**
- * LMI-14b: giros en orden de prueba: más ventanas con MRZ horizontal primero; empate, mayor evidencia (null al final);
- * empate, el orden de entrada (derecha, 90, 270).
+ * LMI-14b y LMI-14c: giros en orden de prueba: más ventanas con MRZ horizontal en el eje (el máximo de la vista y su
+ * opuesta: 0 y 180, 90 y 270, que ven las mismas líneas) primero; empate, mayor evidencia (null al final); empate, el
+ * orden de entrada (derecha, 90, 270, 180).
  */
 export function ordenVistasPorEvidencia(vistas: readonly EvidenciaVista[]): (0 | Giro)[] {
+  const eje = (v: EvidenciaVista): number => Math.max(...vistas.filter((o) => o.giro % 180 === v.giro % 180).map((o) => o.ventanasMrz));
   // sort es estable: el último empate conserva el orden de entrada.
-  return [...vistas].sort((a, b) => b.ventanasMrz - a.ventanasMrz || (b.evidencia ?? -1) - (a.evidencia ?? -1)).map((v) => v.giro);
+  return [...vistas].sort((a, b) => eje(b) - eje(a) || (b.evidencia ?? -1) - (a.evidencia ?? -1)).map((v) => v.giro);
 }
 
-/** LMI-14b: las tres vistas, calculadas siempre, en el orden de ordenVistasPorEvidencia. */
+/** LMI-14b: las cuatro vistas, calculadas siempre, en el orden de ordenVistasPorEvidencia. */
 function ordenVistas(pixeles: PixelesRgba): Vista[] {
   const todas = [vista(pixeles, 0), ...GIROS.map((g) => vista(pixeles, g))];
   return ordenVistasPorEvidencia(todas).map((g) => todas.find((v) => v.giro === g) as Vista);
 }
 
 /**
- * LMI-12b: intentos en dos pasadas sobre las vistas (derecha, 90, 270), sin cajas repetidas dentro de una vista. La
+ * LMI-12b: intentos en dos pasadas sobre las vistas (derecha, 90, 270, 180), sin cajas repetidas dentro de una vista. La
  * pasada 1 lleva los candidatos que no son ventanas literales de LMI-11; la pasada 2, las ventanas literales. Las
  * vistas van en el orden de LMI-14b.
  */
@@ -253,7 +255,7 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
     if (terminado) return { ok: false, error: "lector-terminado" };
 
     let mejor: { intento: IntentoMrz; digitosValidos: number; resultado: ResultadoParserMrz } | null = null;
-    // LMI-12 y LMI-12b: vistas derecha, 90° y 270° en dos pasadas. LMI-13: presupuesto de llamadas y de tiempo.
+    // LMI-12, LMI-12b y LMI-12c: vistas derecha, 90°, 270° y 180° en dos pasadas. LMI-13: presupuesto de llamadas y de tiempo.
     const inicio = ahora();
     let llamadas = 0;
     const intentos = intentosMrz(pixeles);

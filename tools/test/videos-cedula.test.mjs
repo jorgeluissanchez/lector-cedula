@@ -27,6 +27,8 @@ describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () =
       ["amarilla-1080p", "amarilla", 1920, 1080],
       ["digital-1080p", "digital", 1920, 1080],
       ["digital-girada-90-1080p", "digital", 1920, 1080],
+      // mrz-giro-180 (LMI-12c): la digital al revés.
+      ["digital-girada-180-1080p", "digital", 1920, 1080],
       // OFF-22: la escena nítida de captura lleva la amarilla sintética (sin cédula nunca hay listo).
       ["nitida-1080p", "amarilla", 1920, 1080],
       ["nitida-720p", "amarilla", 1280, 720],
@@ -40,6 +42,7 @@ describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () =
     expect(ESCENAS_CEDULA.at(-1).filtro).toContain("gblur=sigma=5");
     expect(ESCENAS.map((e) => e.nombre)).not.toContain("nitida-1080p");
     expect(ESCENAS_CEDULA[2].filtro).toContain("transpose=1");
+    expect(ESCENAS_CEDULA[3].filtro).toContain("[0:v]hflip,vflip,scale=1541:972");
     for (const e of ESCENAS_CEDULA.filter((x) => x.fuente !== "sin-documento")) expect(e.filtro).toContain("lutyuv=y='clip(val,40,200)'");
   });
 

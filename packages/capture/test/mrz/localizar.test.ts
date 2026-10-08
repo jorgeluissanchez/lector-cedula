@@ -330,4 +330,14 @@ describe("LMI-12 Giro de la imagen", () => {
     expect(p.data).toStrictEqual(copia);
     expect(r(girar(girar(p, 90), 270))).toStrictEqual(r(p));
   });
+
+  it("LMI-12 girar 180 (mrz-giro-180): mismas dimensiones, píxeles invertidos, alfa intacto y entrada sin modificar", () => {
+    const p = { width: 3, height: 2, data: new Uint8ClampedArray([0, 1, 2, 3, 4, 5].flatMap((v) => [v, 10 + v, 20 + v, 255])) };
+    const copia = new Uint8ClampedArray(p.data);
+    const g = girar(p, 180);
+    expect([g.width, g.height]).toStrictEqual([3, 2]);
+    expect(Array.from(g.data)).toStrictEqual([5, 4, 3, 2, 1, 0].flatMap((v) => [v, 10 + v, 20 + v, 255]));
+    expect(p.data).toStrictEqual(copia);
+    expect(Array.from(girar(girar(p, 90), 90).data)).toStrictEqual(Array.from(g.data));
+  });
 });

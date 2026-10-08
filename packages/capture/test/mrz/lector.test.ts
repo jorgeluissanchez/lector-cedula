@@ -11,8 +11,8 @@ import { crearLectorMrz, fechaReferenciaValida, planIntentosMrz, recortarYAmplia
 const REF = { fechaReferencia: "2026-10-06" };
 const P = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
 let R: Uint8Array;
-/** Intentos de R (LMI-12b): pasada 1 de la imagen derecha y plan completo de las tres vistas. */
-let intentosR: { derecha: number; total: number; primero270: number };
+/** Intentos de R (LMI-12b): pasada 1 de la imagen derecha y plan completo de las cuatro vistas. */
+let intentosR: { derecha: number; total: number; primero90: number; primero270: number };
 /** Presupuesto por defecto de llamadas al OCR (LMI-13). */
 const MAX_LLAMADAS = 40;
 
@@ -24,7 +24,7 @@ beforeAll(async () => {
   const plan = planIntentosMrz(p);
   // Pasada 1 de la vista derecha: los intentos de giro 0 antes del primero de otra vista.
   const derecha = plan.findIndex((i) => i.giro !== 0);
-  intentosR = { derecha, total: plan.length, primero270: plan.findIndex((i) => i.giro === 270) };
+  intentosR = { derecha, total: plan.length, primero90: plan.findIndex((i) => i.giro === 90), primero270: plan.findIndex((i) => i.giro === 270) };
   await render.cerrar();
 }, 60_000);
 
@@ -188,11 +188,14 @@ describe("LMI-04 Lectura encadenada e intentos", { timeout: 60_000 }, () => {
   });
 
   it("LMI-12 Las vistas giradas solo se prueban si la derecha no da 4 dígitos válidos, con sufijo de giro", async () => {
-    // El texto correcto llega en el primer intento de la vista girada 90°.
+    // El texto correcto llega en el primer intento de otra vista: la opuesta (180°, LMI-14c), que comparte el eje.
     const { reg, crearWorker } = falso((i) => (i === intentosR.derecha ? P.texto : ""));
     const r = await crearLectorMrz({ rutaModelo: "/m", crearWorker }).leer(R, REF);
-    expect(r).toMatchObject({ ok: true, intento: "proyeccion@90", digitosValidos: 4 });
+    expect(r).toMatchObject({ ok: true, intento: "recorte-inferior@180", digitosValidos: 4 });
     expect(reg.imagenes).toHaveLength(intentosR.derecha + 1);
+    const { crearWorker: c90 } = falso((i) => (i === intentosR.primero90 ? P.texto : ""));
+    const q = await crearLectorMrz({ rutaModelo: "/m", crearWorker: c90 }).leer(R, REF);
+    expect(q.ok && q.intento.endsWith("@90")).toBe(true);
     const { crearWorker: c270 } = falso((i) => (i === intentosR.primero270 ? P.texto : ""));
     const s = await crearLectorMrz({ rutaModelo: "/m", crearWorker: c270 }).leer(R, REF);
     expect(s).toMatchObject({ ok: true, digitosValidos: 4 });
@@ -332,15 +335,16 @@ describe("LMI-12b Orden de intentos en dos pasadas", { timeout: 60_000 }, () => 
       [90, "recorte-inferior"],
       [90, "imagen-completa"],
     ]);
+    expect(plan.slice(4, 8).map((i) => i.giro)).toStrictEqual([270, 270, 180, 180]);
     expect(new Set(plan.map(clave)).size).toBe(plan.length);
-    // Pasada 2: las ventanas literales de las tres vistas, después de toda la pasada 1.
-    expect(plan.slice(6).every((i) => i.candidato.metodo === "franja")).toBe(true);
-    expect(plan.slice(6, 8).map((i) => [i.giro, i.candidato.caja])).toStrictEqual([
+    // Pasada 2: las ventanas literales de las cuatro vistas, después de toda la pasada 1.
+    expect(plan.slice(8).every((i) => i.candidato.metodo === "franja")).toBe(true);
+    expect(plan.slice(8, 10).map((i) => [i.giro, i.candidato.caja])).toStrictEqual([
       [0, { x: 0, y: 850, ancho: 1000, alto: 150 }],
       [0, { x: 0, y: 800, ancho: 1000, alto: 150 }],
     ]);
-    // Cada vista aporta sus ventanas una sola vez: 3 alturas (19 + 15 + 12 ventanas) x 3 vistas.
-    expect(plan).toHaveLength(6 + 3 * (18 + 15 + 12));
+    // Cada vista aporta sus ventanas una sola vez: 3 alturas (19 + 15 + 12 ventanas) x 4 vistas.
+    expect(plan).toHaveLength(8 + 4 * (18 + 15 + 12));
   });
 
   it("LMI-12b Las franjas ajustadas van en la pasada 1 y sin cajas repetidas", () => {

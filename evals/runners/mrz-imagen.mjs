@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Eval de la MRZ desde imagen (cambio leer-mrz-desde-imagen, LMI-06; design.md, decisión 9).
 // Uso: npm run eval:mrz-imagen   (requiere npm run modelos:mrz)
-// Conjunto E: 200 personas ficticias (fast-check, semilla 20261006) renderizadas como reverso R y 8 distorsiones leves
-// sobre las 50 primeras. El reporte evals/reports/mrz-imagen.json solo lleva contadores (ni líneas ni NUIP).
+// Conjunto E: 200 personas ficticias (fast-check, semilla 20261006) renderizadas como reverso R y 9 distorsiones
+// sobre las 50 primeras (más el reverso al revés, rotacion180, de mrz-giro-180). El reporte evals/reports/mrz-imagen.json solo lleva contadores (ni líneas ni NUIP).
 import { writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -12,7 +12,7 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const SALIDA = join(RAIZ, "evals", "reports", "mrz-imagen.json");
 export const SEMILLA_E = 20261006;
 export const FECHA_REFERENCIA = "2026-10-06";
-export const DISTORSIONES = ["rotacion+2", "rotacion-2", "blur1", "brillo+20", "brillo-20", "jpeg70", "escala0.8", "ruido8"];
+export const DISTORSIONES = ["rotacion+2", "rotacion-2", "blur1", "brillo+20", "brillo-20", "jpeg70", "escala0.8", "ruido8", "rotacion180"];
 /** Umbrales de LMI-06 como fracciones (98 % limpias, 90 % provisional por distorsión). */
 export const UMBRAL_LIMPIAS = 0.98;
 export const UMBRAL_DISTORSION = 0.9;

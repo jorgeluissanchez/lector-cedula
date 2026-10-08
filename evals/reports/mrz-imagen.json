@@ -44,6 +44,11 @@
       "n": 50,
       "correctas": 50,
       "falsas": 0
+    },
+    "rotacion180": {
+      "n": 50,
+      "correctas": 50,
+      "falsas": 0
     }
   },
   "cumple": true
