@@ -64,3 +64,7 @@ Depende de la fase 2.
 - [ ] 6.3 Cierre: `npm run check`, `npm run test:e2e`, `A`, `S`, `SC`, `Z`, `eval:quick` sin regresión; `verificador` y `pr-test-analyzer` en paralelo; `revisor-producto` contra `benchmark-comercial` (núcleo headless, adaptadores, componente, flujo alojado, SDK de backend). Cubre todos. Verificación: todos los comandos de `design.md` en verde.
 
 Fase futura sin tareas: `@lector-cedula/react-native` (diseño en `design.md`, decisión C).
+
+## 7. Ionic / Capacitor (decisión del orquestador por delegación del usuario, 2026-10-09)
+
+- [ ] 7.1 `examples/ionic-angular` (Ionic + Capacitor) con `injectLectorCedula`, recursos copiados a `www/`, permisos `CAMERA` (Android) y `NSCameraUsageDescription` (iOS) y `<video playsinline>`. Cubre SDK-12 (ejemplos), SDK-37 (sin red). Tipos de prueba: **E2E** (Playwright sobre la build web del ejemplo) y **humo en emulador Android** (Appium o `adb` + WebView con cámara simulada) que lee la amarilla sintética sin red. Verificación: build del ejemplo en verde; E2E en verde; informe del humo en emulador. Documentar en `docs/sdk/ionic.md`.
