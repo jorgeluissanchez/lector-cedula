@@ -19,7 +19,7 @@ from app.idempotencia import RegistroIdempotencia
 from app.limite import VentanaDeslizante
 from app.logs import configurar_logs
 from app.puertos import Puertos
-from app.rutas import sdk, validaciones
+from app.rutas import alojada, sdk, validaciones
 from app.seguridad import MiddlewareSeguridad
 from app.servicio import ServicioValidaciones
 from app.webhooks import ServicioWebhooks
@@ -76,6 +76,7 @@ def crear_app(config: Config | None = None, puertos: Puertos | None = None) -> F
 
     validaciones.registrar(aplicacion)
     sdk.registrar(aplicacion)
+    alojada.registrar(aplicacion)
     return aplicacion
 
 

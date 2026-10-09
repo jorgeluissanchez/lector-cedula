@@ -47,7 +47,9 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never", outputFolder: "reports/playwright" }]],
   snapshotPathTemplate: "e2e/visual/assets-ui/{testFileName}/{arg}-{projectName}{ext}",
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: "disabled" } },
-  webServer: [
+  // E2E_SIN_SERVIDORES=1: suites que traen su propio servidor (e2e/sdk/alojado.spec.ts contra api-pruebas en Docker) no
+  // compilan ni levantan los servidores locales.
+  webServer: process.env.E2E_SIN_SERVIDORES === "1" ? [] : [
     {
       command: "npm run build -w apps/pwa && npm run preview -w apps/pwa -- --port 4173 --strictPort",
       url: "http://localhost:4173",

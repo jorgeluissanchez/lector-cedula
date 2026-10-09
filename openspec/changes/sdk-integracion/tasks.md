@@ -2,13 +2,26 @@
 
 Reglas: TDD (principio II), la prueba se ve fallar antes de implementar. Datos sintéticos (`PERSONA_BASE`, números `9999...`). Pruebas nombradas `SDK-xx <escenario>`. Comandos `U`, `B`, `E(x)`, `C`, `S`, `SC`, `Z`, `T`, `G`, `M`, `LH`, `L`, `P`, `V` y umbrales en `design.md`, `## Pruebas`. Cada tarea es un PR pequeño. E2E con los agentes `playwright-test-planner` (plan en `e2e/planes/sdk-*.md`), `-generator` y `-healer`. Dependencias nuevas pasan por `revisor-licencias`; tareas de servidor, captura o datos por `revisor-privacidad`. Dependen de `api-validaciones-contrato` y `motor-real-servidor` fusionados para la fase 4 y las pruebas `C`; las fases 3, 3b y 3c no requieren servidor.
 
-## Fase 1. Paquete servidor Node (independiente del frontal)
+Orden revisado por las decisiones del usuario del 2026-10-09 (modelo backend propio, `design.md`): la fase B va primero. Las fases 1, 2 y 4 pasan a ser el **modo opcional microservicio** (SDK-52): lo hecho no se toca y lo pendiente de ellas tiene menor prioridad. Comandos `UB`, `EB(x)` y `TB` en `design.md`.
+
+## Fase B. Modelo por defecto: front + backend propio (prioridad)
+
+- [ ] B.1 `packages/web/src/protocolo.ts` (subruta `@lector-cedula/web/protocolo`, pura, sin DOM): tipos de eventos, `protocolo-ndjson.schema.json`, lector de líneas NDJSON incremental con `TextDecoder` en modo stream y validación de eventos. Lo usan el núcleo y `@lector-cedula/servidor` (MOT-20). Cubre SDK-48 (propiedad de fragmentación y bytes arbitrarios), SDK-54 (`protocolo-invalido`). Tipos: **unitaria**, **propiedad** (numRuns >= 1000), **mutación**. Verificación: `UB`, `M`.
+- [ ] B.2 `decidirModo(senales, umbrales)` pura y lectura de señales del navegador (`deviceMemory`, `hardwareConcurrency`, WASM SIMD, `connection`, micro-medición opcional). Cubre SDK-57. Tipos: **unitaria** (tabla de 8 casos literal), **propiedad** (totalidad, `fc.statistics`), **mutación**. Verificación: `UB`, `M`.
+- [ ] B.3 Núcleo: opciones `backend`, `encabezadosBackend`, `modo`, `streaming`, `intentosVerificacion`, `tiempoLimiteMs`, `inactividadMs`; fase `verificando` y nuevas `TRANSICIONES`; envío automático multipart; `verificacion`, `rechazo`, `intentosVerificacion`, `modo`, `modoMotivo` en el estado; fallos de transporte con `AbortController`; menores; `confiable: true` solo tras `ok`. Cubre SDK-28 (enmienda), SDK-45, SDK-46, SDK-47, SDK-48, SDK-53, SDK-54, SDK-55, SDK-59. Tipos: **unitaria** con `DEPS`, `fetch` y `ReadableStream` falsos y reloj falso, **propiedad** de la máquina, **mutación**, **privacidad** (copias a cero). Verificación: `UB`, `M`, `P`. Revisor: `revisor-privacidad`.
+- [ ] B.4 Adaptadores React, Vue y Angular: `autoIniciar` al vincular el vídeo (nunca en servidor), opciones nuevas y estado de verificación. Cubre SDK-49, SDK-50. Tipos: **unitaria**, **SSR**, **presupuesto**, **mutación**. Verificación: `UB`, `A`, `T`, `M`.
+- [ ] B.5 Confirmación diferida sin red: cola de una imagen solo en memoria, evento `online`, `tiempoColaMs`, `cola-vencida`, puesta a cero en `destruir`. Cubre SDK-58. Tipos: **unitaria**, **navegador** (sin persistencia), **privacidad**. Verificación: `UB`, `B`, `P`. Revisor: `revisor-privacidad`.
+- [ ] B.6 Modo `back` ligero: grafo de importación sin motor pesado (calidad y presencia ligeras), marcado `pesado` en `manifest.json`, medición del tamaño real y fijación de `PRESUPUESTO_BACK` en `design.md` (medido + 10 %, tope 300 KiB gzip), `check:tamano-sdk -- --modo back` con fixture que falla. Cubre SDK-56. Tipos: **unitaria**, **presupuesto de tamaño**, **E2E de red**. Verificación: `UB`, `TB`, `EB(modo-back-red)`. Revisor: `revisor-licencias` si cambia el reparto de assets.
+- [ ] B.7 E2E con el ejemplo Express de `motor-backend-embebido` (tarea 1.2): secuencia con backend real, los 4 modos con `streaming` on/off, auto sin red, ejemplos Express/Nest/Next con front React y axe. Plan en `e2e/planes/sdk-backend-propio.md` con `playwright-test-planner`. Depende de A.1 a A.3 y 1.2 a 1.4 de `motor-backend-embebido`. Cubre SDK-46 (E2E), SDK-51, SDK-58 (E2E), SDK-60. Tipos: **E2E** (Chromium y Pixel 7), **accesibilidad**, **privacidad**. Verificación: `EB(backend)`, `EB(modos)`, `EB(ejemplos-backend)`, `P`.
+- [ ] B.8 Documentación: `docs/sdk/README.md` con el modelo backend propio primero (front, `crearLectorServidor` en Express/Nest/Next, protocolo, modos, `autoIniciar`) y la sección "Modo opcional: microservicio"; prueba en `tools/test/docs-sdk.test.mjs`. Cubre SDK-52, SDK-25. Tipos: **análisis estático**, **regresión** del modo opcional. Verificación: `U`.
+
+## Fase 1. Paquete servidor Node (modo opcional microservicio; independiente del frontal)
 
 - [x] 1.1 Crear `packages/servidor` (`@lector-cedula/servidor`, MIT, `0.1.0`, sin `dependencies`, `exports` con subrutas) con `verificarWebhook`. Cubre SDK-18, SDK-20. Tipos: **unitaria** (vectores de AV-26), **propiedad**, **mutación**. Verificación: `U` y `M`.
 - [x] 1.2 `crearCliente`, `crearSesion`, `obtenerResultado`, `suprimir`, `ErrorLector` con `fetch` inyectable. Cubre SDK-18, SDK-19 (unitarias con `fetch` falso). Tipos: **unitaria**, **mutación**. Verificación: `U`, `M`.
 - [x] 1.3 `manejarWebhook` y adaptadores `express`, `nest`, `next`, `fastify` con lectura de bytes crudos. Cubre SDK-21 (unitarias con `Request` construidas). Tipos: **unitaria**, **mutación**; **licencias** (tipos de frameworks como devDependencies). Verificación: `U`, `M`, `L`.
 
-## Fase 2. Servidor: multi-aplicativo, sesión alojada y recursos del motor
+## Fase 2. Servidor: multi-aplicativo, sesión alojada y recursos del motor (modo opcional microservicio)
 
 - [x] 2.1 Configuración por clave en `CLAVES_API_JSON` (`origenes`, `retornos`, `secreto_webhook`, compatibilidad con la forma anterior, rechazo de `*`) y CORS por clave con 403 `origin-not-allowed`. Cubre SDK-16. Tipos: **unitaria**, **propiedad** (Hypothesis), **seguridad** (ruff S). Verificación: `S`. Revisor: `revisor-privacidad`.
 - [x] 2.2 `return_url` y `hosted_url` en el contrato OpenAPI y en `POST /v1/validations`; token alojado de propósito distinto. Cubre SDK-13. Tipos: **unitaria**, **propiedad**, **lint de contrato** (Spectral), **contrato** (Schemathesis). Verificación: `S`, `SC`.
@@ -43,15 +56,15 @@ Cada tarea añade sus devDependencies de prueba tras `revisor-licencias`.
 - [ ] 3c.1 `packages/elementos` (`@lector-cedula/elementos`) sobre `crearLector`: Custom Element, Shadow DOM, atributos (incluidos `recursos` y `servidor` opcional), eventos, textos `es`, temas, `::part` y variables CSS; presupuesto 61 440 B. Cubre SDK-01, SDK-02, SDK-03, SDK-04 (componente), SDK-36. Tipos: **unitaria** y **propiedad** en navegador, **presupuesto**, **mutación**. Verificación: `B`, `U`, `T`, `M`.
 - [ ] 3c.2 `examples/html` y E2E del componente: eventos, accesibilidad por estado, regresión visual, privacidad; Lighthouse CI. Cubre SDK-03, SDK-10, SDK-11, SDK-36, SDK-04 (LH). Tipos: **E2E**, **accesibilidad**, **regresión visual**, **privacidad**, **rendimiento**. Verificación: `E(componente)`, `E(accesibilidad)`, `E(visual)`, `E(privacidad)`, `LH`, `P`. Revisor: `revisor-privacidad`.
 
-## Fase 4. Flujo alojado y modo sesión
+## Fase 4. Flujo alojado y modo sesión (modo opcional microservicio)
 
 Depende de la fase 2.
 
-- [ ] 4.1 Modo sesión de `apps/pwa` (`VITE_MODO=sesion`, ya sobre el núcleo), servido por el servidor en `/v/{token}` con CSP, `no-store`, pantalla `sesion-invalida`, intercambio `POST /v/{token}/inicio` y retorno con `validation_id` y `estado`. Cubre SDK-14. Tipos: **E2E** con `api-pruebas`, **unitaria** (pytest de la ruta), **DAST**. Verificación: `E(alojado)`, `S`, `Z`. Revisor: `revisor-privacidad`.
+- [x] 4.1 Modo sesión de `apps/pwa` (`VITE_MODO=sesion`, ya sobre el núcleo), servido por el servidor en `/v/{token}` con CSP, `no-store`, pantalla `sesion-invalida`, intercambio `POST /v/{token}/inicio` y retorno con `validation_id` y `estado`. Cubre SDK-14. Tipos: **E2E** con `api-pruebas`, **unitaria** (pytest de la ruta), **DAST**. Verificación: `E(alojado)`, `S`, `Z`. Revisor: `revisor-privacidad`.
 - [ ] 4.2 Modo sesión del núcleo, adaptadores y componente contra `api-pruebas`: subida a `upload.url`, `validacion_id`, origen no permitido y servidor detenido. Cubre SDK-15, SDK-38 (E2E). Tipos: **E2E** con `api-pruebas`. Verificación: `E(sesion)`.
-- [ ] 4.3 Servidor: aceptar una sola cara (`front`) cuando la sesión viene del SDK, para retirar la excepción temporal de SDK-38 (imagen duplicada en `front` y `back`). Cubre SDK-38. Tipos: **unitaria** (pytest), **contrato**. Verificación: `S`, `SC`. Revisor: `revisor-privacidad`.
+- [x] 4.3 Servidor: aceptar una sola cara (`front`) cuando la sesión viene del SDK, para retirar la excepción temporal de SDK-38 (imagen duplicada en `front` y `back`). Cubre SDK-38. Tipos: **unitaria** (pytest), **contrato**. Verificación: `S`, `SC`. Revisor: `revisor-privacidad`.
 
-## Fase 5. Ejemplos de backend, clientes generados y documentación
+## Fase 5. Ejemplos de backend, clientes generados y documentación (5.1 y 5.2: modo opcional microservicio)
 
 - [ ] 5.1 `examples/express`, `nest`, `fastify` con `crearSesion`, webhook y `obtenerResultado`. Cubre SDK-21, SDK-22. Tipos: **integración** con `api-pruebas`. Verificación: `C`, `L`.
 - [ ] 5.2 `npm run clientes:generar` (openapi-generator por digest en Docker, cuatro lenguajes, compilación en Docker, fixture de contrato roto) y job de CI. Cubre SDK-23. Tipos: **generación y compilación**, **licencias**. Verificación: `G`, `L`. Revisor: `revisor-licencias`.

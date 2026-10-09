@@ -62,12 +62,10 @@ export async function enviarCaptura(d: DatosEnvio): Promise<EnvioLector> {
   }
   // `String(url)` de un valor no textual nunca es una URL válida.
   if (typeof id !== "string" || !urlSubidaValida(String(url), base)) return fallido("sesion-invalida");
-  // Excepción temporal (SDK-38, tarea 4.3): el servidor exige anverso y reverso (AV-07) y el lector captura una sola
-  // cara, así que la misma imagen va en ambas partes.
+  // Tarea 4.3: tras `/v/{sesion}/inicio` el servidor acepta una sola cara; la imagen viaja una vez, como `front`.
   const cuerpo = new FormData();
   const destino = String(url);
   cuerpo.append("front", d.imagen, "front.jpg");
-  cuerpo.append("back", d.imagen, "back.jpg");
   let subida: Response;
   try {
     subida = await d.fetch(destino, { method: "POST", body: cuerpo, credentials: "omit" });

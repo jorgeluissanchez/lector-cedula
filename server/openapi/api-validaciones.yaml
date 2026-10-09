@@ -435,6 +435,120 @@ paths:
         "500":
           $ref: "#/components/responses/ErrorInterno"
 
+  /v/{token}:
+    parameters:
+      - $ref: "#/components/parameters/TokenAlojado"
+    get:
+      operationId: obtenerPaginaAlojada
+      tags: [sdk]
+      summary: Página alojada de la sesión (hosted_url)
+      description: |
+        Sirve la página de lectura en modo sesión (sdk-integracion, SDK-14): lee en el dispositivo con
+        `@lector-cedula/web`, muestra el aviso de autorización antes de pedir la cámara, sube la imagen
+        a la validación y vuelve a `return_url` solo con `validation_id` y `estado`. Un token inválido,
+        vencido o de una validación no pendiente recibe 404 con la misma página en la pantalla
+        `sesion-invalida`. Lleva `Content-Security-Policy` con nonce (sin `unsafe-eval` salvo
+        `wasm-unsafe-eval`), `Cache-Control: no-store` y `Referrer-Policy: no-referrer`.
+      security: []
+      responses:
+        "200":
+          description: La página de la sesión.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+            Content-Security-Policy:
+              description: Política con nonce por petición.
+              schema:
+                type: string
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: Token inválido o vencido, o validación no pendiente (pantalla `sesion-invalida`).
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+          content:
+            text/html:
+              schema:
+                type: string
+        "500":
+          $ref: "#/components/responses/ErrorInterno"
+        "503":
+          description: La página no está compilada en la imagen (`service-unavailable`).
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /v/{token}/inicio:
+    parameters:
+      - $ref: "#/components/parameters/TokenAlojado"
+    post:
+      operationId: iniciarSesionAlojada
+      tags: [sdk]
+      summary: Intercambiar el token alojado por la URL de subida
+      description: |
+        La página alojada o el núcleo con `sesion` intercambian el token de `hosted_url` por
+        `upload.url` (design.md, decisión 8). Marca la validación como sesión del SDK: su subida
+        admite solo `front` (tarea 4.3). Solo desde el origen de la página alojada o los orígenes de
+        la clave creadora (`origin-not-allowed`). Token inválido o vencido: 403 `upload-token-invalid`
+        o `upload-token-expired`; validación no pendiente: 409.
+      security: []
+      responses:
+        "200":
+          description: Identificador y URL de subida de la sesión.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/XRequestId"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            Referrer-Policy:
+              $ref: "#/components/headers/ReferrerPolicy"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [validation_id, upload]
+                additionalProperties: false
+                properties:
+                  validation_id:
+                    type: string
+                    pattern: "^val_[0-9a-f]{32}$"
+                  upload:
+                    type: object
+                    required: [url, expires_at]
+                    additionalProperties: false
+                    properties:
+                      url:
+                        type: string
+                        format: uri
+                      expires_at:
+                        type: string
+                        format: date-time
+        "403":
+          $ref: "#/components/responses/Prohibido"
+        "409":
+          $ref: "#/components/responses/Conflicto"
+        "500":
+          $ref: "#/components/responses/ErrorInterno"
+
 webhooks:
   validation.completed:
     post:
@@ -512,6 +626,14 @@ components:
         sirve una sola vez.
 
   parameters:
+    TokenAlojado:
+      name: token
+      in: path
+      required: true
+      description: Token de `hosted_url` (propósito `alojada`).
+      schema:
+        type: string
+        maxLength: 512
     IdValidacion:
       name: id
       in: path
@@ -1290,7 +1412,9 @@ components:
         back:
           type: string
           format: binary
-          description: Reverso del documento.
+          description: |
+            Reverso del documento. Opcional solo en una sesión iniciada con `POST /v/{token}/inicio`
+            (SDK o página alojada, tarea 4.3), que sube una sola cara.
         selfie:
           type: string
           format: binary

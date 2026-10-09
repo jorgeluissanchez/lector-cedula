@@ -137,6 +137,51 @@ Según el principio II y las filas "Captura web", "API servidor" y "Repositorio 
 
 Evals: este cambio no toca parsers; `npm run eval:quick` MUST seguir sin regresión.
 
+### Pruebas del modelo backend propio (decisiones del usuario, 2026-10-09)
+
+Comandos nuevos:
+
+- `UB` = `npx vitest run packages/web/test/backend packages/react packages/vue` (unitarias y propiedades de SDK-45 a SDK-59 con `DEPS`, `fetch` falso y `ReadableStream` falso; reloj falso, nunca esperas fijas)
+- `EB(x)` = `npx playwright test e2e/sdk/<x>.spec.ts --project=sdk-chromium --project=sdk-pixel7` contra el ejemplo Express de MOT-13 (backend real en proceso, cámara simulada); `x` en `backend`, `modos`, `modo-back-red`, `ejemplos-backend`
+- `TB` = `npm run check:tamano-sdk -- --modo back` (grafo del modo back <= `PRESUPUESTO_BACK`, fixture de `PRESUPUESTO_BACK + 1` que falla)
+
+`PRESUPUESTO_BACK`: meta 300 KiB gzip; la tarea B.6 mide el valor real con el ejemplo y lo fija aquí (valor medido + 10 %, nunca por encima de 300 KiB sin decisión humana).
+
+| Requisito | Tipo de prueba | Herramienta | Comando | Umbral |
+|---|---|---|---|---|
+| SDK-18 | Análisis estático (grafo de `cliente.ts`) | Vitest | `U` | 0 importaciones del motor |
+| SDK-28 | Unitaria (`confiable` solo tras `ok`) | Vitest | `UB` | 0 estados con `confiable: true` fuera de `resultado` verificado |
+| SDK-45 | Unitaria (validación de `backend`, cabeceras) | Vitest | `UB` | 4/4 escenarios |
+| SDK-45 | Propiedad (URL arbitrarias nunca lanzan; inválidas nunca hacen red) | fast-check | `UB` | numRuns >= 1000 |
+| SDK-46 | Unitaria (secuencias de fase y etapa) | Vitest | `UB` | 4/4 escenarios, `toStrictEqual` sobre secuencias |
+| SDK-46 | E2E con backend real | Playwright | `EB(backend)` | Chromium y Pixel 7 verdes |
+| SDK-46, SDK-47, SDK-48 | Propiedad de la máquina con `verificando` | fast-check | `UB` | numRuns >= 1000; todo par de fases en `TRANSICIONES` |
+| SDK-47 | Unitaria (tabla de motivos, tope) | Vitest | `UB` | 4/4 escenarios, 9 motivos |
+| SDK-48 | Unitaria (stream falso, abort) | Vitest | `UB` | 7/7 escenarios |
+| SDK-48 | Propiedad (fragmentación y bytes arbitrarios) | fast-check | `UB` | numRuns >= 1000 cada una, 0 excepciones |
+| SDK-48 | Mutación de `protocolo.ts` y `verificacion.ts` | Stryker | `M` | >= 85 % (break 80) |
+| SDK-49 | Unitaria y SSR en React, Vue y Angular | RTL, Vue Test Utils, TestBed | `UB`, `A` | 4/4 escenarios por adaptador |
+| SDK-50 | Unitaria por adaptador | RTL, Vue Test Utils, TestBed | `UB`, `A` | 2/2 escenarios |
+| SDK-50 | Presupuesto de adaptadores | script | `T` | <= 3 072 B cada uno |
+| SDK-51 | E2E por ejemplo (Express, Nest, Next) | Playwright | `EB(ejemplos-backend)` | 3 ejemplos x 2 proyectos verdes; 0 peticiones fuera del origen |
+| SDK-51 | Accesibilidad | @axe-core/playwright | `EB(ejemplos-backend)` | 0 serious/critical en 5 estados |
+| SDK-52 | Regresión del modo opcional | Vitest | `U` | pruebas SDK-38/SDK-42 sin cambios |
+| SDK-52 | Análisis estático de docs | Vitest | `U` (`tools/test/docs-sdk.test.mjs`) | orden de encabezados correcto |
+| SDK-53 | Unitaria | Vitest | `UB` | 2/2 escenarios |
+| SDK-54 | Unitaria (códigos de transporte, reloj falso) | Vitest | `UB` | 5/5 escenarios |
+| SDK-54 | Privacidad (copias a cero en cada fallo) | Vitest | `UB`, `P` | 100 % de copias a cero; 0 hallazgos |
+| SDK-55 | Unitaria | Vitest | `UB` | 3/3 escenarios |
+| SDK-56 | Unitaria (sin `leyendo`, lector no invocado) | Vitest | `UB` | 1/1 |
+| SDK-56 | E2E de red (sin recursos pesados) | Playwright | `EB(modo-back-red)` | 0 recursos `pesado`; bytes <= `PRESUPUESTO_BACK` |
+| SDK-56 | Presupuesto con fixture que falla | script | `TB` | árbol real pasa; fixture sale con 1 |
+| SDK-57 | Unitaria (tabla de 8 casos literal) | Vitest | `UB` | 8/8 filas con `toStrictEqual` |
+| SDK-57 | Propiedad (totalidad, sin back sin backend) | fast-check | `UB` | numRuns >= 1000, proporción de casos con backend > 50 % medida con `fc.statistics` |
+| SDK-57 | Mutación de `decidir-modo.ts` | Stryker | `M` | >= 85 % |
+| SDK-58 | Unitaria (cola en memoria, `online`, vencimiento) | Vitest | `UB` | 3/3 escenarios |
+| SDK-58 | Privacidad (sin persistencia) | Vitest browser + Playwright | `B`, `EB(modos)` | 0 datos en IndexedDB, `localStorage`, Cache Storage |
+| SDK-59 | Unitaria (Accept y JSON único) | Vitest | `UB` | 2/2 escenarios |
+| SDK-60 | E2E de 4 modos y streaming on/off | Playwright | `EB(modos)` | matriz completa verde en Chromium y Pixel 7 |
+
 ## Decisiones del orquestador por delegación del usuario (2026-10-08)
 
 - Ruta: se usa la existente `/v1/validations` (AV-01), sin alias.
@@ -224,3 +269,32 @@ AV-28 impide que el servidor entregue a un receptor local, así que la tarea 2.5
 9. OFF-27c en el núcleo: `leerSecuencia` envía `respaldoDe: "pdf417"` en la llamada final de respaldo MRZ de una pista PDF417 y el cliente del Worker lo reenvía (prueba `packages/web/test/off-27c-respaldo.test.ts`).
 
 > Nota (2026-10-09): la decisión C (React Native con VisionCamera) queda sustituida por el cambio `sdk-nativo`.
+
+## Decisiones del usuario, 2026-10-09 (modelo backend propio)
+
+Decididas por el usuario y trasladadas a la spec con escenarios (SDK-45 a SDK-60 en `sdk-integracion`; MOT-13, MOT-15, MOT-19 a MOT-25 en `motor-backend-embebido`).
+
+1. **Dos partes, front headless y back.** El motor (tesseract, zxing, fraude) corre en el servidor de la empresa que usa la librería, nunca en un servidor del autor. `@lector-cedula/servidor` absorbe el antiguo `@lector-cedula/motor` (MOT-01 pasa a `@lector-cedula/servidor`; SDK-18 enmendado: dependencias solo `@lector-cedula/*` y subruta `/cliente` sin motor).
+2. **Modelo por defecto: front + backend propio con respuesta en vivo.** Opción `backend` en `@lector-cedula/web` y adaptadores (SDK-45), envío automático tras la lectura local, fase `verificando` con `estado.verificacion` (SDK-46), rechazo con vuelta automática a `activo` y tope `intentosVerificacion` (SDK-47), `autoIniciar` (SDK-49). El botón solo abre la cámara.
+3. **Protocolo en vivo NDJSON** (`application/x-ndjson`) con `fetch` + `ReadableStream`, `AbortController`, `tiempoLimiteMs` e `inactividadMs`; sin WebSocket ni sondeo (SDK-48, SDK-54, MOT-20). Respuesta JSON única opcional con `streaming: false` / `Accept: application/json` / `?streaming=0` (SDK-59, MOT-25).
+4. **Back**: `crearLectorServidor({ alConfirmar, limites, fraude, comparar })` con `.express()`, `.nest()`, `.next()`, `.fastify()` y `.manejar(Request): Response` (MOT-19); motor en proceso con `worker_threads`; compara con el cliente (MOT-10) y llama `alConfirmar` solo si ok (MOT-21); motivos de rechazo cerrados (MOT-22); sin red, sin disco, bytes a cero (MOT-23). Java y Go emiten el mismo protocolo (MOT-24).
+5. **Modo opcional microservicio**: sesión, `hosted_url`, webhooks firmados, página alojada y `crearCliente` se conservan sin cambios y se reetiquetan como opcionales (SDK-52). Lo ya implementado (fases 1, 2 y 4) no se toca.
+6. **Ampliación del usuario: `modo: "front" | "back" | "front-back" | "auto"`** (por omisión `auto`), con `estado.modo` y `estado.modoMotivo` (SDK-55). `back` captura con análisis ligero sin descargar el motor pesado, con presupuesto `PRESUPUESTO_BACK` medido y fijado (SDK-56). `auto` decide con la función pura `decidirModo` sobre `deviceMemory`, `hardwareConcurrency`, WASM SIMD, `saveData`/`effectiveType` y micro-medición opcional, con umbrales configurables (SDK-57). Sin red: `front` y confirmación al volver la red con cola solo en memoria (SDK-58).
+
+Decisiones del redactor por delegación (el usuario puede revertirlas):
+
+- `backend` acepta ruta relativa, mismo origen, `https:` de otro origen (CORS a cargo de la empresa) y `http://localhost`; `credentials: "same-origin"`, `redirect: "error"` (SDK-45).
+- Todos los motivos de rechazo vuelven a `activo` mientras haya intentos, también `menor-de-edad` y `documento-no-admitido` (literal de la instrucción del usuario); por omisión 3 intentos (1..10).
+- Los fallos de transporte (`backend-no-disponible`, `backend-rechazo-http`, `backend-tiempo-agotado`, `protocolo-invalido`) no consumen intentos y llevan a `error` con el resultado local conservado; el 413 se trata como rechazo `demasiado-grande`.
+- Con `autoIniciar`, el fallo de cámara en el arranque automático vuelve a `inicio` con `autoinicio-fallido` (transición `permiso→inicio`), no a `error`.
+- Menores en modo backend: rechazo local `menor-de-edad` sin red salvo `enviarMenores` (SDK-53, coherente con SDK-43).
+- `alConfirmar` que lanza da `rechazo.motivo` `error-interno` sin filtrar el mensaje (MOT-21).
+- La opción `enviarA` de la propuesta anterior se retira en favor de `backend` (MOT-15).
+- `decidirModo` trata señales ausentes (Safari sin `deviceMemory`) como no débiles; umbrales por omisión: 4 GB, 4 núcleos, SIMD requerido, `saveData` o `slow-2g`/`2g` débiles.
+- Cola sin red: una sola imagen, solo en memoria, vence a los 10 min (`tiempoColaMs`), código `cola-vencida`.
+
+## Decisiones del orquestador por delegación del usuario (2026-10-09, modos)
+
+1. `PRESUPUESTO_BACK`: meta de 300 KiB gzip; el valor final lo fija la medición de B.6 más un 10 %.
+2. Rechazos `menor-de-edad` y `documento-no-admitido` terminan en `error` sin reintento; el resto (`no-coincide`, `fraude`, `ilegible`) vuelve a `activo`.
+3. Umbrales de `auto`: memoria menor de 4 GB, menos de 4 núcleos, sin WASM SIMD, o `saveData`/2g cuentan como débil; señales no expuestas por el navegador no cuentan como débiles.

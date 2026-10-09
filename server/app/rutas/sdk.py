@@ -6,6 +6,7 @@ petición responde 404. Solo se sirven archivos regulares del directorio, con no
 subdirectorios, ni archivos ocultos, ni `..`. Ningún recurso es una imagen ni un resultado.
 """
 
+import json
 import re
 from pathlib import Path
 
@@ -21,12 +22,34 @@ TIPOS = {
     ".js": "text/javascript; charset=utf-8",
     ".mjs": "text/javascript; charset=utf-8",
 }
+MANIFIESTO = "manifest.json"
+# Solo con manifiesto válido; `manifest.json` cambia entre versiones y no se sirve inmutable.
+TIPOS_LISTADOS = {
+    ".json": "application/json",
+    ".traineddata": "application/octet-stream",
+    ".txt": "text/plain; charset=utf-8",
+}
+
+
+def _listados(directorio: Path) -> frozenset[str]:
+    """Nombres que lista el `manifest.json` del directorio (assets de @lector-cedula/web, SDK-39)."""
+    try:
+        datos = json.loads((directorio / MANIFIESTO).read_text(encoding="utf-8"))
+        return frozenset(str(r["archivo"]) for r in datos["recursos"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return frozenset()
 
 
 def _archivo(directorio: Path, nombre: str) -> Path | None:
-    # Solo extensiones conocidas del motor: nada de imágenes, HTML ni otros archivos del directorio.
-    if len(nombre) > 128 or not _NOMBRE.fullmatch(nombre) or Path(nombre).suffix not in TIPOS:
+    # Extensiones del motor siempre; manifiesto, modelo y avisos solo si el manifiesto los lista
+    # (sdk-integracion, fase 4): nada de imágenes, HTML ni otros archivos del directorio.
+    if len(nombre) > 128 or not _NOMBRE.fullmatch(nombre):
         return None
+    sufijo = Path(nombre).suffix
+    if sufijo not in TIPOS:
+        listados = _listados(directorio)
+        if sufijo not in TIPOS_LISTADOS or not listados or (nombre != MANIFIESTO and nombre not in listados):
+            return None
     ruta = directorio / nombre
     try:
         if not ruta.is_file() or ruta.resolve().parent != directorio.resolve():
@@ -44,6 +67,9 @@ def registrar(aplicacion: FastAPI) -> None:
             raise ErrorApi(404, "not-found")
         return Response(
             content=ruta.read_bytes(),
-            media_type=TIPOS[ruta.suffix],
-            headers={"Cache-Control": INMUTABLE, "Cross-Origin-Resource-Policy": "cross-origin"},
+            media_type={**TIPOS, **TIPOS_LISTADOS}[ruta.suffix],
+            headers={
+                "Cache-Control": "no-cache" if archivo == MANIFIESTO else INMUTABLE,
+                "Cross-Origin-Resource-Policy": "cross-origin",
+            },
         )

@@ -13,3 +13,14 @@ checks.positive_data_acceptance.expected-statuses = ["2XX", "401", "404", "409",
 # o requerida (422), tamaño (413), segunda subida (409) y token (403).
 include-name = "POST /v1/validations/{id}/images"
 checks.positive_data_acceptance.expected-statuses = ["2XX", "403", "404", "409", "413", "415", "422", "429"]
+
+[[operations]]
+# SDK-14: un token generado que no es válido muestra la pantalla `sesion-invalida` (404 con la misma página); sin la
+# página compilada, 503.
+include-name = "GET /v/{token}"
+checks.positive_data_acceptance.expected-statuses = ["200", "404", "503"]
+
+[[operations]]
+# SDK-14 / decisión 8: token alojado inválido o vencido (403) y validación no pendiente (409).
+include-name = "POST /v/{token}/inicio"
+checks.positive_data_acceptance.expected-statuses = ["200", "403", "409"]

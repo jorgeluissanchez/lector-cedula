@@ -131,7 +131,9 @@ def comprobar_antes_de_leer(content_type: str | None, content_length: str | None
     return limite
 
 
-async def leer_imagenes(flujo: AsyncIterator[bytes], limite: bytes, face_match: bool) -> Imagenes:
+async def leer_imagenes(
+    flujo: AsyncIterator[bytes], limite: bytes, face_match: bool, una_cara: bool = False
+) -> Imagenes:
     """Lee la subida del flujo y devuelve las imágenes validadas, o lanza `ErrorApi`."""
     lector = _Lector(face_match)
     parser = MultipartParser(limite, lector.callbacks())  # type: ignore[arg-type]
@@ -148,14 +150,16 @@ async def leer_imagenes(flujo: AsyncIterator[bytes], limite: bytes, face_match: 
     if not lector.terminado or lector.actual is not None:
         raise _error(422, "invalid-request", "", "invalid_multipart")
 
-    requeridas = ("front", "back", "selfie") if face_match else ("front", "back")
+    # Tarea 4.3: una sesión del SDK o de la página alojada sube solo `front` (el lector capta una cara).
+    caras = ("front",) if una_cara else ("front", "back")
+    requeridas = (*caras, "selfie") if face_match else caras
     for nombre in requeridas:
         if nombre not in lector.partes:
             raise _error(422, "invalid-request", f"/{nombre}", "required")
     partes = lector.partes
     imagenes = Imagenes(
         front=bytes(partes["front"].datos),
-        back=bytes(partes["back"].datos),
+        back=bytes(partes["back"].datos) if "back" in partes else None,
         selfie=bytes(partes["selfie"].datos) if "selfie" in partes else None,
     )
     partes.clear()

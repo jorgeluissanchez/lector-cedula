@@ -1,0 +1,11 @@
+{
+  "name": "@lector-cedula/alojada",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Página alojada /v/{token} del microservicio (sdk-integracion, SDK-14): lectura en modo sesión con @lector-cedula/web.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node construir.mjs"
+  }
+}

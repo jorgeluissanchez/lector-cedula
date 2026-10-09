@@ -6,7 +6,13 @@
 FROM node:24-bookworm-slim AS fuente
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates  && rm -rf /var/lib/apt/lists/*
 COPY --from=repo_git . /repo.git
-RUN mkdir /fuente && git --git-dir=/repo.git archive HEAD packages/parsers/src packages/parsers/THIRD_PARTY_NOTICES.md packages/capture/src     packages/capture/worker tools/modelos/descargar-mrz.mjs | tar -x -C /fuente
+# REF: HEAD por omisión (despliegue). Las pruebas E2E pasan el árbol del directorio de trabajo (`git write-tree` con un
+# índice temporal, e2e/alojada/imagen.mjs) para probar el código sin commit; nunca mueve HEAD ni toca el árbol.
+ARG REF=HEAD
+RUN mkdir /fuente && git --git-dir=/repo.git archive "$REF" packages/parsers/src packages/parsers/THIRD_PARTY_NOTICES.md \
+    packages/capture/src packages/capture/worker tools/modelos/descargar-mrz.mjs packages/web/src packages/web/scripts \
+    packages/web/package.json tools/avisos-terceros.mjs apps/pwa/licencias models/manifest.json LICENSE \
+    apps/alojada/src apps/alojada/index.html apps/alojada/construir.mjs | tar -x -C /fuente
 
 # Parsers TypeScript compilados desde el código fuente (decisión 4).
 FROM node:24-bookworm-slim AS parsers
@@ -44,6 +50,23 @@ RUN npx tsc --rootDir capture/src --outDir node_modules/@lector-cedula/capture/d
 COPY --from=fuente /fuente/tools/modelos/descargar-mrz.mjs /r/tools/modelos/descargar-mrz.mjs
 RUN node /r/tools/modelos/descargar-mrz.mjs && node /r/tools/modelos/descargar-mrz.mjs --verificar
 
+# Assets de @lector-cedula/web (Workers, WASM, modelo MRZ, avisos y manifest.json con SHA-256) y página alojada
+# /v/{token} (sdk-integracion, fase 4), con el mismo script del paquete npm. Solo esbuild (MIT) y las dependencias ya
+# aprobadas del motor; los paquetes del repositorio se resuelven desde su fuente TypeScript. La imagen final no lleva
+# node_modules de esta etapa.
+FROM node:24-bookworm-slim AS web
+WORKDIR /repo
+COPY --from=fuente /fuente/ ./
+RUN printf '%s' '{"type":"module","private":true,"dependencies":{"esbuild":"0.28.2","zxing-wasm":"3.1.5","tesseract.js":"7.0.0","tesseract.js-core":"7.0.0","jpeg-js":"0.4.4","pngjs":"7.0.0"}}' > package.json \
+ && npm install --no-audit --no-fund --ignore-scripts \
+ && printf '%s' '{"name":"@lector-cedula/capture","type":"module","sideEffects":false,"exports":{".":"./src/index.ts"}}' > packages/capture/package.json \
+ && printf '%s' '{"name":"@lector-cedula/parsers","type":"module","sideEffects":false,"exports":{".":"./src/index.ts","./divipola":"./src/divipola/index.ts","./divipol-2018":"./src/divipol-2018/index.ts"}}' > packages/parsers/package.json \
+ && mkdir -p node_modules/@lector-cedula \
+ && ln -s ../../packages/capture node_modules/@lector-cedula/capture \
+ && ln -s ../../packages/parsers node_modules/@lector-cedula/parsers
+COPY --from=lector /r/models/tesseract ./models/tesseract
+RUN node packages/web/scripts/construir-assets.mjs && node apps/alojada/construir.mjs /salida/alojada
+
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /srv
@@ -71,8 +94,11 @@ COPY app ./app
 COPY openapi/api-validaciones.yaml ./openapi/api-validaciones.yaml
 COPY interprete/interpretar.mjs ./interprete/interpretar.mjs
 COPY lector/leer.mjs ./lector/leer.mjs
-# Recursos del motor del componente web servidos en /sdk/v1/ (sdk-integracion, SDK-05); vacío hasta la fase 3.
+# Recursos del motor servidos en /sdk/v1/ (SDK-05): los assets de @lector-cedula/web con su manifest.json.
 COPY sdk ./sdk
+COPY --from=web /repo/packages/web/dist/assets ./sdk/v1
+# Página alojada /v/{token} (SDK-14).
+COPY --from=web /salida/alojada/index.html ./alojada/index.html
 RUN useradd --create-home --uid 10001 api
 USER api
 EXPOSE 8000

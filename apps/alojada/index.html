@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Validación de documento</title>
+    <style nonce="__NONCE__">
+      :root { color-scheme: light; font-family: system-ui, sans-serif; }
+      body { margin: 0; background: #f4f6f8; color: #14202b; }
+      main { max-width: 640px; margin: 0 auto; padding: 1rem; }
+      h1 { font-size: 1.4rem; }
+      .marco { position: relative; background: #000; border-radius: 12px; overflow: hidden; }
+      video { display: block; width: 100%; }
+      .guia { position: absolute; display: none; border: 3px dashed #ffd400; border-radius: 10px; }
+      .aviso { background: #fff; border: 1px solid #c5ced8; border-radius: 10px; padding: 1rem; margin: 1rem 0; }
+      .reforzado { border-color: #8a4b00; background: #fff6e8; }
+      .acciones { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+      button { font: inherit; min-height: 44px; padding: .6rem 1rem; border-radius: 8px; border: 0; background: #0a4fd6; color: #fff; }
+      button.secundario { background: #e3e8ee; color: #14202b; }
+      button:focus-visible { outline: 3px solid #14202b; outline-offset: 2px; }
+      [hidden] { display: none !important; }
+    </style>
+    <script type="application/json" id="config-sesion">__CONFIG__</script>
+  </head>
+  <body>
+    <main data-pantalla="cargando">
+      <h1>Validación de documento</h1>
+      <p data-prueba="anuncio" role="status" aria-live="polite"></p>
+
+      <section data-seccion="aviso" hidden>
+        <div class="aviso" data-aviso="autorizacion">
+          <h2>Autorización de tratamiento de datos</h2>
+          <p>
+            Para validar tu documento, la cámara de este dispositivo lo leerá y se enviará una imagen al servicio de
+            validación, que la procesa en memoria y no la guarda. Autorizaste este tratamiento de tus datos personales
+            ante quien te envió este enlace (Ley 1581 de 2012). Versión del texto de autorización:
+            <strong data-texto="version"></strong>.
+          </p>
+        </div>
+        <div class="aviso reforzado" data-aviso="autorizacion-reforzada" hidden>
+          <h2>Documento de una persona menor de edad</h2>
+          <p>
+            La tarjeta de identidad pertenece a una persona menor de edad. Continúa solo si eres su representante legal
+            y autorizaste el tratamiento de sus datos (Ley 1581 de 2012, artículo 7; Decreto 1377 de 2013, artículo 12).
+          </p>
+        </div>
+        <div class="acciones">
+          <button type="button" data-accion="aceptar">Acepto y continuar</button>
+          <button type="button" class="secundario" data-accion="cancelar">Cancelar</button>
+        </div>
+      </section>
+
+      <section data-seccion="captura" hidden>
+        <div class="marco">
+          <video playsinline muted aria-label="Vista de la cámara"></video>
+          <div class="guia" data-prueba="guia" aria-hidden="true"></div>
+        </div>
+        <div class="acciones">
+          <button type="button" class="secundario" data-accion="cancelar">Cancelar</button>
+        </div>
+      </section>
+
+      <section data-seccion="enviando" hidden></section>
+
+      <section data-seccion="fallo" hidden>
+        <div class="acciones">
+          <button type="button" data-accion="reintentar">Reintentar</button>
+          <button type="button" class="secundario" data-accion="cancelar">Cancelar</button>
+        </div>
+      </section>
+
+      <section data-seccion="error" hidden>
+        <div class="acciones">
+          <button type="button" data-accion="reintentar">Reintentar</button>
+          <button type="button" class="secundario" data-accion="cancelar">Cancelar</button>
+        </div>
+      </section>
+
+      <section data-seccion="sesion-invalida" hidden>
+        <p>Pide un enlace nuevo a quien te lo envió.</p>
+      </section>
+
+      <section data-seccion="fin" hidden></section>
+    </main>
+    <script type="module" nonce="__NONCE__">/*__PAGINA__*/</script>
+  </body>
+</html>

@@ -36,6 +36,9 @@ class Validacion:
     completada_en: float | None = None
     # Verdadero mientras una subida se procesa: una segunda subida concurrente recibe 409.
     procesando: bool = False
+    # Tarea 4.3: verdadero tras `POST /v/{token}/inicio` (SDK o página alojada): la subida acepta
+    # solo `front`.
+    sesion_alojada: bool = False
 
     def __post_init__(self) -> None:
         if not self.actualizada_en:

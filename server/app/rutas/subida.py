@@ -19,6 +19,7 @@ from app.auth import aplicar_limite, cliente_requerido, exigir_origen
 from app.errores import ErrorApi
 from app.multipart import comprobar_antes_de_leer, leer_imagenes
 from app.representacion import representar, serializar
+from app.rutas.alojada import origenes_de_la_sesion
 from app.servicio import ServicioValidaciones
 from app.token_subida import verificar_token
 
@@ -43,7 +44,10 @@ async def _validacion_autorizada(
         request.state.sandbox = validacion.sandbox
         config = request.app.state.config
         creadora = config.claves.get(validacion.propietario)
-        exigir_origen(request, config.origenes_de(creadora) if creadora is not None else ())
+        if validacion.sesion_alojada:
+            exigir_origen(request, origenes_de_la_sesion(config, validacion))
+        else:
+            exigir_origen(request, config.origenes_de(creadora) if creadora is not None else ())
         aplicar_limite(request, validacion.propietario)
     else:
         cliente = await cliente_requerido(request)
@@ -70,7 +74,9 @@ async def subir_imagenes(id_validacion: str, request: Request) -> Response:
     # Reserva la validación: una segunda subida concurrente recibe 409 y el vencimiento no la toca.
     validacion.procesando = True
     try:
-        imagenes = await leer_imagenes(request.stream(), limite, validacion.face_match)
+        imagenes = await leer_imagenes(
+            request.stream(), limite, validacion.face_match, una_cara=validacion.sesion_alojada
+        )
         try:
             resultado = await motor.procesar(
                 validacion.document_type, validacion.face_match, imagenes, validacion.escenario

@@ -14,7 +14,8 @@ class Imagenes:
     """Bytes de la subida. Viven solo durante la petición: nadie guarda una referencia a este objeto."""
 
     front: bytes = field(repr=False)
-    back: bytes = field(repr=False)
+    # Tarea 4.3: `None` cuando la sesión del SDK sube solo el anverso.
+    back: bytes | None = field(default=None, repr=False)
     selfie: bytes | None = field(default=None, repr=False)
 
 

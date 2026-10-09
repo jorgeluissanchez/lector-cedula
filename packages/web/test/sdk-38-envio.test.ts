@@ -61,7 +61,8 @@ describe("SDK-38 Envío opcional al microservicio", () => {
     expect(s.llamadas[1]?.url).toBe(`${SRV}/v1/validations/val_123/images?token=t`);
     const cuerpo = s.llamadas[1]?.init?.body as FormData;
     // SDK-17: solo imágenes, nunca campos del documento.
-    expect([...cuerpo.keys()].sort()).toStrictEqual(["back", "front"]);
+    // Tarea 4.3: una sola cara (el servidor acepta solo `front` tras `/v/{token}/inicio`).
+    expect([...cuerpo.keys()]).toStrictEqual(["front"]);
     for (const v of cuerpo.values()) expect(v).toBeInstanceOf(Blob);
   });
 

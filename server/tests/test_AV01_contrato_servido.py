@@ -21,6 +21,8 @@ RUTAS_ESPERADAS = {
     ("POST", "/v1/validations/{id}/images"),
     # sdk-integracion, SDK-05: recursos del motor del componente web.
     ("GET", "/sdk/v1/{archivo}"),
+    ("GET", "/v/{token}"),
+    ("POST", "/v/{token}/inicio"),
 }
 
 

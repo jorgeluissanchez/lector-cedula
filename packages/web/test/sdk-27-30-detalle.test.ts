@@ -281,7 +281,7 @@ describe("SDK-38 envío: detalle", () => {
     expect(llamadas[1]?.init?.method).toBe("POST");
     const cuerpo = llamadas[1]?.init?.body as FormData;
     expect((cuerpo.get("front") as File).name).toBe("front.jpg");
-    expect((cuerpo.get("back") as File).name).toBe("back.jpg");
+    expect(cuerpo.has("back")).toBe(false);
   });
 
   it("SDK-38 identificador no textual: sesion-invalida", async () => {

@@ -43,3 +43,7 @@ Fuera de alcance: SDK nativos (Kotlin, Swift; el hook `@lector-cedula/react-nati
 - Dependencias nuevas (sujetas a `revisor-licencias`): ninguna de runtime en `@lector-cedula/web` ni en `@lector-cedula/servidor` salvo los paquetes internos; dev: frameworks de ejemplo (React MIT, Angular MIT, Vue MIT, Next MIT, Express MIT, Nest MIT, Fastify MIT), openapi-generator-cli en Docker (Apache-2.0).
 - Privacidad (`revisor-privacidad`): el flujo alojado envía imágenes al servidor; se procesan en memoria (AV-07) y nunca se persisten; las URL de retorno no llevan datos del documento.
 - Despliegue: `server/compose.dokploy.yaml` añade `CLAVES_API_JSON` con la configuración extendida por clave; DP-08 no cambia de forma.
+
+## Actualización: decisiones del usuario, 2026-10-09 (modelo backend propio)
+
+La librería tiene dos partes, front headless y back; el motor (tesseract, zxing, fraude) corre en el servidor de la empresa que la usa, nunca en un servidor del autor. El modelo por defecto pasa a ser "front + backend propio con respuesta en vivo" (opción `backend`, `modo` front/back/front-back/auto, fase `verificando`, protocolo NDJSON o JSON único, `crearLectorServidor` en `@lector-cedula/servidor`, que absorbe `@lector-cedula/motor`). Sesión, `hosted_url`, webhooks firmados y página alojada quedan como modo opcional microservicio, sin borrar lo implementado. Detalle en `design.md`, sección "Decisiones del usuario, 2026-10-09 (modelo backend propio)"; requisitos SDK-45 a SDK-60 y MOT-19 a MOT-25.

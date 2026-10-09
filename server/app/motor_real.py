@@ -133,7 +133,9 @@ class LectorNode:
         peticion = {
             "tipo": tipo,
             "fecha_referencia": _hoy(self.reloj),
-            "imagenes_b64": [base64.b64encode(i).decode() for i in (imagenes.back, imagenes.front)],
+            "imagenes_b64": [
+                base64.b64encode(i).decode() for i in (imagenes.back, imagenes.front) if i is not None
+            ],
         }
         respuesta = await _ejecutar_node(self.lanzar, SCRIPT_LECTOR, peticion, self.limite_s, ErrorLector)
         del peticion

@@ -54,6 +54,10 @@ services:
       # Parsers y lector TypeScript de HEAD compilados en la imagen (motor-real-servidor, decisiones 4 y 10).
       additional_contexts:
         repo_git: ../.git
+      # Fase 4 de sdk-integracion: el E2E de la página alojada (e2e/alojada/imagen.mjs) pasa el árbol del directorio
+      # de trabajo; por omisión, HEAD.
+      args:
+        REF: ${REF_FUENTE:-HEAD}
     command:
       - /srv/.venv/bin/uvicorn
       - app.main:app
@@ -64,7 +68,8 @@ services:
       - --workers
       - "1"
       - --no-access-log
-    ports: ["8000:8000"]
+    # El E2E de la página alojada puede usar otro puerto del host (PUERTO_API_PRUEBAS) junto a otras suites.
+    ports: ["${PUERTO_API_PRUEBAS:-8000}:8000"]
     read_only: true
     tmpfs: ["/tmp"]
     environment:
@@ -93,7 +98,8 @@ services:
       WEBHOOK_DESTINOS_PRUEBA: >-
         http://host.docker.internal:8091/webhook,http://host.docker.internal:8092/webhook,
         http://host.docker.internal:8093/webhook,http://host.docker.internal:8094/webhook,
-        http://host.docker.internal:8095/webhook
+        http://host.docker.internal:8095/webhook,
+        http://host.docker.internal:8096/webhook
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

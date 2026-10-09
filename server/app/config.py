@@ -18,6 +18,9 @@ from urllib.parse import urlsplit
 
 # Recursos del motor del componente web (SDK-05). Vacío hasta que la fase 3 copie el motor en la imagen.
 DIRECTORIO_SDK = Path(__file__).resolve().parents[1] / "sdk" / "v1"
+# SDK-14: HTML de la página alojada `/v/{token}`, compilado en la imagen (apps/alojada). Sin él,
+# `/v/` responde 503.
+PAGINA_ALOJADA = Path(__file__).resolve().parents[1] / "alojada" / "index.html"
 
 # Origen exacto: `https://host[:puerto]`, sin ruta, credenciales ni comodines.
 _ORIGEN = re.compile(r"^https://[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:[0-9]{1,5})?$")
@@ -52,6 +55,7 @@ class Config:
     # MS-19: `node` activa el lector de packages/capture en modo live; sin valor, live responde 503.
     lector_live: str | None = None
     directorio_sdk: Path = DIRECTORIO_SDK
+    pagina_alojada: Path = PAGINA_ALOJADA
     # SDK-40: solo con `entorno == "pruebas"`; nunca en el despliegue.
     entorno: str | None = None
     webhook_destinos_prueba: tuple[str, ...] = ()

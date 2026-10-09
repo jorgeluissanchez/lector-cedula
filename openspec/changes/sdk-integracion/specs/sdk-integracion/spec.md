@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Integrar el lector de cédula en cualquier aplicativo (web, backend Node y apps nativas vía flujo alojado) sin que el integrador implemente nada del lector, con un único servidor autoalojado, resultados de confianza solo del lado servidor y sin persistir imágenes.
+Integrar el lector de cédula en cualquier aplicativo (web, backend Node y apps nativas vía flujo alojado) sin que el integrador implemente nada del lector, con resultados de confianza solo del lado servidor y sin persistir imágenes.
+
+Decisión del usuario (2026-10-09, modelo backend propio): la librería tiene dos partes, front headless y back. El motor (tesseract, zxing, fraude) corre en el SERVIDOR DE LA EMPRESA que usa la librería, nunca en un servidor del autor. El modelo por defecto es "front + backend propio con respuesta en vivo" (SDK-45 a SDK-52, protocolo NDJSON de MOT-20 en `motor-backend-embebido`). El microservicio con sesión, `hosted_url`, webhooks firmados y página alojada (SDK-05, SDK-13 a SDK-21, SDK-23, SDK-38, SDK-40, SDK-42) es el **modo opcional microservicio**: se conserva, pero no es el camino por omisión.
 
 Convenciones de esta spec (aplican a todos los escenarios):
 
@@ -14,10 +16,12 @@ Convenciones de esta spec (aplican a todos los escenarios):
 - Imágenes y vídeos sintéticos de `pwa-lectura-offline` (`amarilla-1080p`, `digital-1080p`, `PERSONA_BASE`: NUIP `9999123456`, `PRUEBA EJEMPLO FICTICIA LUZ`). Ningún dato real.
 - "Resultado de presentación" = objeto `detail` del evento `resultado` o retorno de `leerDocumento()`. "Resultado de confianza" = cuerpo de `GET /v1/validations/{id}` obtenido por el backend con su clave.
 - Decisión del usuario (2026-10-08): el frontal es HEADLESS. Núcleo `@lector-cedula/web`; adaptadores `@lector-cedula/react`, `@lector-cedula/angular`, `@lector-cedula/vue`; componente opcional `@lector-cedula/elementos`.
-- `OpcionesLector` = `{ servidor?, sesion?, recursos?, documentos?, admitirTi?, enviarMenores?, idioma? }` (`servidor` `https` o `http://localhost`; `sesion` exige `servidor`; `recursos` URL base de los assets; `idioma` solo afecta a `error.mensaje`).
+- `OpcionesLector` = `{ modo?, umbralesAuto?, streaming?, tiempoColaMs?, backend?, encabezadosBackend?, intentosVerificacion?, tiempoLimiteMs?, inactividadMs?, autoIniciar?, servidor?, sesion?, recursos?, documentos?, admitirTi?, enviarMenores?, idioma? }` (`backend` URL del endpoint de la empresa, SDK-45; `intentosVerificacion` por omisión 3; `tiempoLimiteMs` por omisión 30 000; `inactividadMs` por omisión 15 000; `autoIniciar` por omisión `false`; `servidor` `https` o `http://localhost`, solo modo opcional microservicio; `sesion` exige `servidor`; `backend` es excluyente con `servidor`/`sesion`; `recursos` URL base de los assets; `idioma` solo afecta a `error.mensaje`).
+- `DEPS` incluye por omisión señales de dispositivo potente y en línea (8 GB, 8 núcleos, SIMD, `4g`), de modo que `modo: "auto"` con `backend` decide `front-back` (SDK-57).
+- `BACK` = servidor de prueba local en `https://localhost:5173/api/cedula` (mismo origen que la página) que implementa el protocolo NDJSON de MOT-20 con guiones fijos: `ok` (eventos `recibido`, `leyendo` 0.5, `fraude`, `comparando`, `resultado` ok con el documento de `PERSONA_BASE`), `rechazo:<motivo>`, `503`, `colgado` (abre el stream y no emite nada), `basura` (línea `{no-json`).
 - `ControladorLector` = `{ iniciar(video: HTMLVideoElement): Promise<void>, cancelar(), reintentar(), destruir(), obtenerEstado(): EstadoLector, suscribir(fn): () => void }`.
-- `TRANSICIONES` (únicas permitidas): `inicio→permiso`, `permiso→activo`, `permiso→error`, `activo→listo`, `listo→activo`, `listo→leyendo`, `activo→leyendo` (captura guiada), `leyendo→resultado`, `leyendo→activo` (reintento automático), `leyendo→error`, `activo|listo→error` (fallo del análisis de calidad, código `calidad-error`), `permiso|activo|listo|leyendo→inicio` (`cancelar`), `resultado|error→permiso` (`reintentar`).
-- `EstadoLector` = `{ fase, calidad: { score 0..100, motivo: "oscuro"|"sobreexpuesto"|"reflejo"|"desenfocado"|"acerca"|null } | null, guia: { video: {x,y,ancho,alto}, normalizada: {x,y,ancho,alto} } | null, contenido: "pdf417"|"mrz-td1"|"mrz-td3"|null, progreso: 0..1 | null, intento: >= 1, resultado: { tipo, campos, warnings, confiable: false, validacion_id } | null, error: { codigo, mensaje, opcion? } | null, envio: { estado: "enviando"|"enviado"|"fallido", codigo? } | null }`.
+- `TRANSICIONES` (únicas permitidas): `inicio→permiso`, `permiso→activo`, `permiso→error`, `activo→listo`, `listo→activo`, `listo→leyendo`, `activo→leyendo` (captura guiada), `leyendo→resultado`, `leyendo→activo` (reintento automático), `leyendo→error`, `activo|listo→error` (fallo del análisis de calidad, código `calidad-error`), `permiso|activo|listo|leyendo→inicio` (`cancelar`), `resultado|error→permiso` (`reintentar`); con `backend` (SDK-46): `leyendo→verificando`, `verificando→resultado` (backend ok), `verificando→activo` (rechazo con intentos restantes), `verificando→error` (intentos agotados o fallo de transporte), `verificando→inicio` (`cancelar`); en modo `back` (SDK-56): `listo→verificando`; con confirmación diferida (SDK-58): `resultado→verificando`; con `autoIniciar` (SDK-49): `permiso→inicio` también cuando la cámara no se pudo abrir sin gesto.
+- `EstadoLector` = `{ fase, calidad: { score 0..100, motivo: "oscuro"|"sobreexpuesto"|"reflejo"|"desenfocado"|"acerca"|null } | null, guia: { video: {x,y,ancho,alto}, normalizada: {x,y,ancho,alto} } | null, contenido: "pdf417"|"mrz-td1"|"mrz-td3"|null, progreso: 0..1 | null, intento: >= 1, resultado: { tipo, campos, warnings, confiable: boolean, validacion_id } | null, error: { codigo, mensaje, opcion?, causa? } | null, envio: { estado: "enviando"|"enviado"|"fallido", codigo? } | null, verificacion: { etapa: "recibido"|"leyendo"|"fraude"|"comparando", progreso: 0..1 | null } | null, rechazo: { motivo: "no-coincide"|"fraude"|"ilegible"|"menor-de-edad"|"documento-no-admitido"|"demasiado-grande"|"tiempo-agotado"|"ocupado"|"error-interno", diferencias?: string[] } | null, intentosVerificacion: { usados: >= 0, maximo: >= 1 } | null, modo: "front"|"back"|"front-back" | null, modoMotivo: string | null }`.
 - Los tres adaptadores aceptan un segundo argumento opcional `avanzado: { deps?: DependenciasLector, crear?: (opciones, deps) => ControladorLector }` para inyectar `DEPS` o la fábrica del controlador (pruebas e integraciones avanzadas); sin él usan `crearLector`.
 - `DEPS` = `DependenciasLector` falsas inyectadas (cámara, cliente de calidad, cliente lector, reloj) para pruebas sin hardware.
 - El componente no introduce hipótesis de formato; las de los parsers siguen en `docs/decisiones/hipotesis-formato.md` y viajan en `warnings[]`.
@@ -331,12 +335,12 @@ La subida de imágenes MUST rechazar cualquier parte o campo distinto de `front`
 - **WHEN** se sube una parte de archivo (con `filename`) de nombre distinto de `front`, `back` y `selfie`
 - **THEN** la respuesta es 422 con `code` `unexpected_part` (AV-10 sin cambios); `unexpected_field` se reserva a campos de texto, sin `filename`
 
-### Requirement: SDK-18 Paquete de servidor Node sin dependencias
-`@lector-cedula/servidor` SHALL tener `dependencies` vacío, funcionar en Node >= 20 y en runtimes con `fetch` y `crypto.subtle` estándar, y exportar `crearCliente({ servidor, clave, fetch? })` con los métodos `crearSesion(entrada)`, `obtenerResultado(id)` y `suprimir(id)`. La clave MUST NOT aparecer en errores, `toString()` ni `JSON.stringify` del cliente.
+### Requirement: SDK-18 Paquete de servidor Node con cliente sin motor
+`@lector-cedula/servidor` SHALL depender solo de paquetes `@lector-cedula/*` (motor en proceso, MOT-19; decisión del usuario del 2026-10-09). Su subruta `@lector-cedula/servidor/cliente` (modo opcional microservicio) SHALL exportar `crearCliente({ servidor, clave, fetch? })` con `crearSesion`, `obtenerResultado` y `suprimir`, sin importar el motor y usable en Node >= 20 y runtimes con `fetch` y `crypto.subtle`. La clave MUST NOT aparecer en errores, `toString()` ni `JSON.stringify`.
 
 #### Scenario: Sin dependencias
-- **WHEN** se lee `packages/servidor/package.json`
-- **THEN** `dependencies` es `{}` o no existe
+- **WHEN** se lee `packages/servidor/package.json` y se analiza el grafo de importaciones de `packages/servidor/src/cliente.ts`
+- **THEN** cada clave de `dependencies` empieza por `@lector-cedula/` y el grafo de `cliente.ts` no alcanza `packages/servidor/src/motor/**`
 
 #### Scenario: Clave oculta
 - **WHEN** se hace `JSON.stringify(crearCliente({ servidor: SRV, clave: KT }))` y se provoca un error de red
@@ -490,7 +494,7 @@ Toda dependencia nueva (runtime o de ejemplos) MUST estar en la lista permitida 
 - **THEN** el estado inicial es fase `error` con `error` `{"codigo": "opcion-invalida", "opcion": "servidor", "mensaje": "<texto no vacío>"}` y `iniciar` no llama a la cámara
 
 ### Requirement: SDK-28 Estado expuesto por el núcleo
-`obtenerEstado()` y `suscribir` SHALL entregar `EstadoLector` inmutable (`Object.isFrozen`). `resultado.confiable` MUST ser siempre `false`. Cada cambio MUST producir un objeto nuevo y `suscribir` MUST NOT notificar si el estado no cambió.
+`obtenerEstado()` y `suscribir` SHALL entregar `EstadoLector` inmutable (`Object.isFrozen`). `resultado.confiable` MUST ser `false` salvo en fase `resultado` tras un evento final `ok: true` del backend propio (SDK-46), único caso en que es `true`. Cada cambio MUST producir un objeto nuevo y `suscribir` MUST NOT notificar si el estado no cambió.
 
 #### Scenario: Guía en ambas coordenadas
 - **WHEN** el vídeo falso es de 1920x1080 y la guía de `packages/capture` es `{ x: 192, y: 216, ancho: 1536, alto: 648 }`
@@ -723,3 +727,263 @@ Con `ENTORNO=pruebas`, el servidor SHALL aceptar y entregar una `webhook_url` id
 #### Scenario: ENTORNO con un valor desconocido
 - **WHEN** el servidor arranca con `ENTORNO` distinto de `pruebas` (por ejemplo `produccion` o vacío)
 - **THEN** el proceso termina con código distinto de 0 y el mensaje contiene `ENTORNO`; sin `ENTORNO` arranca normalmente
+
+### Requirement: SDK-45 Opción backend del front
+`crearLector` SHALL aceptar `backend: string`, URL del endpoint de la empresa: ruta relativa, mismo origen, `https:` de otro origen o `http://localhost`/`http://127.0.0.1`. Otro valor, o `backend` junto a `servidor`/`sesion`, da fase `error` `{ codigo: "opcion-invalida", opcion: "backend" }` sin red. La petición MUST usar `credentials: "same-origin"`, `cache: "no-store"` y `redirect: "error"`, y SHALL añadir `encabezadosBackend` (objeto o función async). Aplica SDK-44.
+
+#### Scenario: Backend relativo válido
+- **WHEN** en `https://localhost:5173` se crea `crearLector({ backend: "/api/cedula" }, DEPS)`
+- **THEN** el estado inicial es fase `inicio` con `error` `null`
+
+#### Scenario: Esquema inválido
+- **WHEN** se crea `crearLector({ backend: "http://empresa.example/cedula" }, DEPS)` o `crearLector({ backend: "ftp://x" }, DEPS)`
+- **THEN** la fase es `error`, `error.codigo` es `"opcion-invalida"`, `error.opcion` es `"backend"` y el `fetch` falso no recibió ninguna llamada
+
+#### Scenario: Excluyente con el modo microservicio
+- **WHEN** se crea `crearLector({ backend: "/api/cedula", servidor: "https://api.lector-cedula.example" }, DEPS)`
+- **THEN** la fase es `error` con `error.codigo` `"opcion-invalida"` y `error.opcion` `"backend"`
+
+#### Scenario: Cabeceras propias
+- **WHEN** `encabezadosBackend` es `async () => ({ Authorization: "Bearer prueba-sintetica" })` y se completa una lectura contra `BACK` (guion `ok`)
+- **THEN** la única petición a `/api/cedula` lleva `Authorization: Bearer prueba-sintetica` y `Accept: application/x-ndjson`, con `credentials` `"same-origin"` y `redirect` `"error"`
+
+### Requirement: SDK-46 Envío automático y fase verificando
+Con `backend`, al terminar la lectura local el núcleo SHALL publicar el resultado local (`confiable: false`), enviar sin acción del usuario la imagen al backend (MOT-20) y pasar a `verificando`, reflejando cada evento en `estado.verificacion = { etapa, progreso }`. Con el evento final `ok: true` SHALL pasar a `resultado` con el `documento` del backend y `confiable: true`, `verificacion` y `rechazo` en `null`, y liberar la cámara. No existe una acción de "enviar".
+
+#### Scenario: Secuencia completa con el backend
+- **WHEN** con `DEPS` (lector falso con `PERSONA_BASE`) y `fetch` dirigido a `BACK` guion `ok` se llama `iniciar(video)`
+- **THEN** la secuencia de `fase` es exactamente `["permiso", "activo", "listo", "leyendo", "verificando", "resultado"]`, la secuencia de `verificacion.etapa` observada es `["recibido", "leyendo", "fraude", "comparando"]` con `progreso` `0.5` en `leyendo`, y el estado final tiene `resultado.confiable` `true` y `resultado.campos.nuip` `"9999123456"`
+
+#### Scenario: Resultado local instantáneo antes de la verificación
+- **WHEN** el primer estado con fase `verificando` llega al suscriptor
+- **THEN** `estado.resultado.confiable` es `false`, `estado.resultado.campos.nuip` es `"9999123456"` y `estado.verificacion` no es `null`
+
+#### Scenario: Una sola petición por intento
+- **WHEN** se completa una lectura con `BACK` guion `ok`
+- **THEN** hubo exactamente 1 petición `POST /api/cedula` con `Content-Type` `multipart/form-data` que contiene las partes `imagen` y `cliente`, y ninguna petición fuera del origen
+
+#### Scenario: Sin backend el comportamiento previo no cambia
+- **WHEN** se crea `crearLector({}, DEPS)` y se completa una lectura
+- **THEN** la secuencia es `["permiso", "activo", "listo", "leyendo", "resultado"]`, `resultado.confiable` es `false` y `verificacion` es `null`
+
+### Requirement: SDK-47 Rechazo y reintento automático
+Ante el evento final `ok: false`, el núcleo SHALL exponer `estado.rechazo = { motivo, diferencias? }` y, con intentos restantes, volver solo a `activo` con la cámara abierta. Al agotar `intentosVerificacion` (por omisión 3, entero 1..10; fuera de rango da `opcion-invalida`) SHALL pasar a `error` `"verificacion-rechazada"`, conservar el último `rechazo` y liberar la cámara. `diferencias` solo lleva rutas de campo (MOT-10). Un `motivo` fuera de la lista es `protocolo-invalido`.
+
+#### Scenario: No coincide y reintenta
+- **WHEN** con `intentosVerificacion: 3` el primer envío recibe `rechazo:no-coincide` con `diferencias` `["campos.nuip"]` y el segundo recibe `ok`
+- **THEN** la secuencia de fases contiene `verificando→activo` y termina en `verificando→resultado`; tras el primer envío `estado.rechazo` es `{ motivo: "no-coincide", diferencias: ["campos.nuip"] }`; el estado final tiene `rechazo` `null`, `intentosVerificacion` `{ usados: 2, maximo: 3 }` y `resultado.confiable` `true`
+
+#### Scenario: Tope agotado
+- **WHEN** con `intentosVerificacion: 2` ambos envíos reciben `rechazo:fraude`
+- **THEN** la fase final es `error` con `error.codigo` `"verificacion-rechazada"`, `estado.rechazo.motivo` es `"fraude"`, hubo exactamente 2 peticiones y las pistas de la cámara falsa están en `"ended"`
+
+#### Scenario: Cada motivo vuelve a activo
+- **WHEN** para cada motivo de `["no-coincide", "fraude", "ilegible", "menor-de-edad", "documento-no-admitido", "demasiado-grande", "tiempo-agotado", "ocupado", "error-interno"]` el primer envío recibe ese rechazo con `intentosVerificacion: 3`
+- **THEN** la fase siguiente a `verificando` es `activo` y `estado.rechazo.motivo` es el motivo enviado
+
+#### Scenario: Motivo desconocido
+- **WHEN** el evento final trae `{ "etapa": "resultado", "ok": false, "rechazo": { "motivo": "otro" } }`
+- **THEN** la fase es `error` con `error.codigo` `"protocolo-invalido"` (SDK-48)
+
+### Requirement: SDK-48 Cliente del protocolo en vivo
+El núcleo SHALL leer la respuesta con `fetch` y `ReadableStream` (`getReader()` y `TextDecoder` en modo stream), dividiendo por salto de línea, tolerando líneas partidas y vacías; MUST NOT usar WebSocket, EventSource ni sondeo. La respuesta MUST ser 200 con `Content-Type` `application/x-ndjson`. `cancelar()` y `destruir()` en `verificando` MUST abortar la petición (`AbortController`) y poner a cero la copia de la imagen. Los fallos de transporte siguen SDK-54.
+
+#### Scenario: Líneas partidas entre fragmentos
+- **WHEN** el `ReadableStream` falso entrega primero los bytes de `{"etapa":"recibido"}` + salto de línea + `{"etapa":"lei` y después `do","progreso":0.5}` + dos saltos de línea + `{"etapa":"resultado","ok":true,"documento":<PERSONA_BASE>}` + salto de línea
+- **THEN** `verificacion.etapa` pasa por `"recibido"` y `"leyendo"` y la fase final es `resultado` con `confiable` `true`
+
+#### Scenario: Backend 503
+- **WHEN** `BACK` responde con el guion `503`
+- **THEN** la fase final es `error` con `error.codigo` `"backend-no-disponible"`, `estado.resultado.confiable` es `false` con `campos.nuip` `"9999123456"` y no hubo un segundo envío
+
+#### Scenario: Backend colgado
+- **WHEN** `BACK` responde con el guion `colgado`, `inactividadMs: 200` y un reloj falso que avanza 201 ms
+- **THEN** la fase es `error` con `error.codigo` `"backend-tiempo-agotado"` y la señal pasada a `fetch` tiene `aborted` `true`
+
+#### Scenario: Línea que no es JSON
+- **WHEN** `BACK` responde con el guion `basura`
+- **THEN** la fase es `error` con `error.codigo` `"protocolo-invalido"` y la señal de la petición está abortada
+
+#### Scenario: Content-Type incorrecto
+- **WHEN** el backend responde 200 con `Content-Type: text/html`
+- **THEN** la fase es `error` con `error.codigo` `"protocolo-invalido"`
+
+#### Scenario: Cancelar durante la verificación
+- **WHEN** en fase `verificando` se llama `cancelar()`
+- **THEN** la fase pasa a `inicio`, la señal de la petición está abortada, las pistas están en `"ended"` y los píxeles de la copia del envío son todos cero
+
+#### Scenario: Propiedad del lector de líneas
+- **WHEN** fast-check genera una lista de eventos válidos, la serializa como NDJSON y la corta en fragmentos de tamaños arbitrarios (incluidos cortes dentro de caracteres UTF-8 multibyte como la Ñ), y por separado genera bytes arbitrarios con `fc.uint8Array()` (numRuns >= 1000 cada una)
+- **THEN** en el primer caso la lista decodificada es igual a la original; en el segundo el lector termina en eventos válidos o en `protocolo-invalido`; en ninguno lanza
+
+### Requirement: SDK-49 Apertura automática de la cámara
+Con `autoIniciar: true`, los adaptadores y el componente opcional SHALL llamar a `iniciar(video)` en cuanto el vídeo esté vinculado en el navegador, nunca en servidor. Si la cámara falla en ese arranque automático, el núcleo SHALL volver a `inicio` con `error` `{ codigo: "autoinicio-fallido", causa, mensaje }` para que la UI muestre el botón; un `iniciar` posterior sigue SDK-27. Sin `autoIniciar` no se abre la cámara al montar.
+
+#### Scenario: Arranque al montar
+- **WHEN** con React Testing Library se monta un componente con `useLectorCedula({ autoIniciar: true }, { deps })` y la cámara falsa concede el permiso
+- **THEN** sin ningún clic la fase recorre `permiso` y `activo`, y la cámara falsa recibió exactamente 1 llamada
+
+#### Scenario: Navegador que exige gesto
+- **WHEN** con `autoIniciar: true` la cámara falsa rechaza con `NotAllowedError`
+- **THEN** la secuencia es `["permiso", "inicio"]`, `error.codigo` es `"autoinicio-fallido"`, `error.causa` es `"camara-denegada"` y una llamada posterior a `iniciar()` vuelve a pedir la cámara
+
+#### Scenario: Sin autoIniciar
+- **WHEN** se monta `useLectorCedula({}, { deps })`
+- **THEN** la fase sigue en `inicio` y la cámara falsa no recibió llamadas
+
+#### Scenario: Render en servidor con autoIniciar
+- **WHEN** se ejecuta `renderToString` de un componente con `useLectorCedula({ autoIniciar: true })` en Node sin DOM
+- **THEN** no lanza y el HTML contiene `data-fase="inicio"`
+
+### Requirement: SDK-50 Adaptadores con verificación
+`useLectorCedula` (React y Vue) e `injectLectorCedula` (Angular) SHALL exponer `estado.verificacion`, `estado.rechazo` y `estado.intentosVerificacion` sin transformarlos y SHALL aceptar las opciones `backend`, `encabezadosBackend`, `intentosVerificacion`, `tiempoLimiteMs`, `inactividadMs` y `autoIniciar`. Los presupuestos de SDK-29 y SDK-34 se mantienen.
+
+#### Scenario: Estado de verificación en React
+- **WHEN** con dependencias falsas y `fetch` hacia `BACK` guion `ok` se monta un componente que pinta `[data-prueba="etapa"]` con `estado.verificacion?.etapa`
+- **THEN** el texto recorre `recibido`, `leyendo`, `fraude` y `comparando`, y al final `[data-prueba="confiable"]` muestra `true`
+
+#### Scenario: Rechazo visible en Vue y Angular
+- **WHEN** el backend falso responde `rechazo:ilegible` al primer envío
+- **THEN** en ambos adaptadores `estado.rechazo.motivo` es `"ilegible"` y la fase siguiente es `activo`
+
+### Requirement: SDK-51 Ejemplos front React con backend propio
+`examples/backend-express`, `examples/backend-nest` y `examples/backend-next` SHALL incluir un front React con `useLectorCedula({ backend: "/api/cedula", autoIniciar: true })` y UI propia que muestre la etapa, el rechazo y el resultado confiable, servido desde el mismo origen que el backend del ejemplo (MOT-13). Ningún ejemplo MUST contactar un servidor del autor ni un origen distinto del suyo.
+
+#### Scenario: Flujo de punta a punta en cada ejemplo
+- **WHEN** en Playwright (Chromium y Pixel 7, cámara simulada con `amarilla-1080p.y4m`) se abre la página de cada ejemplo sin pulsar nada
+- **THEN** la UI muestra las etapas `recibido`, `leyendo` y `comparando`, termina con `confiable` `true` y NUIP `9999123456`, y el registro de red solo tiene peticiones al origen del ejemplo
+
+#### Scenario: Accesibilidad de los ejemplos
+- **WHEN** se ejecuta axe en las fases `inicio`, `activo`, `verificando`, `resultado` y con un rechazo visible
+- **THEN** hay 0 violaciones serious o critical
+
+### Requirement: SDK-52 Modo opcional microservicio
+El modo microservicio (`servidor` y `sesion`, `hosted_url`, página alojada `/v/{token}`, webhooks firmados, `crearCliente`, SDK-05, SDK-13 a SDK-21, SDK-23, SDK-38, SDK-40 y SDK-42) SHALL seguir funcionando sin cambios como modo opcional. La documentación (`docs/sdk/README.md`) MUST presentar primero el modelo "front + backend propio" y el microservicio en una sección titulada "Modo opcional: microservicio".
+
+#### Scenario: Regresión del modo opcional
+- **WHEN** se ejecutan las pruebas existentes de SDK-38 y SDK-42 (`npx vitest run packages/web/test/sdk-38-envio.test.ts`)
+- **THEN** pasan sin modificar sus aserciones
+
+#### Scenario: Orden de la documentación
+- **WHEN** `tools/test/docs-sdk.test.mjs` lee `docs/sdk/README.md`
+- **THEN** el encabezado del modelo backend propio aparece antes que el encabezado `Modo opcional: microservicio`
+
+### Requirement: SDK-53 Menores en el modo backend propio
+Con `backend`, si el resultado local es `tarjeta-identidad` o trae `menorDeEdad: true` y no hay `enviarMenores: true`, el núcleo MUST NOT enviar la imagen y SHALL aplicar un rechazo local `menor-de-edad` que cuenta como intento de verificación (SDK-43, SDK-47).
+
+#### Scenario: Menor de edad sin envío
+- **WHEN** con `admitirTi: true` y `backend` el lector falso devuelve `tipoDocumento` `tarjeta-identidad` y no se pasa `enviarMenores`
+- **THEN** no hay ninguna petición de red, `estado.rechazo.motivo` es `"menor-de-edad"`, `intentosVerificacion.usados` es 1 y la fase vuelve a `activo`
+
+#### Scenario: Menor con enviarMenores
+- **WHEN** el mismo caso se repite con `enviarMenores: true` y `BACK` guion `ok`
+- **THEN** hubo exactamente 1 petición a `/api/cedula`
+
+### Requirement: SDK-54 Fallos de transporte del backend
+Un fallo de transporte SHALL llevar a `error` conservando el resultado local (`confiable: false`), abortar la petición, poner a cero la imagen y no consumir intentos. Códigos: `backend-no-disponible` (red o 5xx), `backend-rechazo-http` (estado distinto de 200 y 413; el 413 es rechazo `demasiado-grande`), `backend-tiempo-agotado` y `protocolo-invalido` (línea no JSON, etapa desconocida, evento tras el final, fin sin final o `Content-Type` incorrecto).
+
+#### Scenario: 413 como rechazo
+- **WHEN** el backend responde 413 al primer envío con `intentosVerificacion: 3`
+- **THEN** `estado.rechazo.motivo` es `"demasiado-grande"` y la fase siguiente es `activo`
+
+#### Scenario: Estado 401
+- **WHEN** el backend responde 401
+- **THEN** la fase es `error` con `error.codigo` `"backend-rechazo-http"` e `intentosVerificacion.usados` es 0
+
+#### Scenario: Stream cerrado sin evento final
+- **WHEN** el backend emite `{"etapa":"recibido"}` y cierra el stream
+- **THEN** la fase es `error` con `error.codigo` `"protocolo-invalido"`
+
+#### Scenario: Tiempo total agotado
+- **WHEN** con `tiempoLimiteMs: 1000` el backend emite `{"etapa":"leyendo"}` cada 100 ms sin evento final y el reloj falso avanza 1001 ms
+- **THEN** la fase es `error` con `error.codigo` `"backend-tiempo-agotado"` y la señal de la petición está abortada
+
+#### Scenario: Reintentar tras un fallo de transporte
+- **WHEN** tras `backend-no-disponible` se llama `reintentar()`
+- **THEN** la fase pasa a `permiso` y el siguiente envío ocurre con `intentosVerificacion.usados` 1
+
+### Requirement: SDK-55 Opción modo
+`crearLector` SHALL aceptar `modo: "front" | "back" | "front-back" | "auto"` (por omisión `"auto"`) y exponer la decisión en `estado.modo` (`"front"|"back"|"front-back"`) y `estado.modoMotivo`. `"front"`: solo lectura local, sin red, `confiable: false`. `"back"`: captura ligera y envío, resultado del backend. `"front-back"`: SDK-46. `"back"` o `"front-back"` sin `backend` dan `opcion-invalida` con `opcion: "modo"`.
+
+#### Scenario: Modo front ignora el backend
+- **WHEN** `crearLector({ modo: "front", backend: "/api/cedula" }, DEPS)` completa una lectura
+- **THEN** la secuencia es `["permiso", "activo", "listo", "leyendo", "resultado"]`, `confiable` es `false`, `estado.modo` es `"front"` y el `fetch` falso no recibió llamadas
+
+#### Scenario: Modo back sin backend
+- **WHEN** `crearLector({ modo: "back" }, DEPS)`
+- **THEN** la fase es `error` con `error.codigo` `"opcion-invalida"` y `error.opcion` `"modo"`
+
+#### Scenario: Modo front-back
+- **WHEN** `crearLector({ modo: "front-back", backend: "/api/cedula" }, DEPS)` con `BACK` guion `ok`
+- **THEN** la secuencia es `["permiso", "activo", "listo", "leyendo", "verificando", "resultado"]` y `estado.modo` es `"front-back"`
+
+### Requirement: SDK-56 Modo back ligero
+En `estado.modo` `"back"` el núcleo SHALL capturar solo con el análisis ligero de calidad y presencia y pasar de `listo` a `verificando` sin fase `leyendo`, y MUST NOT descargar ni instanciar el motor pesado (WASM de zxing, tesseract, `mrz.traineddata`, modelos de fraude). La descarga total del modo back MUST ser <= `PRESUPUESTO_BACK` (fijado en `design.md`; meta 300 KiB gzip). En `verificando` `resultado` es `null`.
+
+#### Scenario: Secuencia del modo back
+- **WHEN** `crearLector({ modo: "back", backend: "/api/cedula" }, DEPS)` con `BACK` guion `ok`
+- **THEN** la secuencia es `["permiso", "activo", "listo", "verificando", "resultado"]`, el lector falso no recibió llamadas y `resultado.confiable` es `true`
+
+#### Scenario: Sin descarga del motor pesado
+- **WHEN** en Playwright se completa una lectura en modo back con el ejemplo Express
+- **THEN** el registro de red no contiene ningún recurso de `manifest.json` marcado `pesado` (`.wasm` de zxing, `tesseract*`, `*.traineddata`, `*.onnx`) y la suma de bytes transferidos de JS y WASM es <= `PRESUPUESTO_BACK`
+
+#### Scenario: Presupuesto con fixture que falla
+- **WHEN** `npm run check:tamano-sdk` mide el grafo de importación del modo back y un fixture de `PRESUPUESTO_BACK + 1` bytes
+- **THEN** el árbol real pasa y el fixture sale con código 1
+
+### Requirement: SDK-57 Decisión del modo auto
+Con `modo: "auto"` el núcleo SHALL decidir con una función pura `decidirModo(senales, umbrales)` antes de abrir la cámara: potente y backend → `front-back`; potente sin backend → `front`; débil y backend → `back`; débil sin backend → `front` con aviso; sin red → `front` (SDK-58). Señales: `deviceMemory`, `hardwareConcurrency`, WASM SIMD, `connection.saveData`/`effectiveType` y, si `umbrales.microMedicion`, una micro-medición. Los umbrales SHALL ser configurables (`umbralesAuto`).
+
+#### Scenario: Tabla de decisión
+- **WHEN** `decidirModo` recibe, con los umbrales por omisión (`memoriaMinGb` 4, `nucleosMin` 4, `simd` requerido, `saveData` débil, `effectiveType` `"slow-2g"|"2g"` débil), los casos: (8 GB, 8 núcleos, SIMD, 4g, backend, en línea), (8, 8, SIMD, 4g, sin backend, en línea), (2, 8, SIMD, 4g, backend, en línea), (8, 2, SIMD, 4g, backend, en línea), (8, 8, sin SIMD, 4g, backend, en línea), (8, 8, SIMD, saveData, backend, en línea), (2, 2, sin SIMD, 2g, sin backend, en línea), (8, 8, SIMD, 4g, backend, sin red)
+- **THEN** devuelve en orden `{modo, motivo}`: `front-back`/`"potente-con-backend"`, `front`/`"potente-sin-backend"`, `back`/`"memoria-baja"`, `back`/`"pocos-nucleos"`, `back`/`"sin-simd"`, `back`/`"ahorro-datos"`, `front`/`"debil-sin-backend"` con `aviso` `"rendimiento-bajo"`, `front`/`"sin-red"`
+
+#### Scenario: Señales ausentes
+- **WHEN** el navegador no expone `deviceMemory` ni `connection` (Safari) y sí 8 núcleos y SIMD
+- **THEN** esas señales no cuentan como débiles y el resultado con backend es `front-back`
+
+#### Scenario: Umbrales configurables
+- **WHEN** `umbralesAuto: { memoriaMinGb: 8 }` y el dispositivo tiene 4 GB con backend
+- **THEN** `estado.modo` es `"back"` y `estado.modoMotivo` es `"memoria-baja"`
+
+#### Scenario: Propiedad de totalidad
+- **WHEN** fast-check genera señales arbitrarias (incluidos `undefined`, `NaN` y negativos) y umbrales válidos (numRuns >= 1000)
+- **THEN** `decidirModo` nunca lanza, siempre devuelve uno de los tres modos y nunca devuelve `back` ni `front-back` sin backend
+
+### Requirement: SDK-58 Confirmación diferida sin red
+Si `modo` `auto` decide `front` por `"sin-red"` y hay `backend`, el núcleo SHALL entregar el resultado local y guardar la imagen solo en memoria; al evento `online` SHALL enviarla y pasar `resultado→verificando` (SDK-46/47). La cola MUST NOT persistir (sin Cache Storage, IndexedDB ni `localStorage`) y se pone a cero al confirmar, al `destruir()` o tras `tiempoColaMs` (por omisión 10 min).
+
+#### Scenario: Vuelve la red
+- **WHEN** con `navigator.onLine` falso se completa una lectura y después se dispara `online` con `BACK` guion `ok`
+- **THEN** la secuencia termina en `["leyendo", "resultado", "verificando", "resultado"]`, el último `resultado.confiable` es `true` y hubo 1 petición
+
+#### Scenario: Destruir con cola pendiente
+- **WHEN** hay una imagen en la cola y se llama `destruir()`
+- **THEN** los píxeles de la cola son cero, no hay petición al disparar `online` y ni IndexedDB ni `localStorage` ni Cache Storage (fuera de `lector-cedula-sdk-*`) contienen datos
+
+#### Scenario: Cola vencida
+- **WHEN** con `tiempoColaMs: 1000` el reloj falso avanza 1001 ms sin red
+- **THEN** la cola está a cero y `estado.envio` es `{ estado: "fallido", codigo: "cola-vencida" }`
+
+### Requirement: SDK-59 Streaming opcional
+En modos con backend, `streaming` (por omisión `true`) SHALL elegir el protocolo: `true` envía `Accept: application/x-ndjson` y consume el stream (SDK-48); `false` envía `Accept: application/json` y espera una sola respuesta JSON igual al evento final de MOT-20, sin `estado.verificacion` intermedia salvo `{ etapa: "recibido", progreso: null }` al enviar.
+
+#### Scenario: Streaming desactivado
+- **WHEN** `streaming: false` con un backend que responde `application/json` `{"etapa":"resultado","ok":true,"documento":<PERSONA_BASE>}`
+- **THEN** la petición lleva `Accept: application/json`, la secuencia de `verificacion.etapa` es `["recibido"]` y el resultado final tiene `confiable` `true`
+
+#### Scenario: Respuesta incoherente con streaming desactivado
+- **WHEN** `streaming: false` y el backend responde `application/x-ndjson`
+- **THEN** la fase es `error` con `error.codigo` `"protocolo-invalido"`
+
+### Requirement: SDK-60 E2E de modos
+Los cuatro modos y `streaming` activado y desactivado SHALL tener E2E en Chromium y Pixel 7 sobre el ejemplo Express (SDK-51), con la cámara simulada y el backend real del ejemplo.
+
+#### Scenario: Matriz de modos
+- **WHEN** se ejecuta `e2e/sdk/modos.spec.ts` con `modo` en `front`, `back`, `front-back` y `auto` (CPU sin limitar y con `deviceMemory` 2 inyectado), cada uno con `streaming` `true` y `false` donde aplique
+- **THEN** `estado.modo` final es respectivamente `front`, `back`, `front-back`, `front-back` y `back`, y el NUIP mostrado es `9999123456`
+
+#### Scenario: Auto sin red
+- **WHEN** con `context.setOffline(true)` se lee la amarilla en `auto` y luego se restablece la red
+- **THEN** primero se muestra el resultado local con `modoMotivo` `"sin-red"` y después `confiable` `true`
