@@ -222,3 +222,5 @@ AV-28 impide que el servidor entregue a un receptor local, así que la tarea 2.5
 7. Fase 3b: Angular 21.2 en desarrollo (cumple "Angular >= 18"; Angular 22 exige TypeScript 6.0 y el repositorio usa 5.9). Los ejemplos son workspaces (`examples/*`) con versiones exactas, para que `npm run build -w examples/<x>` funcione y comparta una sola copia de cada framework. Los adaptadores aceptan `avanzado: { deps?, crear? }` (convención de la spec).
 8. El E2E `SDK-30 Cancelar/Destruir libera la cámara` usa el vídeo `sin-documento-1080p`: con la amarilla, la lectura terminaba antes de poder observar la cámara abierta (carrera de tiempos, no cambio de comportamiento).
 9. OFF-27c en el núcleo: `leerSecuencia` envía `respaldoDe: "pdf417"` en la llamada final de respaldo MRZ de una pista PDF417 y el cliente del Worker lo reenvía (prueba `packages/web/test/off-27c-respaldo.test.ts`).
+
+> Nota (2026-10-09): la decisión C (React Native con VisionCamera) queda sustituida por el cambio `sdk-nativo`.

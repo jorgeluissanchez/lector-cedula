@@ -1,0 +1,152 @@
+# Design: sdk-nativo
+
+## Contexto
+
+`sdk-integracion` entrega un núcleo headless web (`@lector-cedula/web`) con adaptadores y deja a las apps nativas el flujo alojado o la WebView. El usuario decidió (2026-10-09) un SDK nativo además de la WebView. Esta máquina es Windows sin Android Studio ni macOS: todo lo Android corre en Docker o en CI; todo lo iOS en GitHub Actions macOS.
+
+## Decisiones
+
+### 1. Dónde viven las reglas: un bundle JS único (`@lector-cedula/nucleo-js`)
+
+Opciones evaluadas para Kotlin y Swift puros:
+
+| Opción | Lugar de verdad | Coste | Riesgo |
+|---|---|---|---|
+| Port de parsers a Kotlin y Swift | Tres (TS, Kotlin, Swift) | Alto, cada cambio de formato se triplica | Divergencia silenciosa en NUIP, RH, Ñ (errores pasados) |
+| Port mínimo (solo checksums) y resto en servidor | Dos | Medio | Contradice offline total |
+| **Motor JS embebido que ejecuta el mismo bundle** | **Uno** | Bajo; +~1 MB por QuickJS en Android, 0 en iOS (JavaScriptCore del sistema) | Rendimiento del parser en intérprete: medido en NAT-14 |
+
+Se elige el motor embebido. `packages/nucleo-js` compila con esbuild (MIT, ya transitiva) a un único IIFE ES2020 sin DOM ni `fetch` que expone `globalThis.LectorCedulaNucleo = { version, procesarPdf417(bytesBase64, opciones), procesarMrz(lineas, opciones), transicion(fase, evento), crearEstado(), validarOpciones(opciones) }`, todos síncronos y con entrada/salida JSON. Contiene `packages/parsers` (incluido DIVIPOL), reglas de edad y máscara de `packages/capture/src/lectura` y `maquina.ts`/`estado.ts` de `packages/web`, importados, no copiados.
+
+- React Native: el bundle se importa como módulo JS normal y corre en Hermes.
+- Capacitor: corre en la WebView (es el mismo `@lector-cedula/web`; el plugin solo sustituye las dependencias de cámara y decodificación).
+- Kotlin puro: QuickJS embebido (motor MIT) con un único contexto por `Lector`, creado en un hilo propio.
+- Swift puro: `JavaScriptCore` del sistema, un `JSContext` por `Lector`.
+
+El núcleo nativo nunca interpreta campos: entrega `bytes` del PDF417 o las líneas MRZ crudas, y presenta lo que devuelve el bundle. El binding de QuickJS para Android se elige en la tarea 1.1 con `revisor-licencias` (candidatos con licencia MIT o Apache-2.0); si ninguno pasa, se compila QuickJS con JNI propio (pregunta abierta 2).
+
+### 2. Procesamiento de imagen en nativo, con prueba diferencial
+
+Calidad (nitidez por varianza del Laplaciano, exposición por histograma, reflejo por saturación), presencia de documento, localización de la franja MRZ, enderezado y plan de vistas (LMI-11x, LMI-12c, LMI-14x) son procesamiento de imagen, no reglas de negocio: se implementan en Kotlin/Swift por velocidad, con los mismos umbrales por omisión de CAL-08 (`docs/decisiones/2026-10-06-umbrales-calidad-captura.md`), leídos de un JSON generado desde `packages/capture/src/calidad/umbrales.ts` (un solo origen de valores). La paridad se exige con prueba diferencial contra `packages/capture` en Node sobre los mismos fixtures (NAT-03, NAT-06).
+
+### 3. Cámara
+
+- Android: CameraX `Preview` + `ImageAnalysis` (`STRATEGY_KEEP_ONLY_LATEST`, YUV_420_888) a 1920x1080 o superior; análisis de calidad sobre la luminancia reducida a 640 px de lado largo (CAL-01); decodificación sobre el recorte a resolución completa; `FocusMeteringAction` continuo centrado en la guía; `CameraControl.enableTorch`.
+- iOS: `AVCaptureSession` preset `.hd1920x1080` o `.hd4K3840x2160` si el código queda bajo 1156 px de ancho; `focusMode = .continuousAutoFocus`, `torchMode`.
+- Solo el plano Y (luminancia) se copia; el búfer se libera al terminar cada frame y las copias se ponen a cero (SDK-44).
+
+### 3b. Headless (requisito explícito del usuario, 2026-10-09; NAT-19)
+
+El SDK nativo es headless igual que el web: el integrador dibuja toda la UI. Lo único visual que expone es la vista previa de cámara sin decoración, que el integrador posiciona y dimensiona: `<VistaCamara lector={...} />` en React Native, `PreviewView` (y el composable `VistaCamara(lector, modifier)`) en Android, `AVCaptureVideoPreviewLayer` envuelta en `VistaCamaraUIView` en iOS. Ningún overlay, guía, texto, botón, color ni animación del SDK. En Capacitor la vista previa nativa se renderiza DETRÁS de la WebView transparente; el HTML/CSS del integrador queda encima. El estado se expone con el mismo modelo que la web: hook en RN y Capacitor, `StateFlow<EstadoLector>` en Kotlin, `@Published var estado` y `AsyncStream<EstadoLector>` en Swift.
+
+### 4. React Native: módulo propio, no VisionCamera
+
+Usar VisionCamera supondría una segunda implementación de cámara (y de calidad) distinta del núcleo Kotlin/Swift que usan Capacitor y las librerías puras, y rompería la paridad. `@lector-cedula/react-native` es un módulo de Nueva Arquitectura (TurboModule + Fabric view) que envuelve el mismo núcleo nativo; el hook `useLectorCedula` replica la firma de `@lector-cedula/react` y su estado lo produce la máquina del bundle JS en Hermes.
+
+### 5. Capacitor: vista nativa bajo la WebView
+
+`@lector-cedula/capacitor` registra un `DependenciasLector` para `@lector-cedula/web` cuyas cámara y lectores llaman al plugin. La vista previa nativa se dibuja detrás de la WebView transparente en el rectángulo que indica el integrador (`iniciar(elemento)` mide el `getBoundingClientRect` del elemento). La API pública es exactamente `crearLector(opciones)` de la web; `iniciar` acepta un `HTMLElement` cualquiera además de `HTMLVideoElement`. No se depende de `@capgo/camera-preview`.
+
+### 6. Sin QR, PDF417 solamente
+
+zxing-cpp se configura con `BarcodeFormat.PDF417` únicamente; el QR de la cédula digital no se decodifica (principio V). ML Kit, si el integrador lo añade, se configura con `FORMAT_PDF417` únicamente y solo como segundo intento tras zxing-cpp (skill `captura-movil`).
+
+### 7. Distribución
+
+- Android: AAR `co.lectorcedula:lector-cedula-android` (núcleo + QuickJS + bundle en `assets/`), `minSdk` 24, ABI `arm64-v8a`, `armeabi-v7a`, `x86_64`. Complemento `co.lectorcedula:lector-cedula-mlkit`.
+- iOS: paquete SwiftPM `LectorCedula` con `XCFramework` binario de Tesseract/Leptonica y zxing-cpp, iOS 15+. Complemento `LectorCedulaMLKit`.
+- Los paquetes npm (`capacitor`, `react-native`) llevan los binarios por referencia a esos artefactos; la publicación queda fuera de alcance y requiere confirmación humana.
+
+### 8. CI sin Android Studio ni macOS local
+
+- `docker/android-sdk/Dockerfile`: imagen fijada por digest con JDK 21 (Temurin, GPL+CE solo como herramienta, no se redistribuye), `cmdline-tools`, `platforms;android-35`, NDK fijado y CMake. Corre `./gradlew assemble testDebugUnitTest lint` desde Windows con `docker run`.
+- Emulador: no hay KVM anidado en Docker Desktop sobre Windows. Las pruebas instrumentadas y el humo corren en GitHub Actions `ubuntu-24.04` con KVM y `reactivecircus/android-emulator-runner` (Apache-2.0) fijado por SHA; cámara simulada con `-camera-back videofile:` o `imagefile:` desde los vídeos sintéticos de `e2e/videos`.
+- iOS: GitHub Actions `macos-15` con `xcodebuild test` en simulador. El simulador no tiene cámara: el núcleo expone `FuenteFrames` inyectable y el humo usa una fuente de prueba que lee los fotogramas del vídeo sintético (skill `estrategia-pruebas`, "Cámara en cada plataforma").
+
+## Hipótesis
+
+Este cambio no introduce hipótesis de formato nuevas. Las de los parsers siguen en `docs/decisiones/hipotesis-formato.md` y llegan en `warnings[]` porque el bundle JS es el mismo parser. Hipótesis técnicas (no de formato), a confirmar por pruebas: (H-N1) zxing-cpp nativo decodifica el 100 % de los fixtures que decodifica zxing-wasm; (H-N2) Tesseract nativo con `mrz.traineddata` produce las mismas líneas que tesseract-wasm para las mismas vistas.
+
+## Riesgos
+
+- Tamaño del AAR (Tesseract + Leptonica + zxing-cpp + QuickJS por 3 ABI): se informa y se usa el mismo criterio que la web (falla si crece > 10 % frente a la versión anterior); sin límite absoluto hasta decisión humana.
+- Rendimiento medido en emulador no representa gama media: el umbral bloqueante se mide en el dispositivo de referencia (pregunta abierta 1); en CI solo se informa.
+- Paridad de calidad WASM frente a nativo: diferencias de redondeo; tolerancia explícita de ±2 puntos de score y mismo motivo.
+- Swift en CI macOS consume minutos de pago si el repositorio es privado.
+
+## Pruebas
+
+Según el principio II y las filas "App móvil", "Captura web", "Parsers", "Evals" y "Repositorio e infraestructura" de la matriz de `.claude/skills/estrategia-pruebas/SKILL.md`. Comandos:
+
+- `KJ` = `docker run --rm -v "$(pwd -W):/work" -w /work/native/android lector-android-sdk ./gradlew testDebugUnitTest` (JUnit sobre JVM; zxing-cpp y Tesseract cargados como bibliotecas del host Linux compiladas en la misma imagen)
+- `KI` = workflow `nativo-android.yml`, job `instrumentadas`: `./gradlew connectedDebugAndroidTest` en emulador API 34 x86_64 (GitHub Actions con KVM)
+- `KH` = workflow `nativo-android.yml`, job `humo`: `npx wdio run native/android/humo/wdio.android.conf.ts` (Appium 3 + uiautomator2) con `-camera-back videofile:<y4m>`
+- `KM` = `docker run ... ./gradlew pitest` (mutación de Kotlin con PIT, Apache-2.0)
+- `KB` = `./gradlew :benchmark:connectedBenchmarkAndroidTest` (Jetpack Microbenchmark) en el dispositivo de referencia
+- `SX` = workflow `nativo-ios.yml`: `xcodebuild test -scheme LectorCedulaCore -destination 'platform=iOS Simulator,name=iPhone 16'`
+- `SH` = workflow `nativo-ios.yml`, job `humo`: `xcodebuild test -scheme HumoEjemplo` con `FuenteFramesVideo`
+- `SB` = `xcodebuild test -scheme Rendimiento` en el dispositivo de referencia iOS (`XCTMetric`)
+- `CT` = `npm run nativo:contrato` (compara la salida JSON del núcleo nativo, volcada por las pruebas `KJ`/`SX` a `scratchpad`, con `npm run leer-foto -- --sin-mascara` sobre los mismos fixtures; describe con `{ timeout: 60_000 }`)
+- `NJ` = `npx vitest run packages/nucleo-js packages/capacitor packages/react-native`
+- `NM` = `npm run test:mutacion` con `packages/nucleo-js/src/**/*.ts`, `packages/capacitor/src/**/*.ts` y `packages/react-native/src/**/*.ts` en `mutate`
+- `RN` = workflow `nativo-android.yml`, job `react-native`: build de `examples/react-native` y humo Appium
+- `CP` = workflow `nativo-android.yml`, job `capacitor`: build de `examples/ionic-nativo` y humo Appium en contexto nativo y `WEBVIEW_<pkg>`
+- `TN` = `npm run check:tamano-nativo` (bundle `nucleo-js` <= 409 600 B gzip con fixture de 409 601 B que falla; informa AAR y XCFramework y falla si crecen > 10 %)
+- `L` = `npm run check:licencias` (amplía el control a `native/android/**/build.gradle.kts` y `native/ios/Package.resolved`); `P` = `npm run check:privacidad` (amplía reglas a Kotlin y Swift); `E` = `npm run eval:quick`
+
+| Requisito | Tipo de prueba | Herramienta | Comando | Umbral |
+|---|---|---|---|---|
+| NAT-01 | Unitaria de la API de estado y transiciones | JUnit 5, XCTest | `KJ`, `SX` | 4/4 escenarios por plataforma |
+| NAT-01 | Propiedad (secuencias de eventos solo dan `TRANSICIONES`) | jqwik (EPL-2.0, solo prueba), fast-check sobre el bundle | `KJ`, `NJ` | tries >= 1000, 0 transiciones fuera de la lista |
+| NAT-01 | Mutación | PIT, Stryker | `KM`, `NM` | >= 85 % (break 80) |
+| NAT-02 | Instrumentada de cámara (resolución, enfoque, linterna, liberación) | AndroidX Test | `KI` | 4/4 escenarios |
+| NAT-02 | Unitaria con `FuenteFrames` falsa | XCTest | `SX` | 4/4 escenarios |
+| NAT-03 | Unitaria de calidad con fixtures sintéticos | JUnit, XCTest | `KJ`, `SX` | 5/5 escenarios |
+| NAT-03 | Diferencial nativo frente a `packages/capture` | Vitest + volcado JSON | `CT` | |score nativo - score TS| <= 2 y mismo `motivo` en 100 % de fixtures |
+| NAT-03 | Metamórfica (brillo ±20 %, JPEG 70, rotación ±3°) | JUnit | `KJ` | motivo estable; score de distorsión fuerte < 70 |
+| NAT-04 | Unitaria de presencia y guía | JUnit, XCTest | `KJ`, `SX` | 3/3 escenarios |
+| NAT-05 | Unitaria de decodificación PDF417 | JUnit, XCTest | `KJ`, `SX` | 4/4 escenarios |
+| NAT-05 | Metamórfica (rotación ±3°, blur sigma 1, brillo ±20 %) | JUnit | `KJ` | mismos bytes; nunca un NUIP distinto |
+| NAT-06 | Unitaria MRZ TD1/TD3 y plan de giros | JUnit, XCTest | `KJ`, `SX` | 5/5 escenarios |
+| NAT-06 | Diferencial de vistas y líneas frente a `packages/capture` | Vitest + volcado JSON | `CT` | mismas líneas en 100 % de fixtures MRZ |
+| NAT-07 | Análisis estático (sin reglas en nativo) | Vitest sobre fuentes | `NJ` | 0 apariciones de patrones prohibidos |
+| NAT-07 | Unitaria del bundle (sin DOM, síncrono, JSON) | Vitest en Node sin globals de navegador | `NJ` | 4/4 escenarios |
+| NAT-07 | Mismo bundle en QuickJS y JavaScriptCore | JUnit, XCTest | `KJ`, `SX` | igualdad estricta con Node en 100 % de fixtures |
+| NAT-08 | Contrato nativo frente a la CLI | Vitest | `CT` | igualdad estricta de `campos` y `warnings` en 100 % de fixtures; `eval:quick` sin regresión |
+| NAT-08 | Evals | `eval-campo` | `E` | sin regresión frente a `baseline.json` |
+| NAT-09 | Unitaria del plugin con puente falso | Vitest | `NJ` | 4/4 escenarios |
+| NAT-09 | Humo Capacitor en emulador | Appium + WebdriverIO | `CP` | lectura de `amarilla-1080p` y `digital-1080p` sin red |
+| NAT-10 | Unitaria del hook | Vitest + `@testing-library/react-native` (MIT) | `NJ` | 4/4 escenarios |
+| NAT-10 | Humo React Native en emulador | Appium + WebdriverIO | `RN` | lectura de `amarilla-1080p` sin red |
+| NAT-11 | Unitaria de la API pública Kotlin y Swift | JUnit, XCTest | `KJ`, `SX` | 3/3 escenarios por plataforma |
+| NAT-11 | Compatibilidad binaria de la API | binary-compatibility-validator (Apache-2.0) | `KJ` (`apiCheck`) | 0 cambios no declarados |
+| NAT-12 | Unitaria del envío (reusa escenarios SDK-38, SDK-42 a SDK-44) | JUnit, XCTest, Vitest | `KJ`, `SX`, `NJ` | 5/5 escenarios por plataforma |
+| NAT-12 | Mutación del envío | PIT, Stryker | `KM`, `NM` | >= 85 % |
+| NAT-13 | Instrumentada de privacidad (sin archivos nuevos, sin red) | AndroidX Test | `KI` | 0 archivos creados; 0 sockets abiertos sin `servidor` |
+| NAT-13 | Análisis estático del manifiesto y de fuentes | Vitest + `privacidad-check` | `NJ`, `P` | 0 hallazgos; manifiesto sin `INTERNET` |
+| NAT-13 | Unitaria de copias a cero | JUnit, XCTest | `KJ`, `SX` | 100 % de búferes a cero |
+| NAT-14 | Rendimiento en dispositivo de referencia | Jetpack Microbenchmark, XCTMetric | `KB`, `SB` | amarilla p95 < 500 ms; digital p95 < 2000 ms (20 lecturas) |
+| NAT-14 | Rendimiento informativo en emulador | AndroidX Test | `KI` | se informa p95; no bloquea |
+| NAT-15 | Análisis del árbol de dependencias | Gradle `dependencies`, `Package.resolved` | `KJ`, `NJ` | 0 artefactos `com.google.mlkit` en el núcleo |
+| NAT-15 | Unitaria del complemento ML Kit | JUnit | `KJ` | 2/2 escenarios |
+| NAT-16 | Licencias | `licencia-check` | `L` | 0 dependencias fuera de la lista |
+| NAT-16 | Avisos de terceros | Vitest | `NJ` | `THIRD_PARTY_NOTICES` lista 100 % de componentes nativos |
+| NAT-17 | Humo emulador Android | Appium + WebdriverIO | `KH` | 3/3 documentos sintéticos leídos sin red |
+| NAT-17 | Humo simulador iOS | XCTest con `FuenteFramesVideo` | `SH` | 3/3 documentos sintéticos leídos |
+| NAT-18 | Presupuesto de tamaño con fixture que falla | script + Vitest | `TN`, `NJ` | bundle <= 409 600 B gzip; artefactos <= +10 % |
+| NAT-19 | Instrumentada de jerarquía de vistas (solo la preview) | AndroidX Test (Espresso), XCTest | `KI`, `SX` | 1 vista hija en Android; 1 subcapa en iOS; 0 vistas con texto |
+| NAT-19 | Unitaria de `VistaCamara` RN (sin hijos ni estilos propios) | `@testing-library/react-native` | `NJ` | 0 hijos; `style` igual al del integrador |
+| NAT-19 | Humo Capacitor: WebView transparente encima de la preview | Appium | `CP` | WebView con fondo transparente y z-order superior; 0 vistas nativas del SDK además de la preview |
+| NAT-19 | E2E de ejemplos con UI distinta por plataforma | Appium + capturas | `KH`, `CP`, `RN`, `SH` | 4 ejemplos con `estilo-esperado.json` distinto dos a dos |
+| Todos | Secretos y vulnerabilidades | gitleaks, osv-scanner (Docker) | `npm run check` | 0 secretos; 0 High/Critical sin excepción |
+
+## Decisiones del orquestador por delegación del usuario (2026-10-09)
+
+1. Dispositivo de referencia: mientras no haya uno físico, NAT-14 se informa sin bloquear; el umbral se vuelve bloqueante cuando el usuario aporte un dispositivo de gama media (Android e iOS).
+2. Bindings de QuickJS y Tesseract: tarea previa con `revisor-licencias`; si ninguno pasa, se compilan con JNI o puente propio.
+3. Pruebas Kotlin con Kotest y su módulo de propiedades (Apache-2.0); no se usan JUnit 5 ni jqwik (EPL-2.0).
+4. CI: el repositorio es público, así que los runners macOS de GitHub Actions no cuestan minutos. Coordenadas: `io.github.jorgeluissanchez` en Maven Central (no exige dominio propio) y SwiftPM desde el repositorio. La publicación queda para el usuario.
+5. Tamaño del bundle `nucleo-js`: se mide en la fase 0 y se fija el tope en la medida más un 10 %.
+6. El antifraude nativo va en un cambio posterior.
+7. ABIs: `arm64-v8a` y `x86_64` (emulador); se excluye `armeabi-v7a`. `minSdk` 24.
+8. La decisión C de `sdk-integracion/design.md` queda sustituida por este cambio.
