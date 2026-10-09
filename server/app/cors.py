@@ -91,7 +91,9 @@ class MiddlewareCors:
             if mensaje["type"] == "http.response.start":
                 salida = MutableHeaders(scope=mensaje)
                 salida.append("Vary", "Origin")
-                if permitido and origen is not None:
+                # Recursos del motor: CORS solo en 200 (un 404 no revela nada a otro origen).
+                exito = subida is not None or mensaje["status"] == 200
+                if permitido and exito and origen is not None:
                     salida["Access-Control-Allow-Origin"] = origen
             await send(mensaje)
 

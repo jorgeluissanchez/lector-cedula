@@ -14,7 +14,7 @@ Reglas: TDD (principio II), la prueba se ve fallar antes de implementar. Datos s
 - [x] 2.2 `return_url` y `hosted_url` en el contrato OpenAPI y en `POST /v1/validations`; token alojado de propósito distinto. Cubre SDK-13. Tipos: **unitaria**, **propiedad**, **lint de contrato** (Spectral), **contrato** (Schemathesis). Verificación: `S`, `SC`.
 - [x] 2.3 Rechazo de campos no imagen en la subida (`unexpected_field`). Cubre SDK-17. Tipos: **unitaria**, **contrato**. Verificación: `S`, `SC`.
 - [x] 2.4 Ruta `/sdk/v1/{archivo}` con cabeceras inmutables y CORS por clave; declarar la ruta en el contrato y mantener la paridad AV-01. Cubre SDK-05. Tipos: **unitaria**, **contrato**. Verificación: `S`, `SC`.
-- [ ] 2.5 Prueba de contrato del paquete servidor contra `api-pruebas` en Docker: `crearSesion`, errores tipados, idempotencia y diferencial de firma de webhooks reales con un receptor local; adaptadores reciben el webhook del sandbox. Cubre SDK-19, SDK-20 (diferencial), SDK-21. Tipos: **contrato**, **integración**. Verificación: `C` (describe con `{ timeout: 60_000 }`).
+- [x] 2.5 Prueba de contrato del paquete servidor contra `api-pruebas` en Docker: `crearSesion`, errores tipados, idempotencia y diferencial de firma de webhooks reales con un receptor local; adaptadores reciben el webhook del sandbox. Cubre SDK-19, SDK-20 (diferencial), SDK-21. Tipos: **contrato**, **integración**. Verificación: `C` (describe con `{ timeout: 60_000 }`).
 
 ## Fase 3. Núcleo headless y migración de la PWA
 

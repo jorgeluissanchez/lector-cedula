@@ -20,13 +20,12 @@ TIPOS = {
     ".wasm": "application/wasm",
     ".js": "text/javascript; charset=utf-8",
     ".mjs": "text/javascript; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-    ".json": "application/json",
 }
 
 
 def _archivo(directorio: Path, nombre: str) -> Path | None:
-    if len(nombre) > 128 or not _NOMBRE.fullmatch(nombre):
+    # Solo extensiones conocidas del motor: nada de imágenes, HTML ni otros archivos del directorio.
+    if len(nombre) > 128 or not _NOMBRE.fullmatch(nombre) or Path(nombre).suffix not in TIPOS:
         return None
     ruta = directorio / nombre
     try:
@@ -45,6 +44,6 @@ def registrar(aplicacion: FastAPI) -> None:
             raise ErrorApi(404, "not-found")
         return Response(
             content=ruta.read_bytes(),
-            media_type=TIPOS.get(ruta.suffix, "application/octet-stream"),
+            media_type=TIPOS[ruta.suffix],
             headers={"Cache-Control": INMUTABLE, "Cross-Origin-Resource-Policy": "cross-origin"},
         )

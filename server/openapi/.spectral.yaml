@@ -26,11 +26,13 @@ rules:
     description: >-
       Ningún esquema de respuesta o webhook usa `format: binary`, `contentEncoding` ni
       `contentMediaType` (AV-31): el servidor nunca devuelve bytes de imagen. Única excepción:
-      `/sdk/v1/{archivo}` (sdk-integracion, SDK-05), código estático del motor del componente
+      la respuesta 200 de `/sdk/v1/{archivo}` con `application/wasm` o `text/javascript` (sdk-integracion, SDK-05), código estático del motor del componente
       (WASM y módulos) que forma parte de la imagen del servidor; nunca datos del titular.
     message: "Esquema binario en una respuesta o webhook: {{path}}"
     severity: error
     given:
+      - "$.paths[?(@property === '/sdk/v1/{archivo}')][*].responses[?(@property !== '200')].content[*]..[?(@ && (@.format === 'binary' || @.contentEncoding !== undefined || @.contentMediaType !== undefined))]"
+      - "$.paths[?(@property === '/sdk/v1/{archivo}')][*].responses[?(@property === '200')].content[?(@property !== 'application/wasm' && @property !== 'text/javascript')]..[?(@ && (@.format === 'binary' || @.contentEncoding !== undefined || @.contentMediaType !== undefined))]"
       - "$.paths[?(@property !== '/sdk/v1/{archivo}')][*].responses[*].content[*]..[?(@ && (@.format === 'binary' || @.contentEncoding !== undefined || @.contentMediaType !== undefined))]"
       - "$.webhooks[*][*].requestBody.content[*]..[?(@ && (@.format === 'binary' || @.contentEncoding !== undefined || @.contentMediaType !== undefined))]"
     then:

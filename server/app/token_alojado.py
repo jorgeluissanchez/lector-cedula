@@ -1,7 +1,8 @@
 """Token de la sesión alojada `hosted_url` (sdk-integracion, SDK-13, decisión 8).
 
-`token = base64url(vence_be64 || id_16_bytes || HMAC-SHA256(SECRETO_SUBIDA, "alojada." + id + "." + vence))`
-sin relleno: 56 bytes, 75 caracteres. A diferencia del token de subida, identifica la validación (la
+`token = base64url(vence_be64 || id_16_bytes || HMAC-SHA256(K_alojada, "alojada." + id + "." + vence))`
+sin relleno, con `K_alojada` derivada de `SECRETO_SUBIDA` por HKDF (`app.secretos`): 56 bytes,
+75 caracteres. A diferencia del token de subida, identifica la validación (la
 URL `/v/{token}` no lleva el `id`) y su mensaje firmado lleva el propósito `alojada`, así que un token
 no sirve en el lugar del otro. Vence con `upload.expires_at`. La decodificación es canónica y la firma
 se compara en tiempo constante; ninguna entrada lanza.
@@ -14,6 +15,8 @@ import hmac
 import struct
 from typing import Literal
 
+from app.secretos import subclave
+
 _LONGITUD = 75
 _ALFABETO = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 _PREFIJO_ID = "val_"
@@ -22,7 +25,8 @@ Estado = Literal["valido", "invalido", "vencido"]
 
 
 def _firma(secreto: bytes, id_validacion: str, vence_en: int) -> bytes:
-    return hmac.new(secreto, f"alojada.{id_validacion}.{vence_en}".encode(), hashlib.sha256).digest()
+    clave = subclave(secreto, "alojada")
+    return hmac.new(clave, f"alojada.{id_validacion}.{vence_en}".encode(), hashlib.sha256).digest()
 
 
 def emitir_token_alojado(secreto: bytes, id_validacion: str, vence_en: int) -> str:

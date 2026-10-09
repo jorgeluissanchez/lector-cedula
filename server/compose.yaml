@@ -87,6 +87,15 @@ services:
       URL_PUBLICA: https://api.lector-cedula.example
       LIMITE_PETICIONES_POR_MINUTO: "100000"
       LECTOR_LIVE: node
+      # SDK-40: excepción a AV-28 SOLO para pruebas. Receptores locales de la prueba de contrato del paquete
+      # servidor (verificación directa, Express, Nest, Next y Fastify). Nunca en compose.dokploy.yaml.
+      ENTORNO: pruebas
+      WEBHOOK_DESTINOS_PRUEBA: >-
+        http://host.docker.internal:8091/webhook,http://host.docker.internal:8092/webhook,
+        http://host.docker.internal:8093/webhook,http://host.docker.internal:8094/webhook,
+        http://host.docker.internal:8095/webhook
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test:
         - CMD

@@ -1,6 +1,7 @@
 """Token de subida firmado (decisión 4, AV-08).
 
-`token = base64url(exp_be64 || HMAC-SHA256(SECRETO_SUBIDA, id + "." + exp))` sin relleno: 40 bytes,
+`token = base64url(exp_be64 || HMAC-SHA256(K_subida, id + "." + exp))`, con `K_subida` derivada de
+`SECRETO_SUBIDA` por HKDF (`app.secretos`), sin relleno: 40 bytes,
 54 caracteres. Se verifica en tiempo constante. La decodificación es canónica: un token cuyo
 reencodado no coincide carácter a carácter (por ejemplo, con otros bits de relleno en el último
 carácter) se rechaza, de modo que cualquier alteración de un carácter da `invalido`.
@@ -13,6 +14,8 @@ import hmac
 import struct
 from typing import Literal
 
+from app.secretos import subclave
+
 _LONGITUD = 54
 _ALFABETO = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
 
@@ -20,7 +23,8 @@ Verificacion = Literal["valido", "invalido", "vencido"]
 
 
 def _firma(secreto: bytes, id_validacion: str, vence_en: int) -> bytes:
-    return hmac.new(secreto, f"{id_validacion}.{vence_en}".encode(), hashlib.sha256).digest()
+    clave = subclave(secreto, "subida")
+    return hmac.new(clave, f"{id_validacion}.{vence_en}".encode(), hashlib.sha256).digest()
 
 
 def emitir_token(secreto: bytes, id_validacion: str, vence_en: int) -> str:

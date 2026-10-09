@@ -107,7 +107,11 @@ def url_de_webhook_valida(url: str) -> bool:
 
 
 def reglas_de_creacion(
-    cuerpo: CrearValidacion, sandbox: bool, ahora: float, retornos: tuple[str, ...] = ()
+    cuerpo: CrearValidacion,
+    sandbox: bool,
+    ahora: float,
+    retornos: tuple[str, ...] = (),
+    destinos_prueba: tuple[str, ...] = (),
 ) -> tuple[list[dict[str, str]], datetime | None]:
     """Errores `{pointer, code}` de las reglas de valor y la `otorgada_en` ya convertida."""
     errores: list[dict[str, str]] = []
@@ -126,7 +130,8 @@ def reglas_de_creacion(
     if "webhook_url" in presentes:
         if cuerpo.webhook_url is None:
             errores.append({"pointer": "/webhook_url", "code": "invalid_type"})
-        elif not url_de_webhook_valida(cuerpo.webhook_url):
+        elif cuerpo.webhook_url not in destinos_prueba and not url_de_webhook_valida(cuerpo.webhook_url):
+            # SDK-40: solo las URL exactas de WEBHOOK_DESTINOS_PRUEBA (ENTORNO=pruebas) se saltan AV-28.
             errores.append({"pointer": "/webhook_url", "code": "invalid_webhook_url"})
     if "sandbox_scenario" in presentes:
         escenario = cuerpo.sandbox_scenario

@@ -52,6 +52,12 @@ class Config:
     # MS-19: `node` activa el lector de packages/capture en modo live; sin valor, live responde 503.
     lector_live: str | None = None
     directorio_sdk: Path = DIRECTORIO_SDK
+    # SDK-40: solo con `entorno == "pruebas"`; nunca en el despliegue.
+    entorno: str | None = None
+    webhook_destinos_prueba: tuple[str, ...] = ()
+
+    def es_destino_prueba(self, url: str | None) -> bool:
+        return self.entorno == "pruebas" and url is not None and url in self.webhook_destinos_prueba
 
     @classmethod
     def desde_entorno(cls, entorno: Mapping[str, str]) -> "Config":
@@ -76,7 +82,23 @@ class Config:
                 raise ValueError("LECTOR_LIVE solo admite el valor node")
             valores["lector_live"] = "node"
         if "DIRECTORIO_SDK" in entorno:
-            valores["directorio_sdk"] = Path(entorno["DIRECTORIO_SDK"])
+            directorio = Path(entorno["DIRECTORIO_SDK"])
+            if not directorio.is_absolute() or ".." in directorio.parts:
+                raise ValueError("DIRECTORIO_SDK debe ser una ruta absoluta sin ..")
+            valores["directorio_sdk"] = directorio
+        if "ENTORNO" in entorno:
+            valores["entorno"] = entorno["ENTORNO"]
+        if "WEBHOOK_DESTINOS_PRUEBA" in entorno:
+            # SDK-40: excepción solo para pruebas. Fuera de ENTORNO=pruebas, su presencia detiene el arranque.
+            if valores.get("entorno") != "pruebas":
+                raise ValueError("WEBHOOK_DESTINOS_PRUEBA solo se admite con ENTORNO=pruebas")
+            destinos = tuple(d.strip() for d in entorno["WEBHOOK_DESTINOS_PRUEBA"].split(",") if d.strip())
+            if not destinos or not all(destino_prueba_valido(d) for d in destinos):
+                raise ValueError(
+                    "WEBHOOK_DESTINOS_PRUEBA: lista de URL http o https exactas, "
+                    "sin comodines ni credenciales"
+                )
+            valores["webhook_destinos_prueba"] = destinos
         return cls(**valores)
 
     def con_cambios(self, **cambios: Any) -> "Config":
@@ -119,6 +141,17 @@ def retorno_valido(retorno: object) -> bool:
     if partes.scheme == "https":
         return origen_valido(f"https://{partes.netloc}")
     return partes.scheme not in _ESQUEMAS_PROHIBIDOS
+
+
+def destino_prueba_valido(url: str) -> bool:
+    if "*" in url or "#" in url or len(url) > LONGITUD_MAXIMA_URL or any(c <= " " for c in url):
+        return False
+    try:
+        partes = urlsplit(url)
+        partes.port  # noqa: B018 - valida el puerto
+    except ValueError:
+        return False
+    return partes.scheme in ("http", "https") and bool(partes.hostname) and "@" not in partes.netloc
 
 
 def _lista_de_textos(valor: object, valido: Any) -> tuple[str, ...] | None:

@@ -178,7 +178,9 @@ class ServicioWebhooks:
             ips = await self.puertos.resolvedor.resolver(host)
         except OSError:
             return "failed"
-        if not ips or any(ip_bloqueada(ip) for ip in ips):
+        # SDK-40: un destino exacto de WEBHOOK_DESTINOS_PRUEBA (solo ENTORNO=pruebas) puede ser interno.
+        excepcion = self.config.es_destino_prueba(entrega.url)
+        if not ips or (not excepcion and any(ip_bloqueada(ip) for ip in ips)):
             return "blocked"
         t = int(self.puertos.reloj.ahora())
         cabeceras = {

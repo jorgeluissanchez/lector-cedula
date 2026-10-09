@@ -474,10 +474,6 @@ paths:
             text/javascript:
               schema:
                 type: string
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
         '404':
           $ref: '#/components/responses/NoEncontrado'
         '500':

@@ -38,10 +38,13 @@ class TransporteHttpx:
     ) -> int:
         partes = urlsplit(url)
         host = partes.hostname or ""
-        puerto = partes.port or 443
+        # `http` solo llega aquí para un destino de WEBHOOK_DESTINOS_PRUEBA (SDK-40); AV-28 exige `https`.
+        esquema = "http" if partes.scheme == "http" else "https"
+        defecto = 80 if esquema == "http" else 443
+        puerto = partes.port or defecto
         ip_url = f"[{ip}]" if ":" in ip else ip
-        destino = urlunsplit(("https", f"{ip_url}:{puerto}", partes.path or "/", partes.query, ""))
-        anfitrion = host if puerto == 443 else f"{host}:{puerto}"
+        destino = urlunsplit((esquema, f"{ip_url}:{puerto}", partes.path or "/", partes.query, ""))
+        anfitrion = host if puerto == defecto else f"{host}:{puerto}"
         try:
             async with httpx.AsyncClient(
                 follow_redirects=False, timeout=timeout_s, trust_env=False

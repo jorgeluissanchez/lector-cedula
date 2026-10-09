@@ -64,3 +64,26 @@ describe("DP-10 Guía de despliegue", () => {
     for (const s of ["docs/legal/", "ORIGENES_CORS", "modo avión", "mode=max", "Analytics", "Speed Insights"]) expect(g, s).toContain(s);
   });
 });
+
+describe("SDK-40 Destinos de webhook solo para pruebas", () => {
+  it("SDK-40 Nunca en el despliegue", () => {
+    for (const archivo of [["server", "compose.dokploy.yaml"], ["server", "dokploy.env.example"]]) {
+      const texto = leer(...archivo);
+      expect(texto, archivo.join("/")).not.toContain("WEBHOOK_DESTINOS_PRUEBA");
+      expect(texto, archivo.join("/")).not.toMatch(/ENTORNO\s*[:=]\s*["']?pruebas/u);
+    }
+  });
+
+  it("SDK-40 Solo api-pruebas la define, junto a ENTORNO=pruebas", () => {
+    const c = yaml.load(leer("server", "compose.yaml"));
+    for (const [nombre, servicio] of Object.entries(c.services)) {
+      const env = servicio.environment ?? {};
+      if (nombre === "api-pruebas") {
+        expect(env.ENTORNO).toBe("pruebas");
+        expect(env.WEBHOOK_DESTINOS_PRUEBA).toMatch(/^http:\/\/host\.docker\.internal:\d+\//u);
+      } else {
+        expect(env.WEBHOOK_DESTINOS_PRUEBA, nombre).toBeUndefined();
+      }
+    }
+  });
+});

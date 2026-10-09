@@ -110,6 +110,10 @@ El servidor SHALL servir los recursos del motor en `GET /sdk/v1/<archivo-con-has
 - **WHEN** se pide el mismo recurso con `Origin: https://intruso.example`
 - **THEN** la respuesta no contiene la cabecera `Access-Control-Allow-Origin`
 
+#### Scenario: Solo recursos del motor y CORS solo en 200
+- **WHEN** existe `notas-1a2b.txt` en el directorio y se pide, y se pide `no-existe.wasm` con `Origin: https://app-a.example`
+- **THEN** ambas respuestas son 404 `PROBLEM(not-found)` sin `Access-Control-Allow-Origin` (solo se sirven `.wasm`, `.js` y `.mjs`; `DIRECTORIO_SDK` debe ser una ruta absoluta o el servidor no arranca)
+
 ### Requirement: SDK-06 Caché offline del motor
 Tras verificar los recursos (SDK-39), el núcleo SHALL guardarlos en la Cache Storage `lector-cedula-sdk-<version>`, SHALL poder leer sin red, MUST borrar las cachés de otras versiones y MUST NOT cachear imágenes ni resultados. Para recargar la página sin red, el paquete SHALL ofrecer `precacheLector(recursos)` en `@lector-cedula/web/sw` para el service worker del integrador.
 
@@ -218,6 +222,10 @@ El repositorio SHALL incluir ejemplos web en `examples/html` (componente opciona
 - **WHEN** se hace `CREAR` con `return_url` `"https://app-a.example/volver"` y `KT`
 - **THEN** la respuesta es 201, `hosted_url` cumple `^https://api\.lector-cedula\.example/v/[A-Za-z0-9_-]{43,}$` y `return_url` es `"https://app-a.example/volver"`
 
+#### Scenario: Subclaves por propósito
+- **WHEN** se emiten el token de `upload.url` y el de `hosted_url` para la misma validación
+- **THEN** cada uno se firma con una subclave HKDF-SHA256 distinta derivada de `SECRETO_SUBIDA` (información `lector-cedula/subida` y `lector-cedula/alojada`) y el formato del token de subida (54 caracteres) no cambia
+
 #### Scenario: Retorno de otra clave
 - **WHEN** se hace `CREAR` con `return_url` `"https://app-b.example/fin"` y `KT`
 - **THEN** la respuesta es 422 `PROBLEM(invalid-request)` con `errors` `[{"pointer": "/return_url", "code": "return_url_not_allowed"}]`
@@ -252,6 +260,18 @@ El repositorio SHALL incluir ejemplos web en `examples/html` (componente opciona
 #### Scenario: Token vencido
 - **WHEN** el reloj del servidor avanza a `2026-10-06T15:35:01Z` y se abre `hosted_url`
 - **THEN** se muestra `data-pantalla="sesion-invalida"`
+
+#### Scenario: La redirección solo lleva identificador y estado
+- **WHEN** termina la lectura (o se cancela) en `hosted_url` con `return_url` `"https://app-a.example/volver"`
+- **THEN** la URL de destino tiene exactamente los parámetros `validation_id` y `estado`, sin fragmento, y no contiene el token, campos del documento ni `9999123456`
+
+#### Scenario: Aviso de autorización en la página alojada
+- **WHEN** se abre `hosted_url` de una validación de cédula y luego una de tarjeta de identidad
+- **THEN** antes de pedir la cámara se muestra `[data-aviso="autorizacion"]` con el texto de `autorizacion.version_texto`, y para la tarjeta de identidad además `[data-aviso="autorizacion-reforzada"]` (menor de edad)
+
+#### Scenario: Cabeceras de la página alojada
+- **WHEN** se pide `GET /v/{token}` con un token válido y con uno inválido
+- **THEN** ambas respuestas llevan `Cache-Control: no-store` y `Referrer-Policy: no-referrer`
 
 #### Scenario: Retorno a deeplink
 - **WHEN** la sesión tiene `return_url` `"com.ejemplo.appa://lector/retorno"` y termina la lectura
@@ -616,3 +636,21 @@ Con `servidor` y `sesion`, el núcleo SHALL entregar primero el resultado local 
 - **WHEN** se recalcula el SHA-256 de cada archivo de `packages/web/dist/assets` tras compilar
 - **THEN** coincide con `manifest.json` para el 100 % de los archivos y no hay archivos sin entrada
 
+### Requirement: SDK-40 Destinos de webhook solo para pruebas
+Con `ENTORNO=pruebas`, el servidor SHALL aceptar y entregar una `webhook_url` idéntica a una URL de `WEBHOOK_DESTINOS_PRUEBA` (lista exacta `http`/`https`) aunque sea `http` o interna. Fuera de ese entorno la variable MUST detener el arranque; toda otra `webhook_url` MUST seguir AV-28, y el despliegue MUST NOT definirla.
+
+#### Scenario: Aceptada en pruebas
+- **WHEN** el servidor arranca con `ENTORNO=pruebas` y `WEBHOOK_DESTINOS_PRUEBA=http://host.docker.internal:8091/webhook`, se crea una validación sandbox con esa `webhook_url` y se sube `IMG_JPEG`
+- **THEN** la creación es 201 y el receptor recibe un `POST` con `X-Lector-Signature` que `verificarWebhook` acepta con el secreto de la clave
+
+#### Scenario: Rechazada en producción
+- **WHEN** el servidor arranca con `WEBHOOK_DESTINOS_PRUEBA` definida y `ENTORNO` ausente o distinto de `pruebas`
+- **THEN** el proceso termina con código distinto de 0 y el mensaje contiene `WEBHOOK_DESTINOS_PRUEBA`
+
+#### Scenario: Destino no listado sigue rechazado por AV-28
+- **WHEN** con `ENTORNO=pruebas` y la lista anterior se crea una validación con `webhook_url` `http://host.docker.internal:8092/otro`
+- **THEN** la respuesta es 422 con `errors` `[{"pointer": "/webhook_url", "code": "invalid_webhook_url"}]`, y una `webhook_url` `https` no listada que resuelve a una IP interna sigue con el intento `blocked`
+
+#### Scenario: Nunca en el despliegue
+- **WHEN** se leen `server/compose.dokploy.yaml` y `server/dokploy.env.example`
+- **THEN** ninguno contiene `WEBHOOK_DESTINOS_PRUEBA` ni `ENTORNO=pruebas`

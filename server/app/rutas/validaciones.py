@@ -61,15 +61,23 @@ async def leer_cuerpo_limitado(request: Request, limite: int) -> bytes:
     return bytes(cuerpo)
 
 
-def validar_creacion(cuerpo: bytes, cliente: Cliente, ahora: float) -> tuple[CrearValidacion, object]:
+def validar_creacion(
+    cuerpo: bytes, cliente: Cliente, ahora: float, destinos_prueba: tuple[str, ...] = ()
+) -> tuple[CrearValidacion, object]:
     try:
         modelo = CrearValidacion.model_validate_json(cuerpo)
     except ValidationError as error:
         raise ErrorApi(422, "invalid-request", traducir_errores(error.errors())) from None
-    errores, otorgada = reglas_de_creacion(modelo, cliente.sandbox, ahora, cliente.retornos)
+    errores, otorgada = reglas_de_creacion(modelo, cliente.sandbox, ahora, cliente.retornos, destinos_prueba)
     if errores:
         raise ErrorApi(422, "invalid-request", errores)
     return modelo, otorgada
+
+
+def _destinos_prueba(request: Request) -> tuple[str, ...]:
+    """SDK-40: destinos de webhook admitidos solo con ENTORNO=pruebas."""
+    config = request.app.state.config
+    return config.webhook_destinos_prueba if config.entorno == "pruebas" else ()
 
 
 def respuesta_validacion(request: Request, validacion: Validacion, estado: int = 200) -> Response:
@@ -121,7 +129,9 @@ def registrar(aplicacion: FastAPI) -> None:
         try:
             if servicio.puertos.retener_creacion is not None:
                 await servicio.puertos.retener_creacion()
-            modelo, otorgada = validar_creacion(cuerpo, cliente, servicio.puertos.reloj.ahora())
+            modelo, otorgada = validar_creacion(
+                cuerpo, cliente, servicio.puertos.reloj.ahora(), _destinos_prueba(request)
+            )
             validacion = servicio.crear(modelo, cliente.hash_clave, cliente.sandbox, otorgada)  # type: ignore[arg-type]
             request.state.validation_id = validacion.id
             contenido = serializar(representar(validacion, request.app.state.config))

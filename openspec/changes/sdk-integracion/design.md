@@ -41,7 +41,7 @@ Según el principio II y las filas "Captura web", "API servidor" y "Repositorio 
 - `A` = `npx ng test --project lector-cedula-angular --watch=false` (Angular TestBed, sin zone.js)
 - `B` = `npm run test:browser -- packages/web packages/elementos` (Vitest browser mode, Chromium: Worker, WASM, Cache Storage)
 - `E(x)` = `npx playwright test e2e/sdk/<x>.spec.ts` (proyectos `sdk-chromium` y `sdk-pixel7`, cámara simulada con los `.y4m` de `pwa-lectura-offline`)
-- `C` = `docker compose -f server/compose.yaml up -d --wait api-pruebas && npx vitest run packages/servidor/test/contrato` (contrato del paquete contra la API real)
+- `C` = `docker compose -f server/compose.yaml up -d --build --wait api-pruebas && LECTOR_CONTRATO_OBLIGATORIO=1 npx vitest run packages/servidor/test/contrato` (contrato del paquete contra la API real; sin `LECTOR_CONTRATO_OBLIGATORIO=1` la suite se omite si la API no responde, para que `npm test` no dependa de Docker; con ella, falla)
 - `S` = `docker compose -f server/compose.yaml run --rm pruebas` (pytest + Hypothesis del servidor)
 - `SC` = Schemathesis `--checks all` en Docker contra `http://host.docker.internal:8000/openapi.json`
 - `Z` = OWASP ZAP API scan en Docker contra `api-pruebas`
@@ -131,6 +131,8 @@ Según el principio II y las filas "Captura web", "API servidor" y "Repositorio 
 | SDK-39 | E2E de recurso alterado | Playwright | `E(offline)` | 1/1 escenario |
 | SDK-39 | Coherencia del manifiesto tras compilar | Vitest | `U` | 100 % de archivos con hash correcto |
 | SDK-39 | Mutación de `integridad.ts` | Stryker | `M` | >= 85 % |
+| SDK-40 | Unitaria (aceptada en pruebas, rechazo al arrancar, destino no listado, despliegue sin la variable) | pytest, Vitest | `S`, `U` | 4/4 escenarios |
+| SDK-40 | Integración (entrega real del sandbox a los 4 adaptadores y verificación diferencial) | Vitest + `api-pruebas` | `C` | 100 % de webhooks verifican |
 | Todos | Secretos y vulnerabilidades | gitleaks, osv-scanner (Docker) | `npm run check` + escáneres | 0 secretos; 0 High/Critical |
 
 Evals: este cambio no toca parsers; `npm run eval:quick` MUST seguir sin regresión.
@@ -183,6 +185,17 @@ Arquitectura del núcleo:
 - `DependenciasLector` nativas: cámara con react-native-vision-camera (MIT) y frame processors (worklets) que calculan la calidad y decodifican PDF417 (zxing nativo o ML Kit, a evaluar con `licencia-check`) y MRZ con OCR nativo; parsers TypeScript de `packages/parsers` en JS.
 - Mismo contrato de estado, por lo que la UI del integrador en RN sigue el mismo patrón que en web.
 - Riesgos: licencias de los decodificadores nativos, paridad de umbrales de calidad entre WASM y nativo (requiere prueba diferencial), tamaño del binario. Hasta entonces, RN usa el flujo alojado en WebView (sin cambios).
+
+## Hallazgos de revisor-privacidad aplicados (2026-10-08)
+
+- M1: `/sdk/v1/` solo sirve `.wasm`, `.js` y `.mjs`; `DIRECTORIO_SDK` debe ser absoluta y sin `..`.
+- M2: la excepción de Spectral a `sin-binario-en-respuestas` cubre solo la respuesta 200 de `/sdk/v1/{archivo}` con `application/wasm` o `text/javascript`.
+- M3: los tokens de subida y alojado se firman con subclaves HKDF-SHA256 (RFC 5869) de `SECRETO_SUBIDA` por propósito (`app/secretos.py`). El formato no cambia; los tokens vigentes antes del despliegue dejan de valer (el almacén es en memoria y se vacía al reiniciar, así que no hay tokens que conservar).
+- M4: el CORS de `/sdk/v1/` solo se anuncia en respuestas 200.
+
+## Decisión del orquestador: destinos de webhook solo para pruebas (2026-10-08)
+
+AV-28 impide que el servidor entregue a un receptor local, así que la tarea 2.5 no podía comprobar webhooks reales. Se añade una excepción **solo para pruebas** (SDK-40): `WEBHOOK_DESTINOS_PRUEBA`, lista exacta de URL `http`/`https`, aceptada únicamente con `ENTORNO=pruebas`; en cualquier otro entorno su presencia detiene el arranque. Solo las URL listadas se saltan la comprobación de red interna y de `https`; el resto sigue AV-28. La define solo `api-pruebas` en `server/compose.yaml`; `compose.dokploy.yaml` nunca (prueba en `tools/test/despliegue-dokploy.test.mjs`). Revisor: `revisor-privacidad`.
 
 ## Decisiones del orquestador por delegación del usuario (2026-10-08, segunda ronda)
 
