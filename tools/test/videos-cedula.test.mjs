@@ -37,9 +37,11 @@ describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () =
       // OFF-25: escenas suaves como la cámara de un celular real.
       ["amarilla-suave-1080p", "amarilla", 1920, 1080],
       ["digital-suave-1080p", "digital", 1920, 1080],
+      // otros-documentos (OD-21): pasaporte colombiano sintético (TD3).
+      ["pasaporte-col-1080p", "pasaporte", 1920, 1080],
     ]);
-    expect(ESCENAS_CEDULA.at(-2).filtro).toContain("gblur=sigma=2.5");
-    expect(ESCENAS_CEDULA.at(-1).filtro).toContain("gblur=sigma=5");
+    expect(ESCENAS_CEDULA.find((e) => e.nombre === "amarilla-suave-1080p").filtro).toContain("gblur=sigma=2.5");
+    expect(ESCENAS_CEDULA.find((e) => e.nombre === "digital-suave-1080p").filtro).toContain("gblur=sigma=5");
     expect(ESCENAS.map((e) => e.nombre)).not.toContain("nitida-1080p");
     expect(ESCENAS_CEDULA[2].filtro).toContain("transpose=1");
     expect(ESCENAS_CEDULA[3].filtro).toContain("[0:v]hflip,vflip,scale=1541:972");
