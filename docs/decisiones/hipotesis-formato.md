@@ -133,3 +133,16 @@ Pendientes. Se exponen en `warnings` de la `SenalRiesgo` mientras sigan pendient
 |---|---|---|---|---|
 | H-FRA-1 | El holograma de la cédula amarilla ocupa una región fija del anverso y su tono o brillo varía entre frames al mover la tarjeta; una fotocopia no varía | Conocimiento general de elementos ópticamente variables | pendiente | Sin medición sobre espécimen ni cédula real |
 | H-FRA-3 | La cédula digital en policarbonato conserva el radio de esquina ISO/IEC 7810 ID-1 (3,18 mm) | ISO/IEC 7810 | pendiente | Sin medición sobre cédula real |
+
+## Contraseña de la Registraduría (investigación 2026-10-09)
+
+Pendientes. Evidencia en docs/investigacion/06-contrasena-registraduria.md.
+
+| ID | Hipótesis | Fuente | Estado | Evidencia |
+|---|---|---|---|---|
+| CT-01 | Ningún tipo de contraseña lleva PDF417, código 1D ni Datamatrix; solo la EIS y la verde web llevan QR | Circular Única v8, 15.5 | confirmada parcialmente | La norma solo menciona QR; sin espécimen que lo confirme visualmente |
+| CT-02 | El QR de la contraseña contiene solo una URL de `registraduria.gov.co` que abre la consulta de estado, sin datos personales en claro | Circular Única v8, 15.5.3; prensa | pendiente | La norma dice que "carga el estado del trámite en la página Web"; contenido real no publicado |
+| CT-03 | El QR no lleva firma digital verificable fuera de línea | Ausencia de especificación publicada | pendiente | Ninguna fuente describe firma ni cifrado |
+| CT-04 | La contraseña verde web definitiva imprime el número de preparación; la temporal no | Circular Única v8, 15.5.3 | confirmada parcialmente | Afirmado por la norma; posición y formato del número desconocidos |
+| CT-05 | La contraseña EIS mide 8 x 16 cm y la blanca 8,7 x 7,8 cm | Circular Única v8, 15.5.1 y 15.5.2 | confirmada parcialmente | Medidas en la norma; sin medición sobre espécimen |
+| CT-06 | Los "datos del titular" incluyen NUIP, nombres y apellidos, tipo de trámite y fecha del trámite | Inferencia | pendiente | La norma no enumera los campos |
