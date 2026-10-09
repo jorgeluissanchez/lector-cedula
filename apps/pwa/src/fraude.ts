@@ -133,3 +133,11 @@ export function datosParaFraude(lectura: { tipo: string; tipoDocumento?: string;
 export function framesParaFraude<F extends FrameFraude & { readonly origen: string }>(frames: readonly F[], ancho: number, alto: number): F[] {
   return frames.filter((f) => f.origen === "video" && f.ancho === ancho && f.alto === alto).slice(0, MAX_FRAMES);
 }
+
+/**
+ * FRA-21: la señal está apagada por defecto mientras los detectores no estén calibrados con el reverso; se activa con
+ * la variable de compilación `VITE_FRAUDE=true` o con `?debug=1`.
+ */
+export function fraudeActivo(variable: string | undefined, busqueda: string): boolean {
+  return variable === "true" || new URLSearchParams(busqueda).get("debug") === "1";
+}

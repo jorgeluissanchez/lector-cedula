@@ -7,7 +7,7 @@ import { ESTADO_INICIAL, reducir, type CodigoError } from "./estado";
 import { iniciarIndicador, TEXTOS_OFFLINE, type EstadoOffline } from "./precache/indicador";
 import { fragmentos, RUTA_POLITICA, RUTA_TERMINOS, TEXTO_ALCANCE, type Bloque } from "./legal";
 import { LICENCIA_CC_BY_SA, RUTA_AVISOS, SECCIONES_LICENCIAS, TEXTO_ENLACE_FUENTES } from "./licencias";
-import { MOTIVOS_RIESGO } from "./fraude";
+import { fraudeActivo, MOTIVOS_RIESGO } from "./fraude";
 import { camposVisibles } from "./resultado";
 import { crearSesion } from "./sesion";
 
@@ -97,7 +97,11 @@ export function App() {
   const [diagnostico, setDiagnostico] = useState<Diagnostico | null>(null);
   const depurar = useMemo(() => diagnosticoActivo(location.search), []);
   const sesion = useMemo(
-    () => crearSesion({ evento: despachar, feedback: setFeedback, ...(depurar ? { diagnostico: setDiagnostico } : {}) }),
+    () =>
+      crearSesion(
+        { evento: despachar, feedback: setFeedback, ...(depurar ? { diagnostico: setDiagnostico } : {}) },
+        { fraude: fraudeActivo(import.meta.env.VITE_FRAUDE as string | undefined, location.search) },
+      ),
     [depurar],
   );
   const [offline, setOffline] = useState<EstadoOffline>("pendiente");
@@ -247,8 +251,8 @@ export function App() {
             class="resultado"
             aria-live="polite"
             aria-labelledby="titulo-resultado"
-            data-riesgo-nivel={estado.riesgo?.nivel ?? "no-disponible"}
-            data-riesgo-motivos={(estado.riesgo?.motivos ?? []).map((m) => m.codigo).join(" ")}
+            data-riesgo-nivel={"riesgo" in estado ? (estado.riesgo?.nivel ?? "no-disponible") : undefined}
+            data-riesgo-motivos={"riesgo" in estado ? (estado.riesgo?.motivos ?? []).map((m) => m.codigo).join(" ") : undefined}
           >
             <h2 id="titulo-resultado">{estado.lectura.tipo === "pdf417" ? "Cédula amarilla" : "Cédula digital"}</h2>
             <p class="descargo">{LEGAL.descargo}</p>
@@ -270,6 +274,7 @@ export function App() {
                 </div>
               ))}
             </dl>
+            {"riesgo" in estado && (
             <section class="riesgo" aria-labelledby="titulo-riesgo" data-riesgo={estado.riesgo?.nivel ?? "no-disponible"}>
               <h3 id="titulo-riesgo">{TEXTOS_RIESGO[estado.riesgo?.nivel ?? "no-disponible"]}</h3>
               {(estado.riesgo?.motivos.length ?? 0) > 0 && (
@@ -283,6 +288,7 @@ export function App() {
               )}
               <p class="nota-riesgo">{TEXTO_AUTENTICIDAD}</p>
             </section>
+            )}
           </section>
         )}
         {depurar && diagnostico !== null && (p === "leyendo" || p === "resultado" || p === "error-lectura") && (

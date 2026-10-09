@@ -105,3 +105,15 @@ describe("FRA-17 estado de la pantalla resultado", () => {
     expect(reducir(leyendo, { tipo: "leida", resultado: ok, riesgo: null })).toMatchObject({ riesgo: null });
   });
 });
+
+describe("FRA-21 señal apagada por defecto", () => {
+  it("solo con VITE_FRAUDE=true o ?debug=1", async () => {
+    const { fraudeActivo } = await import("../src/fraude");
+    expect(fraudeActivo(undefined, "")).toBe(false);
+    expect(fraudeActivo("false", "?x=1")).toBe(false);
+    expect(fraudeActivo("1", "")).toBe(false);
+    expect(fraudeActivo("true", "")).toBe(true);
+    expect(fraudeActivo(undefined, "?debug=1")).toBe(true);
+    expect(fraudeActivo(undefined, "?debug=0")).toBe(false);
+  });
+});

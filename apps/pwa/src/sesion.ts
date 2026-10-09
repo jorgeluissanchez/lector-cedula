@@ -91,7 +91,7 @@ function entornoFoto(): EntornoFoto {
   return { ...(ImageCapture === undefined ? {} : { ImageCapture }), aPixeles: fotoAPixeles };
 }
 
-export function crearSesion(obs: Observador): Sesion {
+export function crearSesion(obs: Observador, opciones: { readonly fraude?: boolean } = {}): Sesion {
   let cliente: ClienteCalidad | null = null;
   let lector: ClienteLector | null = null;
   // deteccion-fraude (FRA-17): Worker propio, creado en la primera señal y reutilizado.
@@ -164,7 +164,7 @@ export function crearSesion(obs: Observador): Sesion {
     const p = pista;
     // FRA-17 y FRA-03: copias de los frames de vídeo para la señal (la secuencia pone a cero los originales); se ponen
     // a cero en cuanto se envían al Worker de fraude o si la lectura no termina en resultado.
-    const copiasFraude = framesParaFraude(frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }], c.ancho, c.alto).map((f) => ({
+    const copiasFraude = opciones.fraude !== true ? [] : framesParaFraude(frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }], c.ancho, c.alto).map((f) => ({
       ancho: f.ancho,
       alto: f.alto,
       pixeles: new Uint8ClampedArray(f.pixeles),
@@ -198,6 +198,11 @@ export function crearSesion(obs: Observador): Sesion {
     reintentos.reiniciar();
     if (!r.ok) {
       limpiarCopias();
+      obs.evento({ tipo: "leida", resultado: r });
+      return;
+    }
+    // FRA-21: con la señal apagada no se crea el Worker de fraude ni el evento lleva riesgo.
+    if (opciones.fraude !== true) {
       obs.evento({ tipo: "leida", resultado: r });
       return;
     }

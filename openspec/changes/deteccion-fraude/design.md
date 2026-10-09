@@ -39,6 +39,7 @@ Los proveedores no publican APCER/BPCER comparables; nuestras metas se fijan con
 - **P7**: sin rangos de NUIP. Se elimina `nuip-fuera-de-rango` y la hipótesis H-FRA-2; solo se usan los validadores de formato existentes (`validarFormatoNuip`).
 - **P8**: fuera de alcance de este cambio.
 - **Baseline (tarea 4.6)**: se aprueba fijar `evals/reports/baseline-fraude.json` con las métricas sintéticas actuales de `npm run eval:fraude` (50 muestras por clase y tipo, semillas desde 1001). Es un baseline de regresión sintético, no una meta real (FRA-15).
+- **Señal apagada por defecto (FRA-21)**: hasta recalibrar con el reverso, la PWA solo calcula y muestra la señal con `VITE_FRAUDE=true` en la compilación o con `?debug=1`; apagada no se carga `fraude.worker` ni se pinta el bloque de riesgo.
 - **Integración en la PWA (tarea 5.1, FRA-20)**: la señal se calcula en un Worker propio de la PWA (`apps/pwa/src/fraude.worker.ts`) y no en el Worker lector de `packages/capture`, que pertenece a otro frente. Usa los frames de vídeo de la captura (copias que se ponen a cero) y el rectángulo de la guía como cuadrilátero, porque la captura no detecta los bordes de la tarjeta; espera como máximo 3000 ms y, si no hay señal, `resultado` muestra `data-riesgo-nivel="no-disponible"`.
 
 ## Calibración inicial de la Fase A (2026-10-08)
@@ -98,4 +99,5 @@ Comandos abreviados: `U` = `npx vitest run packages/fraud`; `T` = `npm run typec
 | FRA-19 | Revisión manual del verificador | verificador | n/a | Sin aprobación no hay reporte de campo |
 | FRA-20 | Unitaria del cliente con puerto falso y relojes simulados | Vitest | `npx vitest run apps/pwa` | 100 % verdes |
 | FRA-20 | E2E con el Worker de fraude retenido | Playwright | `E(lectura/riesgo)` | `data-riesgo-nivel="no-disponible"` y datos visibles |
+| FRA-21 | Unitaria de `fraudeActivo` y E2E apagada/activada (`?debug=1`) | Vitest, Playwright | `npx vitest run apps/pwa`, `E(lectura/riesgo)` | 100 % verdes |
 | Todos | Puerta completa | npm | `C` | Código 0 |

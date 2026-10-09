@@ -234,7 +234,7 @@ La pantalla `resultado` MUST mostrar el nivel de riesgo y los motivos en españo
 - **THEN** `data-riesgo-nivel` es `bajo`
 
 ### Requirement: FRA-20 Señal no disponible en la PWA
-La PWA MUST calcular la señal en un Worker propio (`fraude.worker`) tras una lectura correcta de la cédula, con los frames de vídeo de la captura (copias que el Worker pone a cero) y el rectángulo de la guía como cuadrilátero, y esperarla como máximo 3000 ms. Si el Worker falla, excede el tiempo o el documento no es una cédula, `resultado` MUST mostrarse igual con `data-riesgo-nivel` `no-disponible` y sin motivos.
+La PWA, con la señal activada (FRA-21), MUST calcularla en un Worker propio (`fraude.worker`) tras una lectura correcta de la cédula, con los frames de vídeo de la captura (copias que el Worker pone a cero) y el rectángulo de la guía como cuadrilátero, y esperarla como máximo 3000 ms. Si el Worker falla, excede el tiempo o el documento no es una cédula, `resultado` MUST mostrarse igual con `data-riesgo-nivel` `no-disponible` y sin motivos.
 
 #### Scenario: Guía como cuadrilátero
 - **WHEN** la entrada declara `cuadrilateroAproximado: true` (la PWA usa la guía de encuadre)
@@ -265,3 +265,14 @@ La recolección de ataques físicos (fotocopias, pantallas) con cédulas reales 
 #### Scenario: Sin aprobación legal
 - **WHEN** no existe `docs/legal/aprobacion-set-campo.md`
 - **THEN** la tarea 6.3 permanece abierta y no existe ningún `evals/reports/fraude-campo-*.json`
+
+### Requirement: FRA-21 Señal apagada por defecto en la PWA
+Mientras los detectores no estén calibrados con el reverso de la cédula, la señal en la PWA MUST estar apagada por defecto y activarse solo con la variable de compilación `VITE_FRAUDE=true` o con `?debug=1`.
+
+#### Scenario: Señal apagada por defecto
+- **WHEN** la PWA se compila sin `VITE_FRAUDE=true` y se abre sin `?debug=1`
+- **THEN** tras leer la cédula no se solicita `fraude.worker`, `resultado` no tiene `data-riesgo-nivel` y no se muestra el bloque de riesgo
+
+#### Scenario: Señal activada por build o por diagnóstico
+- **WHEN** la PWA se compila con `VITE_FRAUDE=true`, o se abre con `?debug=1`
+- **THEN** se calcula la señal en `fraude.worker` y `resultado` muestra `data-riesgo-nivel` y el bloque de riesgo
