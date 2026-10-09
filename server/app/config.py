@@ -87,7 +87,10 @@ class Config:
                 raise ValueError("DIRECTORIO_SDK debe ser una ruta absoluta sin ..")
             valores["directorio_sdk"] = directorio
         if "ENTORNO" in entorno:
-            valores["entorno"] = entorno["ENTORNO"]
+            # Como LECTOR_LIVE: solo ausente o `pruebas`; un valor desconocido detiene el arranque.
+            if entorno["ENTORNO"] != "pruebas":
+                raise ValueError("ENTORNO solo admite el valor pruebas (o no definirlo)")
+            valores["entorno"] = "pruebas"
         if "WEBHOOK_DESTINOS_PRUEBA" in entorno:
             # SDK-40: excepción solo para pruebas. Fuera de ENTORNO=pruebas, su presencia detiene el arranque.
             if valores.get("entorno") != "pruebas":

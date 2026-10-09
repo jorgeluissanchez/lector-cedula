@@ -35,12 +35,12 @@ def test_SDK40_aceptada_en_pruebas() -> None:
     assert config.webhook_destinos_prueba == (DESTINO,)
 
 
-@pytest.mark.parametrize("entorno", [None, "produccion", "PRUEBAS", ""])
-def test_SDK40_rechazada_fuera_de_pruebas(entorno: str | None) -> None:
+@pytest.mark.parametrize(("entorno", "campo"), [(None, "WEBHOOK_DESTINOS_PRUEBA"), ("produccion", "ENTORNO")])
+def test_SDK40_rechazada_fuera_de_pruebas(entorno: str | None, campo: str) -> None:
     extra = {"WEBHOOK_DESTINOS_PRUEBA": DESTINO}
     if entorno is not None:
         extra["ENTORNO"] = entorno
-    with pytest.raises(ValueError, match="WEBHOOK_DESTINOS_PRUEBA"):
+    with pytest.raises(ValueError, match=campo):
         Config.desde_entorno(_entorno(**extra))
 
 
@@ -124,3 +124,14 @@ def test_SDK40_sin_la_variable_no_hay_excepcion() -> None:
     cliente.app.state.config = config_multi()  # type: ignore[attr-defined]
     respuesta = crear(cliente, webhook_url=DESTINO)
     assert respuesta.status_code == 422
+
+
+@pytest.mark.parametrize("valor", ["produccion", "PRUEBAS", "", "pruebas "])
+def test_SDK40_entorno_solo_admite_pruebas(valor: str) -> None:
+    """`ENTORNO` solo admite estar ausente o valer `pruebas`; otro valor detiene el arranque."""
+    with pytest.raises(ValueError, match="ENTORNO"):
+        Config.desde_entorno(_entorno(ENTORNO=valor))
+
+
+def test_SDK40_entorno_pruebas_sin_destinos_es_valido() -> None:
+    assert Config.desde_entorno(_entorno(ENTORNO="pruebas")).entorno == "pruebas"

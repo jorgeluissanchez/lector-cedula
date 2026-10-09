@@ -653,4 +653,8 @@ Con `ENTORNO=pruebas`, el servidor SHALL aceptar y entregar una `webhook_url` id
 
 #### Scenario: Nunca en el despliegue
 - **WHEN** se leen `server/compose.dokploy.yaml` y `server/dokploy.env.example`
-- **THEN** ninguno contiene `WEBHOOK_DESTINOS_PRUEBA` ni `ENTORNO=pruebas`
+- **THEN** ninguno contiene `WEBHOOK_DESTINOS_PRUEBA` ni `ENTORNO=pruebas`, y `compose.dokploy.yaml` no define `extra_hosts`
+
+#### Scenario: ENTORNO con un valor desconocido
+- **WHEN** el servidor arranca con `ENTORNO` distinto de `pruebas` (por ejemplo `produccion` o vacío)
+- **THEN** el proceso termina con código distinto de 0 y el mensaje contiene `ENTORNO`; sin `ENTORNO` arranca normalmente

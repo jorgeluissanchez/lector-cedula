@@ -74,6 +74,12 @@ describe("SDK-40 Destinos de webhook solo para pruebas", () => {
     }
   });
 
+  it("SDK-40 El servicio de Dokploy no define extra_hosts", () => {
+    const c = compose();
+    for (const [nombre, servicio] of Object.entries(c.services)) expect(servicio.extra_hosts, nombre).toBeUndefined();
+    expect(leer("server", "compose.dokploy.yaml")).not.toContain("extra_hosts");
+  });
+
   it("SDK-40 Solo api-pruebas la define, junto a ENTORNO=pruebas", () => {
     const c = yaml.load(leer("server", "compose.yaml"));
     for (const [nombre, servicio] of Object.entries(c.services)) {
