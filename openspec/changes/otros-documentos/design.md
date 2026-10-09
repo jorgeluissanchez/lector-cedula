@@ -73,3 +73,8 @@ El lector admite hoy la cédula de ciudadanía (amarilla PDF417 y digital MRZ TD
 9. `nombrePaisEmisor` y `nombreNacionalidad` van en la raíz del resultado de `parsearMrzTd3` y `parsearMrzTd1`, no en `campos`, para que `campos` sea exactamente el de OD-01a (OD-01b, OD-10b).
 10. Una `fechaReferencia` presente que no sea `AAAA-MM-DD` existente da `error: "fecha-referencia-invalida"` en ambos parsers; ausente usa la fecha del sistema en `America/Bogota` (OD-05a).
 11. `parsearMrzTd3` y `parsearMrzTd1` no normalizan espacios ni minúsculas: cualquier carácter fuera de `0-9A-Z<` da `formato-td3` o `formato-td1`; la limpieza del OCR es del lector de imagen (OD-01b, OD-10b).
+
+
+## OFF-27c: presupuesto del respaldo MRZ tras una pista PDF417 (2026-10-09)
+
+Con el plan de 4 vistas (LMI-12c) y el TD1 genérico (OD-11), el respaldo MRZ de `tarjeta-ilegible-1080p` gastaba las 12 llamadas de OFF-23 (unos 11,6 s) y la primera lectura llegaba a unos 19 s, sin margen para el reintento de OFF-26 dentro de 20 s. La presencia ya dijo PDF417, así que el respaldo es improbable; las vistas se ordenan por evidencia (LMI-14b) y una MRZ real queda en las primeras llamadas. El tope solo puede convertir una lectura en `mrz-no-encontrada`: no añade lecturas falsas.

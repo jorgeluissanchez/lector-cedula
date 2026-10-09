@@ -32,6 +32,7 @@ import { conLienzoTemporal } from "./lienzo";
 import {
   crearClienteLector,
   nuevoWorkerLector,
+  opcionesLecturaFrame,
   type ClienteLector,
 } from "./lectura";
 import { crearClienteFraude, datosParaFraude, framesParaFraude, nuevoWorkerFraude, type ClienteFraude } from "./fraude";
@@ -186,11 +187,7 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
     const { resultado: r, pasos } = await leerSecuencia(
       frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }],
       p,
-      (f, lector) =>
-        obtenerLector().leer(f, hoyEnBogota(), control.signal, {
-          ...(lector === null ? {} : { pista: lector, respaldo: false }),
-          ...(opciones.admitirTarjetaIdentidad === true ? { admitirTarjetaIdentidad: true } : {}),
-        }),
+      (f, lector) => obtenerLector().leer(f, hoyEnBogota(), control.signal, opcionesLecturaFrame(p, lector, opciones.admitirTarjetaIdentidad === true)),
       { ahora: () => performance.now() },
     );
     if (control.signal.aborted) return limpiarCopias();

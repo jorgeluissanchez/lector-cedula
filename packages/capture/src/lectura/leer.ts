@@ -22,6 +22,9 @@ import type {
   TipoDocumento,
 } from "./tipos.js";
 
+/** OFF-27c: llamadas OCR del respaldo MRZ tras una pista PDF417 (la presencia no vio MRZ; solo TD1, nunca TD3). */
+export const MAX_LLAMADAS_RESPALDO_MRZ = 4;
+
 const CANCELADA: ResultadoLectura = { ok: false, error: "cancelada" };
 const COLOMBIA = "COL";
 /** OD-33: prefijo `I3` (bytes 0x49 0x33) de la TI en el PDF417 (hipótesis H12). */
@@ -176,9 +179,12 @@ async function pasoPdf417(pixeles: Pixeles, deps: DependenciasLectura, opciones:
 }
 
 function pasoMrz(formato: "td1" | "td3") {
-  return async (pixeles: Pixeles, deps: DependenciasLectura, opciones: OpcionesLectura): Promise<Paso> => {
+  return async (pixeles: Pixeles, deps: DependenciasLectura, opciones: OpcionesLectura, respaldoPdf417: boolean): Promise<Paso> => {
     const { senal, fechaReferencia, enmascarar = true } = opciones;
-    const lectura = await deps.lectorMrz.leer(pixeles, formato === "td3" ? { fechaReferencia, formato } : { fechaReferencia });
+    const lectura = await deps.lectorMrz.leer(
+      pixeles,
+      formato === "td3" ? { fechaReferencia, formato } : respaldoPdf417 ? { fechaReferencia, maxLlamadasOcr: MAX_LLAMADAS_RESPALDO_MRZ } : { fechaReferencia },
+    );
     if (abortada(senal)) return { final: CANCELADA };
     if (!lectura.ok) {
       if (lectura.error === "documento-no-admitido")
@@ -220,7 +226,7 @@ function pasoMrz(formato: "td1" | "td3") {
   };
 }
 
-const PASOS: Readonly<Record<Lector, (p: Pixeles, d: DependenciasLectura, o: OpcionesLectura) => Promise<Paso>>> = {
+const PASOS: Readonly<Record<Lector, (p: Pixeles, d: DependenciasLectura, o: OpcionesLectura, respaldoPdf417: boolean) => Promise<Paso>>> = {
   pdf417: pasoPdf417,
   "mrz-td1": pasoMrz("td1"),
   "mrz-td3": pasoMrz("td3"),
@@ -241,7 +247,9 @@ export async function leerDocumento(pixeles: Pixeles, deps: DependenciasLectura,
   let ultimo: ResultadoLectura = CANCELADA;
   let soloCe: ResultadoLectura | null = null;
   for (const lector of intentar) {
-    const paso = await PASOS[lector](pixeles, deps, opciones);
+    // OFF-27c: la MRZ como respaldo de una pista PDF417 (en esta llamada o, con `respaldoDe`, en una aparte) lleva presupuesto corto.
+    const respaldoPdf417 = opciones.respaldoDe === "pdf417" || (opciones.pista === "pdf417" && lector !== "pdf417");
+    const paso = await PASOS[lector](pixeles, deps, opciones, respaldoPdf417);
     if ("final" in paso) {
       if (soloCe === null || paso.final === CANCELADA) return paso.final;
       return paso.final.ok && paso.final.tipoDocumento === "cedula-extranjeria" ? paso.final : soloCe;

@@ -7,9 +7,11 @@ import type { DependenciasLectura, OpcionesLectura, PistaLectura, ResultadoLectu
 const PISTAS: readonly PistaLectura[] = ["pdf417", "mrz", "mrz-td1", "mrz-td3"];
 
 /** OFF-27 y OD-20: solo `"pdf417"`, `"mrz"`, `"mrz-td1"` y `"mrz-td3"` son pistas; cualquier otro valor equivale a no tenerla. */
-function opcionesPista(m: MensajeLeer): Pick<OpcionesLectura, "pista" | "respaldo"> {
+function opcionesPista(m: MensajeLeer): Pick<OpcionesLectura, "pista" | "respaldo" | "respaldoDe"> {
   const pista = PISTAS.find((p) => p === m.pista);
-  return pista === undefined ? {} : { pista, ...(m.respaldo === false ? { respaldo: false } : {}) };
+  // OFF-27c: solo `respaldoDe: "pdf417"` reduce el presupuesto MRZ; otro valor se ignora.
+  const de = m.respaldoDe === "pdf417" ? { respaldoDe: "pdf417" as const } : {};
+  return pista === undefined ? de : { pista, ...(m.respaldo === false ? { respaldo: false } : {}), ...de };
 }
 
 export interface MensajeLeer {
@@ -23,6 +25,8 @@ export interface MensajeLeer {
   readonly pista?: unknown;
   /** OFF-28: `false` desactiva el respaldo del otro lector. */
   readonly respaldo?: unknown;
+  /** OFF-27c: `"pdf417"` marca el respaldo MRZ de una pista PDF417; otro valor se ignora. */
+  readonly respaldoDe?: unknown;
   /** OD-30a: solo `true` admite la TI y los menores; otro valor equivale a `false`. */
   readonly admitirTarjetaIdentidad?: unknown;
 }

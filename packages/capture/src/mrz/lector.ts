@@ -301,6 +301,8 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
     if (terminado) return { ok: false, error: "lector-terminado" };
 
     const formato = formatoMrz(op);
+    // OFF-27c: tope de llamadas por lectura (`maxLlamadasOcr` en las opciones de `leer`); nunca amplía el del lector.
+    const tope = Math.min(maxLlamadas, enteroPositivo((op as { maxLlamadasOcr?: number }).maxLlamadasOcr, maxLlamadas));
     let mejor: { intento: IntentoMrz; digitosValidos: number; resultado: ResultadoParserMrz } | null = null;
     let noAdmitido: { ok: false; error: "documento-no-admitido"; warnings: string[] } | null = null;
     // LMI-12, LMI-12b y LMI-12c: vistas derecha, 90°, 270° y 180° en dos pasadas. LMI-13: presupuesto de llamadas y de tiempo.
@@ -308,7 +310,7 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
     let llamadas = 0;
     const intentos = formato === "td3" ? intentosTd3(pixeles) : intentosMrz(pixeles);
     for (;;) {
-      if (llamadas >= maxLlamadas || ahora() - inicio >= limiteMs) break;
+      if (llamadas >= tope || ahora() - inicio >= limiteMs) break;
       // Cede el hilo antes de cada paso síncrono pesado (girar y localizar una vista, recortar y enderezar): con
       // fotos grandes bloqueaba el bucle de eventos lo bastante para agotar los RPC de Vitest bajo carga.
       await ceder();

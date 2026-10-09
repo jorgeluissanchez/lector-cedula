@@ -97,4 +97,6 @@ export interface OpcionesLectura {
   readonly admitirTarjetaIdentidad?: boolean;
   /** OFF-27 y OFF-28: `false` no prueba el otro lector cuando el de la pista no encuentra nada. */
   readonly respaldo?: boolean;
+  /** OFF-27c: esta lectura es el respaldo de una pista `"pdf417"` hecho en una llamada aparte (la PWA, OFF-28 c). */
+  readonly respaldoDe?: "pdf417";
 }

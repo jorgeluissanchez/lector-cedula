@@ -417,4 +417,17 @@ describe("LMI-13 Presupuesto de intentos y de tiempo", { timeout: 60_000 }, () =
     await lector.leer(R, REF);
     expect(reg.imagenes).toHaveLength(6);
   });
+
+  it("OFF-27c Tope de llamadas por lectura: nunca supera el del lector y un valor inválido se ignora", async () => {
+    const a = falso([""]);
+    const lector = crearLectorMrz({ rutaModelo: "/m", crearWorker: a.crearWorker, maxLlamadasOcr: 12 });
+    await lector.leer(R, { ...REF, maxLlamadasOcr: 4 });
+    expect(a.reg.imagenes).toHaveLength(4);
+    const b = falso([""]);
+    await crearLectorMrz({ rutaModelo: "/m", crearWorker: b.crearWorker, maxLlamadasOcr: 3 }).leer(R, { ...REF, maxLlamadasOcr: 30 });
+    expect(b.reg.imagenes).toHaveLength(3);
+    const c = falso([""]);
+    await crearLectorMrz({ rutaModelo: "/m", crearWorker: c.crearWorker, maxLlamadasOcr: 5 }).leer(R, { ...REF, maxLlamadasOcr: 0 });
+    expect(c.reg.imagenes).toHaveLength(5);
+  });
 });

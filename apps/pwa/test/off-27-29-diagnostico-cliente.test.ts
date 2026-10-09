@@ -2,7 +2,7 @@
 // pwa-lectura-offline. Puerto falso en memoria; ningún dato de la cédula.
 import { describe, expect, it } from "vitest";
 import { diagnosticoActivo, lineasDiagnostico } from "../src/diagnostico";
-import { crearClienteLector, type PuertoLector } from "../src/lectura";
+import { crearClienteLector, opcionesLecturaFrame, type PuertoLector } from "../src/lectura";
 
 function puerto() {
   const enviados: Record<string, unknown>[] = [];
@@ -25,6 +25,18 @@ describe("OFF-27 Pista en el cliente del Worker lector", () => {
     expect(enviados[0]).toMatchObject({ tipo: "leer", pista: "mrz", respaldo: false });
     expect(enviados[1]).not.toHaveProperty("pista");
     expect(enviados[1]).not.toHaveProperty("respaldo");
+    expect(enviados[1]).not.toHaveProperty("respaldoDe");
+  });
+
+  it("OFF-27c el respaldo MRZ final tras la pista PDF417 lleva respaldoDe", () => {
+    expect(opcionesLecturaFrame("pdf417", "pdf417", false)).toStrictEqual({ pista: "pdf417", respaldo: false });
+    expect(opcionesLecturaFrame("pdf417", "mrz", false)).toStrictEqual({ pista: "mrz", respaldo: false, respaldoDe: "pdf417" });
+    expect(opcionesLecturaFrame("mrz", "pdf417", true)).toStrictEqual({ pista: "pdf417", respaldo: false, admitirTarjetaIdentidad: true });
+    expect(opcionesLecturaFrame("mrz-td3", "mrz-td1", false)).toStrictEqual({ pista: "mrz-td1", respaldo: false });
+    expect(opcionesLecturaFrame(null, null, false)).toStrictEqual({});
+    const { p, enviados } = puerto();
+    void crearClienteLector(p).leer(captura(), "2026-10-06", undefined, opcionesLecturaFrame("pdf417", "mrz", false));
+    expect(enviados[0]).toMatchObject({ pista: "mrz", respaldo: false, respaldoDe: "pdf417" });
   });
 });
 

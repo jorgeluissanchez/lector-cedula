@@ -9,7 +9,7 @@ import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
 import type { FrameAnalisis } from "../../src/calidad/tipos.js";
 import { crearDetectorGuia } from "../../src/flujo/guia.js";
 import { clasificarErrorLectura } from "../../src/lectura/errores.js";
-import { leerDocumento } from "../../src/lectura/leer.js";
+import { leerDocumento, MAX_LLAMADAS_RESPALDO_MRZ } from "../../src/lectura/leer.js";
 import { crearManejadorLector } from "../../src/lectura/manejador.js";
 import type { DependenciasLectura } from "../../src/lectura/tipos.js";
 import type { ResultadoLectorMrz } from "../../src/mrz/lector.js";
@@ -88,6 +88,26 @@ describe("OFF-27 Pista de tipo en leerDocumento", () => {
     expect(c.orden).toStrictEqual(["pdf417", "mrz"]);
   });
 
+  it("OFF-27c Presupuesto del respaldo MRZ tras la pista PDF417", async () => {
+    // En la misma llamada: pista pdf417 con respaldo, TD1 con a lo sumo MAX_LLAMADAS_RESPALDO_MRZ llamadas OCR y sin TD3.
+    const a = deps(() => PDF_NO, { ok: false, error: "mrz-no-encontrada" });
+    await leerDocumento(PIXELES, a.d, { fechaReferencia: FECHA, pista: "pdf417" });
+    expect(MAX_LLAMADAS_RESPALDO_MRZ).toBe(4);
+    expect(a.leerMrz).toHaveBeenCalledTimes(1);
+    expect(a.leerMrz.mock.calls[0]).toStrictEqual([PIXELES, { fechaReferencia: FECHA, maxLlamadasOcr: 4 }]);
+    // Respaldo en una llamada aparte (la PWA, OFF-28 c): pista mrz con respaldoDe pdf417.
+    const b = deps(() => PDF_NO, mrzOk());
+    const r = await leerDocumento(PIXELES, b.d, { fechaReferencia: FECHA, pista: "mrz", respaldo: false, respaldoDe: "pdf417" });
+    expect(r).toMatchObject({ ok: true, tipo: "mrz" });
+    expect(b.leerMrz.mock.calls[0]).toStrictEqual([PIXELES, { fechaReferencia: FECHA, maxLlamadasOcr: 4 }]);
+    // Sin pista (OFF-06) o con pista MRZ propia, el presupuesto del lector no cambia.
+    for (const op of [{}, { pista: "mrz" as const }]) {
+      const c = deps(() => PDF_NO, { ok: false, error: "mrz-no-encontrada" });
+      await leerDocumento(PIXELES, c.d, { fechaReferencia: FECHA, ...op });
+      expect(c.leerMrz.mock.calls[0]).toStrictEqual([PIXELES, { fechaReferencia: FECHA }]);
+    }
+  });
+
   it("OFF-27 cancelación entre el lector de la pista y el respaldo", async () => {
     const control = new AbortController();
     const { d, decodificar } = deps(PDF_OK, { ok: false, error: "mrz-no-encontrada" });
@@ -110,6 +130,15 @@ describe("OFF-27 Pista en el Worker lector", () => {
     const { d, orden } = deps(() => PDF_NO, mrzOk());
     expect(await crearManejadorLector(d)(mensaje("qr"))).toMatchObject({ resultado: { ok: true, tipo: "mrz" } });
     expect(orden).toStrictEqual(["pdf417", "mrz"]);
+  });
+
+  it("OFF-27c respaldoDe en el mensaje: solo \"pdf417\" reduce el presupuesto MRZ", async () => {
+    const a = deps(() => PDF_NO, mrzOk());
+    await crearManejadorLector(a.d)({ ...mensaje("mrz"), respaldo: false, respaldoDe: "pdf417" });
+    expect(a.leerMrz.mock.calls[0]?.[1]).toStrictEqual({ fechaReferencia: FECHA, maxLlamadasOcr: 4 });
+    const b = deps(() => PDF_NO, mrzOk());
+    await crearManejadorLector(b.d)({ ...mensaje("mrz"), respaldo: false, respaldoDe: "otro" });
+    expect(b.leerMrz.mock.calls[0]?.[1]).toStrictEqual({ fechaReferencia: FECHA });
   });
 
   it("OFF-28 respaldo: false en el mensaje", async () => {

@@ -23,6 +23,20 @@ export interface OpcionesLecturaCliente {
   readonly pista?: PistaLectura;
   readonly respaldo?: boolean;
   readonly admitirTarjetaIdentidad?: boolean;
+  /** OFF-27c: la lectura es el respaldo MRZ de una pista PDF417 (presupuesto MRZ corto). */
+  readonly respaldoDe?: "pdf417";
+}
+
+/**
+ * OFF-28 (c) y OFF-27c: opciones de cada lectura de la secuencia. `lector` es el de ese paso (null: orden de OFF-06);
+ * si es el respaldo MRZ final de una pista PDF417, lleva `respaldoDe: "pdf417"`.
+ */
+export function opcionesLecturaFrame(pista: PistaLectura | null, lector: PistaLectura | null, admitirTarjetaIdentidad: boolean): OpcionesLecturaCliente {
+  return {
+    ...(lector === null ? {} : { pista: lector, respaldo: false }),
+    ...(pista === "pdf417" && lector !== null && lector !== "pdf417" ? { respaldoDe: "pdf417" as const } : {}),
+    ...(admitirTarjetaIdentidad ? { admitirTarjetaIdentidad: true } : {}),
+  };
 }
 
 export interface ClienteLector {
@@ -73,6 +87,7 @@ export function crearClienteLector(puerto: PuertoLector): ClienteLector {
           ...(opciones.pista === undefined ? {} : { pista: opciones.pista }),
           ...(opciones.respaldo === undefined ? {} : { respaldo: opciones.respaldo }),
           ...(opciones.admitirTarjetaIdentidad === true ? { admitirTarjetaIdentidad: true } : {}),
+          ...(opciones.respaldoDe === "pdf417" ? { respaldoDe: "pdf417" } : {}),
         };
         puerto.postMessage({ tipo: "leer", id, ancho: captura.ancho, alto: captura.alto, pixeles, fechaReferencia, ...extra }, [pixeles]);
       });

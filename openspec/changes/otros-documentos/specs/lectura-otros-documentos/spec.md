@@ -26,6 +26,25 @@ El lector MRZ desde imagen (LMI) MUST aceptar un parámetro `formato: "td1" | "t
 - **WHEN** se llama `leerDocumento` con `pista: "mrz-td3"` y lectores inyectados en los que TD3 devuelve `mrz-no-encontrada` y TD1 una CE válida
 - **THEN** el resultado tiene `tipoDocumento: "cedula-extranjeria"`, TD3 tiene 1 llamada antes que TD1 y PDF417 0 llamadas
 
+### Requirement: OFF-27c Presupuesto del respaldo MRZ tras una pista PDF417
+Si la MRZ es solo respaldo de una pista `"pdf417"` (en la misma llamada o en otra marcada `respaldoDe: "pdf417"`, como el respaldo final de OFF-28 c en la PWA), `leerDocumento` MUST pedir solo TD1 con `maxLlamadasOcr: 4` (`MAX_LLAMADAS_RESPALDO_MRZ`), tope por lectura que nunca amplía el del lector. Sin pista o con pista MRZ no cambia. Motivo en design.md.
+
+#### Scenario: Respaldo MRZ con presupuesto corto
+- **WHEN** se llama `leerDocumento` con `pista: "pdf417"`, el PDF417 devuelve `pdf417-no-encontrado` y la MRZ `mrz-no-encontrada`; aparte con `pista: "mrz"`, `respaldo: false` y `respaldoDe: "pdf417"`; y aparte sin pista y con `pista: "mrz"`
+- **THEN** en los dos primeros el lector MRZ recibe exactamente `{ fechaReferencia, maxLlamadasOcr: 4 }` (sin `formato`); en los otros, `{ fechaReferencia }`
+
+#### Scenario: Tope por lectura en el lector MRZ
+- **WHEN** un lector MRZ con `maxLlamadasOcr: 12` lee una imagen sin MRZ legible con `maxLlamadasOcr: 4`; uno con 3 lee con 30; y uno con 5 lee con 0
+- **THEN** el OCR recibe 4, 3 y 5 llamadas
+
+#### Scenario: Mensaje y PWA
+- **WHEN** el manejador del Worker lector recibe `respaldoDe: "pdf417"` y aparte `respaldoDe: "otro"`; y la PWA arma las opciones del respaldo final de una secuencia con pista `"pdf417"`
+- **THEN** solo el primero pasa `maxLlamadasOcr: 4` al lector MRZ, y el mensaje `leer` del respaldo lleva `pista: "mrz"`, `respaldo: false` y `respaldoDe: "pdf417"`; los frames con pista PDF417 no lo llevan
+
+#### Scenario: Tarjeta ilegible dentro de la ventana de OFF-26
+- **WHEN** se completa el flujo E2E con `tarjeta-ilegible-1080p` (`e2e/lectura/errores.spec.ts`, `lectura-chromium`)
+- **THEN** hay al menos dos `leyendo` (reintento de OFF-26) antes de `error-lectura` con `no-encontrado`
+
 ### Requirement: OD-22 Salida unificada con tipoDocumento
 `leerDocumento`, el SDK y el servidor MUST devolver en el éxito `{ ok: true, tipoDocumento, fuente, campos, warnings }`, con `tipoDocumento` en `"cedula-ciudadania" | "cedula-extranjeria" | "pasaporte" | "tarjeta-identidad"` y `fuente` en `"pdf417" | "mrz-td1" | "mrz-td3"`. El campo `tipo` actual se conserva un ciclo, marcado obsoleto en el OpenAPI, y se retira en el cambio siguiente a este; los errores conservan `{ ok: false, tipo, error }`.
 

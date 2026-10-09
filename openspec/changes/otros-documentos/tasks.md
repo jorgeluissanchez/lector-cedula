@@ -17,6 +17,7 @@
 - [x] 2.2 Lector MRZ con `formato: "td3"` y plan de giros. Cubre: OD-21. Tipos: integración con OCR real y metamórficas. Verificación: `npx vitest run packages/capture/test/mrz --maxWorkers=2`.
 - [x] 2.3 `leerDocumento` con salida unificada, orden por pista, CE sin 2D. Cubre: OD-13, OD-21, OD-22, OD-22a. Tipos: unitaria con espías. Verificación: `npx vitest run packages/capture/test/lectura`.
 - [x] 2.4 Parámetro `admitirTarjetaIdentidad` y regla de edad OFF-24b. Cubre: OD-30a, OD-31, OD-32, OD-32a, OD-33. Tipos: unitaria de frontera en ambos valores. Verificación: `npx vitest run packages/capture/test/lectura`.
+- [x] 2.5 Presupuesto del respaldo MRZ tras una pista PDF417 (4 llamadas OCR, solo TD1) y `respaldoDe` en el mensaje y la PWA. Cubre: OFF-27c. Tipos: unitaria con espías y E2E. Verificación: `npx vitest run packages/capture/test/lectura/off-27-pista packages/capture/test/mrz/lector.test.ts apps/pwa/test/off-27-29` y `npx playwright test e2e/lectura/errores.spec.ts --project=lectura-chromium --workers=1`.
 
 ## 3. Evals
 
