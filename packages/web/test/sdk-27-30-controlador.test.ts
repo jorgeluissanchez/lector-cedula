@@ -196,7 +196,7 @@ describe("SDK-30 Ciclo de vida y liberación", () => {
     c.cancelar();
     await p;
     expect(c.obtenerEstado().fase).toBe("inicio");
-    expect(fases(vistos)).toStrictEqual(["permiso", "activo", "inicio"]);
+    expect(fases(vistos)).toStrictEqual(["permiso", "inicio"]);
     expect(f.pistas.every((x) => x.readyState === "ended")).toBe(true);
   });
 

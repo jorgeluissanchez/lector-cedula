@@ -95,11 +95,14 @@ describe("SDK-28 y SDK-30 detalle del controlador", () => {
     expect(f.lecturasHechas).toBe(1);
   });
 
-  it("SDK-30 fallo del Worker de calidad: vuelve a inicio con calidad-error y libera la cámara", async () => {
+  it("SDK-41 Fallo del análisis de calidad: activo→error con calidad-error y libera cámara y Worker", async () => {
     const f = crearFalsos({ calidadFalla: true });
     const c = crearLector({}, f.deps);
+    const vistas: string[] = [];
+    c.suscribir((x) => vistas.push(x.fase));
     await c.iniciar(VIDEO);
-    const e = await esperar(c.obtenerEstado, (x) => x.fase === "inicio");
+    const e = await esperar(c.obtenerEstado, (x) => x.fase === "error");
+    expect(vistas).toStrictEqual(["permiso", "activo", "error"]);
     expect(e.error?.codigo).toBe("calidad-error");
     expect(f.pistas.every((p) => p.readyState === "ended")).toBe(true);
     expect(f.terminados.calidad).toBe(1);
@@ -271,7 +274,7 @@ describe("SDK-38 envío: detalle", () => {
 
   it("SDK-38 método, nombres de archivo y barras finales del servidor", async () => {
     const llamadas: { url: string; init: RequestInit | undefined }[] = [];
-    const respuestas = [new Response(JSON.stringify({ id: "v1", upload: { url: "https://u.example/s" } }), { status: 200 }), new Response(null, { status: 200 })];
+    const respuestas = [new Response(JSON.stringify({ id: "v1", upload: { url: "https://a.example/s" } }), { status: 200 }), new Response(null, { status: 200 })];
     const f = (async (u: string, init?: RequestInit) => (llamadas.push({ url: u, init }), respuestas.shift() as Response)) as typeof fetch;
     expect(await enviarCaptura({ servidor: "https://a.example//", sesion: "t", imagen: IMG, fetch: f })).toStrictEqual({ estado: "enviado", validacion_id: "v1" });
     expect(llamadas[0]?.url).toBe("https://a.example/v/t/inicio");
@@ -282,7 +285,7 @@ describe("SDK-38 envío: detalle", () => {
   });
 
   it("SDK-38 identificador no textual: sesion-invalida", async () => {
-    const f = (async () => new Response(JSON.stringify({ id: 5, upload: { url: "https://u.example" } }))) as typeof fetch;
+    const f = (async () => new Response(JSON.stringify({ id: 5, upload: { url: "https://a.example/s" } }))) as typeof fetch;
     expect(await enviarCaptura({ servidor: "https://a.example", sesion: "t", imagen: IMG, fetch: f })).toStrictEqual({ estado: "fallido", codigo: "sesion-invalida" });
   });
 });

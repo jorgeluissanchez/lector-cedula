@@ -20,6 +20,15 @@
       "path": "packages/web"
     },
     {
+      "path": "packages/react"
+    },
+    {
+      "path": "packages/angular"
+    },
+    {
+      "path": "packages/vue"
+    },
+    {
       "path": "apps/pwa"
     }
   ]

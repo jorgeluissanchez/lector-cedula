@@ -8,7 +8,7 @@ import { AMARILLA, crearFalsos, NO_ENCONTRADO, VIDEO } from "./falsos.js";
 
 const LISTA_SPEC = [
   "inicio>permiso", "permiso>activo", "permiso>error", "activo>listo", "listo>activo", "listo>leyendo", "activo>leyendo",
-  "leyendo>resultado", "leyendo>activo", "leyendo>error", "activo>inicio", "listo>inicio", "leyendo>inicio",
+  "leyendo>resultado", "leyendo>activo", "leyendo>error", "activo>error", "listo>error", "permiso>inicio", "activo>inicio", "listo>inicio", "leyendo>inicio",
   "resultado>permiso", "error>permiso",
 ];
 
@@ -105,7 +105,9 @@ describe("SDK-27 máquina de estados pura", () => {
     const err = transicion(leyendo, { tipo: "fallo", error: { codigo: "lectura-fallida", mensaje: "m" } });
     expect(err).toMatchObject({ fase: "error", progreso: null, error: { codigo: "lectura-fallida" } });
     expect(transicion(err, { tipo: "reintentar" })).toMatchObject({ fase: "permiso", intento: 2, error: null });
-    expect(transicion(activo, { tipo: "fallo", error: { codigo: "lectura-fallida", mensaje: "m" } })).toBe(activo);
+    expect(transicion(activo, { tipo: "fallo", error: { codigo: "calidad-error", mensaje: "m" } })).toMatchObject({ fase: "error", error: { codigo: "calidad-error" } });
+    expect(transicion(permiso, { tipo: "cancelar" })).toMatchObject({ fase: "inicio", intento: 1, error: null });
+    expect(transicion(ESTADO_INICIAL, { tipo: "fallo", error: { codigo: "calidad-error", mensaje: "m" } })).toBe(ESTADO_INICIAL);
     const res = transicion(leyendo, { tipo: "resultado", resultado: { tipo: "cedula-ciudadania", campos: {} as never, warnings: [], confiable: false, validacion_id: null }, contenido: null, envio: { estado: "enviando" } });
     expect(res).toMatchObject({ fase: "resultado", progreso: 1, contenido: "pdf417", envio: { estado: "enviando" } });
     const enviado = transicion(res, { tipo: "envio", envio: { estado: "enviado", validacion_id: "val_9" } });
@@ -167,7 +169,8 @@ describe("SDK-27 opciones", () => {
 });
 
 describe("SDK-27 propiedad del controlador", { timeout: 60_000 }, () => {
-  const ordenes = fc.constantFrom("iniciar", "cancelar", "reintentar", "destruir", "frame", "frame", "frame", "resolver-ok", "resolver-fallo");
+  // Con permiso→inicio directo, cancelar recorre menos fases: más frames mantienen útil más de la mitad de los casos.
+  const ordenes = fc.constantFrom("iniciar", "cancelar", "reintentar", "destruir", "frame", "frame", "frame", "frame", "frame", "resolver-ok", "resolver-fallo");
   it("SDK-27 Transiciones inválidas: secuencias de hasta 50 eventos solo producen TRANSICIONES y nunca lanzan", async () => {
     let pares = 0;
     await fc.assert(

@@ -2,7 +2,8 @@
 import { expect, test } from "@playwright/test";
 import { conVideo, estadosPistas, fase, registrarPeticiones, vigilarPistas } from "./ayudas";
 
-test.use(conVideo("amarilla-1080p"));
+// Sin documento: la lectura nunca termina sola y la cámara sigue abierta en `activo` hasta cancelar o destruir.
+test.use(conVideo("sin-documento-1080p"));
 
 test.describe("SDK-30 núcleo en examples/vanilla", { timeout: 180_000 }, () => {
   test.describe.configure({ timeout: 180_000 });

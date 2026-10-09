@@ -22,6 +22,7 @@ import {
 import { entornoNavegador, ErrorMotor, motorMemorizado, recursosPorOmision, type MotorCargado } from "./cargador.js";
 import { crearClienteLector, type ClienteLector } from "./cliente-lector.js";
 import { leerSecuencia, MAX_FRAMES_LECTURA } from "./secuencia.js";
+import { conCeroAnteError, copiaEnvio, type PixelesCopia } from "./copias.js";
 import type { CalidadInyectada, CamaraLector, CapturaLector, DependenciasLector, LectorInyectado, MotivoCalidad, OpcionesLector } from "./tipos.js";
 
 /** Presupuestos de lectura de la PWA (OFF-23, OFF-28). */
@@ -62,8 +63,7 @@ async function conLienzo<T>(f: { ancho: number; alto: number; pixeles: Uint8Clam
 }
 
 /** JPEG de una copia del frame para el envío opcional (la copia se pone a cero al codificar). */
-function imagenDe(f: { ancho: number; alto: number; pixeles: Uint8ClampedArray }): () => Promise<Blob> {
-  const copia = { ancho: f.ancho, alto: f.alto, pixeles: new Uint8ClampedArray(f.pixeles) };
+function imagenDe(copia: PixelesCopia): () => Promise<Blob> {
   return () =>
     conLienzo(copia, (l) => l.convertToBlob({ type: "image/jpeg", quality: 0.92 })).finally(() => {
       copia.pixeles.fill(0);
@@ -153,25 +153,34 @@ export function crearDependencias(opciones: OpcionesLector): DependenciasLector 
         completo.pixeles.fill(0);
         return null;
       }
-      const imagen = opciones.sesion === undefined ? undefined : imagenDe(completo);
+      const copia = opciones.sesion === undefined ? null : copiaEnvio(completo);
       const frames: FrameLectura[] = [];
-      const pista = camara.stream.getVideoTracks()[0];
-      if (r.contenido !== "mrz" && pista !== undefined) {
-        const foto = await tomarFoto(pista, entornoFoto());
-        if (foto !== null) frames.push(foto);
-      }
-      frames.push({ ...completo, origen: "video" });
-      while (r.contenido === "pdf417" && frames.length < MAX_FRAMES_LECTURA) {
-        await siguienteFrame(video);
-        frames.push({ ...tomarFrameCaptura(video), origen: "video" });
-      }
+      const bufers: Uint8ClampedArray[] = [completo.pixeles, ...(copia === null ? [] : [copia.pixeles])];
+      await conCeroAnteError(bufers, async () => {
+        const pista = camara.stream.getVideoTracks()[0];
+        if (r.contenido !== "mrz" && pista !== undefined) {
+          const foto = await tomarFoto(pista, entornoFoto());
+          if (foto !== null) {
+            bufers.push(foto.pixeles);
+            frames.push(foto);
+          }
+        }
+        frames.push({ ...completo, origen: "video" });
+        while (r.contenido === "pdf417" && frames.length < MAX_FRAMES_LECTURA) {
+          await siguienteFrame(video);
+          const f = tomarFrameCaptura(video);
+          bufers.push(f.pixeles);
+          frames.push({ ...f, origen: "video" });
+        }
+      });
       const p = r.contenido ?? contenido;
       return {
         frames,
         pista: p,
-        ...(imagen === undefined ? {} : { imagen }),
+        ...(copia === null ? {} : { imagen: imagenDe(copia) }),
         liberar() {
           for (const f of frames) f.pixeles.fill(0);
+          copia?.liberar();
         },
       };
     },
@@ -187,9 +196,10 @@ export function crearDependencias(opciones: OpcionesLector): DependenciasLector 
           const { resultado } = await leerSecuencia(
             captura.frames,
             captura.pista,
-            async (f, lector) => {
+            async (f, lector, respaldoDe) => {
               const r = await cl.leer(f, fecha, senal, {
                 ...(lector === null ? {} : { pista: lector, respaldo: false }),
+                ...(respaldoDe === "pdf417" ? { respaldoDe } : {}),
                 ...(opciones.admitirTi === true ? { admitirTarjetaIdentidad: true } : {}),
               });
               progreso(Math.min(0.99, ++hechos / (total + 1)));

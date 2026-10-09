@@ -6,10 +6,19 @@ import type { ResultadoPresentacion } from "./tipos.js";
 export { crearLector } from "./controlador.js";
 export { TRANSICIONES } from "./maquina.js";
 export { ESTADO_INICIAL } from "./estado.js";
-export { precargarMotor, NOMBRE_CACHE } from "./cargador.js";
+export { NOMBRE_CACHE } from "./cargador.js";
 export { VERSION } from "./version.js";
 export type * from "./tipos.js";
 export type { EntradaLectura, OpcionesLeerDocumento } from "./lectura-headless.js";
+
+/**
+ * SDK-07: descarga, verifica y deja listo el motor sin pedir la cámara, y carga también el módulo diferido de las
+ * dependencias por omisión, para que la lectura funcione con la red cortada. Rechaza con `codigo` `motor-no-disponible`.
+ */
+export async function precargarMotor(o: { recursos?: string } = {}): Promise<void> {
+  const { precargarMotor: motor } = await import("./cargador.js");
+  await Promise.all([motor(o), import("./dependencias.js")]);
+}
 
 /** SDK-08: lee una imagen sin cámara ni DOM. Rechaza con `codigo` (`lectura-fallida`, `motor-no-disponible`...) o `AbortError`. */
 export async function leerDocumento(entrada: EntradaLectura, opciones: OpcionesLeerDocumento = {}): Promise<ResultadoPresentacion> {

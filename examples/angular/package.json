@@ -1,0 +1,28 @@
+{
+  "name": "@lector-cedula/ejemplo-angular",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ejemplo headless de @lector-cedula/angular con UI propia y sin servidor por omisión (sdk-integracion, tarea 3b.4).",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@angular/build": "21.2.26",
+    "@angular/cli": "21.2.26",
+    "@angular/compiler-cli": "21.2.25"
+  },
+  "scripts": {
+    "build": "ng build && node ../copiar-recursos.mjs dist/browser/lector-cedula",
+    "typecheck": "ng build",
+    "preview": "vite preview --outDir dist/browser --port 4193 --strictPort"
+  },
+  "dependencies": {
+    "@angular/common": "21.2.25",
+    "@angular/compiler": "21.2.25",
+    "@angular/core": "21.2.25",
+    "@angular/platform-browser": "21.2.25",
+    "@lector-cedula/angular": "0.1.0",
+    "@lector-cedula/web": "0.1.0",
+    "rxjs": "7.8.2",
+    "tslib": "2.8.1"
+  }
+}

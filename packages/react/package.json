@@ -1,0 +1,24 @@
+{
+  "name": "@lector-cedula/react",
+  "version": "0.1.0",
+  "description": "Adaptador React y Next del lector headless: useLectorCedula sobre useSyncExternalStore, sin UI (sdk-integracion, SDK-31, SDK-34).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "peerDependencies": {
+    "@lector-cedula/web": "0.1.0",
+    "react": ">=18"
+  }
+}

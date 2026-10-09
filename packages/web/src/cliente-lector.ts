@@ -23,6 +23,8 @@ export interface PixelesCaptura {
 export interface OpcionesLecturaCliente {
   readonly pista?: TipoLectura;
   readonly respaldo?: boolean;
+  /** OFF-27c: respaldo MRZ de una pista PDF417 (presupuesto corto en el Worker). */
+  readonly respaldoDe?: "pdf417";
   /** OD-30a. */
   readonly admitirTarjetaIdentidad?: boolean;
 }
@@ -70,6 +72,7 @@ export function crearClienteLector(puerto: PuertoLector): ClienteLector {
         const extra = {
           ...(opciones.pista === undefined ? {} : { pista: opciones.pista }),
           ...(opciones.respaldo === undefined ? {} : { respaldo: opciones.respaldo }),
+          ...(opciones.respaldoDe === "pdf417" ? { respaldoDe: "pdf417" } : {}),
           ...(opciones.admitirTarjetaIdentidad === true ? { admitirTarjetaIdentidad: true } : {}),
         };
         puerto.postMessage({ tipo: "leer", id, ancho: captura.ancho, alto: captura.alto, pixeles, fechaReferencia, ...extra }, [pixeles]);

@@ -1,0 +1,24 @@
+{
+  "name": "@lector-cedula/angular",
+  "version": "0.1.0",
+  "description": "Adaptador Angular (>= 18, con y sin zone.js) del lector headless: injectLectorCedula con signals, sin UI (sdk-integracion, SDK-32, SDK-34).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "peerDependencies": {
+    "@lector-cedula/web": "0.1.0",
+    "@angular/core": ">=18"
+  }
+}

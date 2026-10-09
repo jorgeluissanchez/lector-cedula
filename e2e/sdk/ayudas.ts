@@ -6,7 +6,7 @@ import { expect, type Page, type Request } from "@playwright/test";
 
 export const ARGS_CAMARA = ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"];
 
-export function conVideo(video: "amarilla-1080p" | "digital-1080p") {
+export function conVideo(video: "amarilla-1080p" | "digital-1080p" | "sin-documento-1080p") {
   return { launchOptions: { args: [...ARGS_CAMARA, `--use-file-for-fake-video-capture=e2e/videos/sinteticos/${video}.y4m`] } };
 }
 

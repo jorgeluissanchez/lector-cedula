@@ -36,6 +36,7 @@ export function opcionInvalida(o: unknown): string | null {
   }
   if (op.documentos !== undefined && !(Array.isArray(op.documentos) && op.documentos.length > 0 && op.documentos.every((d) => TIPOS.has(d as string)))) return "documentos";
   if (op.admitirTi !== undefined && typeof op.admitirTi !== "boolean") return "admitirTi";
+  if (op.enviarMenores !== undefined && typeof op.enviarMenores !== "boolean") return "enviarMenores";
   if (op.idioma !== undefined && op.idioma !== "es" && op.idioma !== "en") return "idioma";
   return null;
 }

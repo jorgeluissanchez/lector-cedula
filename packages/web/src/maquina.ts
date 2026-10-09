@@ -17,6 +17,9 @@ export const TRANSICIONES: ReadonlySet<string> = new Set([
   "leyendo>resultado",
   "leyendo>activo",
   "leyendo>error",
+  "activo>error",
+  "listo>error",
+  "permiso>inicio",
   "activo>inicio",
   "listo>inicio",
   "leyendo>inicio",
@@ -59,7 +62,9 @@ export function transicion(e: EstadoLector, ev: EventoLector): EstadoLector {
     case "camara-lista":
       return e.fase === "permiso" ? actualizar(e, { fase: "activo" }) : e;
     case "fallo":
-      return e.fase === "permiso" || e.fase === "leyendo" ? actualizar(e, { fase: "error", error: ev.error, progreso: null }) : e;
+      return e.fase === "permiso" || e.fase === "activo" || e.fase === "listo" || e.fase === "leyendo"
+        ? actualizar(e, { fase: "error", error: ev.error, progreso: null })
+        : e;
     case "calidad": {
       if (e.fase !== "activo" && e.fase !== "listo") return e;
       const guia = normalizarGuia(ev.frame.guia, ev.frame.anchoVideo, ev.frame.altoVideo);
@@ -81,7 +86,7 @@ export function transicion(e: EstadoLector, ev: EventoLector): EstadoLector {
     case "reintento-automatico":
       return e.fase === "leyendo" ? actualizar(e, { ...LIMPIO, fase: "activo", intento: e.intento + 1 }) : e;
     case "cancelar":
-      return e.fase === "activo" || e.fase === "listo" || e.fase === "leyendo" ? actualizar(e, { ...LIMPIO, fase: "inicio", intento: 1, error: ev.error ?? null }) : e;
+      return e.fase === "permiso" || e.fase === "activo" || e.fase === "listo" || e.fase === "leyendo" ? actualizar(e, { ...LIMPIO, fase: "inicio", intento: 1, error: ev.error ?? null }) : e;
     case "reintentar":
       return e.fase === "resultado" || e.fase === "error" ? actualizar(e, { ...LIMPIO, fase: "permiso", intento: e.intento + 1 }) : e;
     case "envio": {

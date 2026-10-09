@@ -64,3 +64,10 @@ models/tesseract/
 # Cambio deteccion-fraude: escenas sintéticas generadas y reporte efímero del corredor
 evals/sinteticos/fraude/
 evals/reports/fraude-latest.json
+
+# sdk-integracion 3b: ejemplos por framework
+.next/
+.angular/
+next-env.d.ts
+examples/*/public/lector-cedula/
+.stryker-tmp-*/

@@ -63,6 +63,19 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 400_000,
     },
+    // sdk-integracion (tarea 3b.4): ejemplos por framework compilados, sin servidor del lector.
+    ...[
+      { puerto: 4191, comando: "npm run build -w examples/react && npm run preview -w examples/react" },
+      { puerto: 4192, comando: "npm run build -w examples/next && npm run start -w examples/next" },
+      { puerto: 4193, comando: "npm run build -w examples/angular && npm run preview -w examples/angular" },
+      { puerto: 4194, comando: "npm run build -w examples/vue && npm run preview -w examples/vue" },
+    ].map(({ puerto, comando }) => ({
+      command: `npm run build -w @lector-cedula/web && npx tsc -b packages/react packages/angular packages/vue && ${comando}`,
+      url: `http://localhost:${puerto}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 600_000,
+      env: { NEXT_TELEMETRY_DISABLED: "1", NG_CLI_ANALYTICS: "false" },
+    })),
   ],
   use: {
     trace: "on-first-retry",
@@ -80,8 +93,11 @@ export default defineConfig({
     ].map(({ name, dispositivo }) => ({
       name,
       testDir: "e2e/sdk",
+      testIgnore: /ejemplos\.spec\.ts/,
       use: { ...dispositivo, baseURL: "http://localhost:4190", video: "retain-on-failure" as const, launchOptions: { args: CAMARA } },
     })),
+    // sdk-integracion (tarea 3b.4): los ejemplos por framework, cada uno en su puerto.
+    { name: "sdk-ejemplos", testDir: "e2e/sdk", testMatch: /ejemplos\.spec\.ts/, use: { ...DISPOSITIVOS.escritorio, video: "retain-on-failure", launchOptions: { args: CAMARA } } },
     ...proyectosCaptura,
     ...proyectosLectura,
     // despliegue-produccion (DP-07): PWA servida con las cabeceras de producción (CSP incluida).

@@ -60,7 +60,7 @@ export interface ErrorLector {
   readonly opcion?: string;
 }
 
-export type CodigoEnvio = "servidor-no-disponible" | "subida-fallida" | "sesion-invalida" | "sesion-vencida";
+export type CodigoEnvio = "servidor-no-disponible" | "subida-fallida" | "sesion-invalida" | "sesion-vencida" | "menor-no-enviado";
 
 export type EnvioLector =
   | { readonly estado: "enviando" }
@@ -84,7 +84,10 @@ export type Idioma = "es" | "en";
 export interface OpcionesLector {
   /** `https://...` o `http://localhost`. Opcional: sin él no hay ninguna petición fuera del origen (SDK-37). */
   readonly servidor?: string;
-  /** Token de `hosted_url`; exige `servidor`. */
+  /**
+   * Token de `hosted_url`; exige `servidor`. Antes de crear la sesión, el integrador debe obtener la autorización del
+   * titular para el tratamiento de sus datos (Ley 1581 de 2012); el SDK no la pide por él.
+   */
   readonly sesion?: string;
   /** URL base de los assets (`@lector-cedula/web/assets`). */
   readonly recursos?: string;
@@ -92,6 +95,8 @@ export interface OpcionesLector {
   readonly documentos?: readonly TipoDocumento[];
   /** Admite la tarjeta de identidad y los menores (OD-30a). */
   readonly admitirTi?: boolean;
+  /** Con envío: sube también tarjetas de identidad y menores (por omisión no se envían: `menor-no-enviado`). */
+  readonly enviarMenores?: boolean;
   /** Solo afecta a `error.mensaje`. */
   readonly idioma?: Idioma;
 }

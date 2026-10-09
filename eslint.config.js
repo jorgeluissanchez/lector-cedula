@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 import globals from "globals";
 
 export default tseslint.config(
-  { ignores: [".stryker-tmp*/**", "reports/**", "test-results/**", "**/dist/**", "**/node_modules/**", "coverage/**", ".specify/**", ".claude/**", "openspec/**"] },
+  { ignores: [".stryker-tmp*/**", "reports/**", "test-results/**", "**/dist/**", "**/node_modules/**", "coverage/**", ".specify/**", ".claude/**", "openspec/**", "**/.next/**", "**/.angular/**", "examples/*/public/lector-cedula/**", "**/next-env.d.ts"] },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {

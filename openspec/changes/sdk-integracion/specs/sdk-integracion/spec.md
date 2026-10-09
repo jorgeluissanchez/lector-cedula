@@ -18,6 +18,7 @@ Convenciones de esta spec (aplican a todos los escenarios):
 - `ControladorLector` = `{ iniciar(video: HTMLVideoElement): Promise<void>, cancelar(), reintentar(), destruir(), obtenerEstado(): EstadoLector, suscribir(fn): () => void }`.
 - `TRANSICIONES` (únicas permitidas): `inicio→permiso`, `permiso→activo`, `permiso→error`, `activo→listo`, `listo→activo`, `listo→leyendo`, `activo→leyendo` (captura guiada), `leyendo→resultado`, `leyendo→activo` (reintento automático), `leyendo→error`, `activo|listo→error` (fallo del análisis de calidad, código `calidad-error`), `permiso|activo|listo|leyendo→inicio` (`cancelar`), `resultado|error→permiso` (`reintentar`).
 - `EstadoLector` = `{ fase, calidad: { score 0..100, motivo: "oscuro"|"sobreexpuesto"|"reflejo"|"desenfocado"|"acerca"|null } | null, guia: { video: {x,y,ancho,alto}, normalizada: {x,y,ancho,alto} } | null, contenido: "pdf417"|"mrz-td1"|"mrz-td3"|null, progreso: 0..1 | null, intento: >= 1, resultado: { tipo, campos, warnings, confiable: false, validacion_id } | null, error: { codigo, mensaje, opcion? } | null, envio: { estado: "enviando"|"enviado"|"fallido", codigo? } | null }`.
+- Los tres adaptadores aceptan un segundo argumento opcional `avanzado: { deps?: DependenciasLector, crear?: (opciones, deps) => ControladorLector }` para inyectar `DEPS` o la fábrica del controlador (pruebas e integraciones avanzadas); sin él usan `crearLector`.
 - `DEPS` = `DependenciasLector` falsas inyectadas (cámara, cliente de calidad, cliente lector, reloj) para pruebas sin hardware.
 - El componente no introduce hipótesis de formato; las de los parsers siguen en `docs/decisiones/hipotesis-formato.md` y viajan en `warnings[]`.
 
@@ -134,11 +135,15 @@ Tras verificar los recursos (SDK-39), el núcleo SHALL guardarlos en la Cache St
 - **THEN** la página carga y una lectura de `amarilla-1080p` llega a `resultado` con NUIP `"9999123456"`
 
 ### Requirement: SDK-07 Precarga opcional del motor
-`@lector-cedula/web` SHALL exportar `precargarMotor({ recursos? }): Promise<void>` que descarga, verifica y compila el motor sin pedir la cámara. Tras resolverse, la primera lectura MUST NOT hacer peticiones de red del motor.
+`@lector-cedula/web` SHALL exportar `precargarMotor({ recursos? }): Promise<void>` que descarga, verifica y compila el motor sin pedir la cámara. Tras resolverse, la primera lectura MUST NOT hacer peticiones de red del motor ni de los módulos diferidos del núcleo (dependencias por omisión), que `precargarMotor` también carga.
 
 #### Scenario: Precarga y lectura
 - **WHEN** se llama `await precargarMotor({ recursos: REC })` y luego se lee `amarilla-1080p`
 - **THEN** `getUserMedia` no se llamó durante la precarga y entre `iniciar` y `resultado` no hay peticiones a `REC`
+
+#### Scenario: Precarga sin red
+- **WHEN** en un ejemplo compilado se llama `precargarMotor({ recursos: REC })`, se corta la red y se lee `amarilla-1080p`
+- **THEN** la lectura termina en `resultado` sin pedir ningún chunk JavaScript (el módulo de dependencias por omisión ya se cargó en la precarga)
 
 #### Scenario: Recursos no disponibles en la precarga
 - **WHEN** `REC` responde 404 a `manifest.json`
@@ -214,6 +219,10 @@ El repositorio SHALL incluir ejemplos web en `examples/html` (componente opciona
 #### Scenario: Next sin errores de hidratación
 - **WHEN** se carga `examples/next` compilado con `next build` y `next start`
 - **THEN** la consola no contiene `Hydration`, `window is not defined`, `navigator is not defined` ni `document is not defined`, y `next build` termina con código 0
+
+#### Scenario: Núcleo compatible con bundlers
+- **WHEN** se analizan las fuentes de `packages/web/src` y se compila `examples/next` con `next build` (Turbopack)
+- **THEN** ningún archivo contiene `new URL(<literal>, import.meta.url)`, la compilación termina con código 0 y los recursos por omisión son la carpeta `assets/` junto al módulo, resuelta en tiempo de ejecución
 
 #### Scenario: Tipos de los adaptadores
 - **WHEN** se ejecuta la comprobación de tipos de `examples/react` y `examples/next` (`tsc --noEmit`), `examples/angular` (`ng build`) y `examples/vue` (`vue-tsc --noEmit`)

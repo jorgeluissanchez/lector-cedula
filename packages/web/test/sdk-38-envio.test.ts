@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { enviarCaptura } from "../src/envio.js";
 import { crearLector, type EstadoLector } from "../src/index.js";
-import { crearFalsos, esperar, VIDEO } from "./falsos.js";
+import { AMARILLA, crearFalsos, esperar, VIDEO, type Lectura } from "./falsos.js";
 
 const SRV = "https://api.lector-cedula.example";
 const TOKEN = "tok_sintetico_1";
@@ -93,9 +93,70 @@ describe("SDK-38 Envío opcional al microservicio", () => {
   });
 
   it("SDK-38 acepta `id` como identificador y no envía credenciales", async () => {
-    const s = servidorFalso(json({ id: "val_9", upload: { url: "https://u.example/x" } }));
+    const s = servidorFalso(json({ id: "val_9", upload: { url: `${SRV}/x` } }));
     expect(await enviarCaptura({ servidor: SRV, sesion: "a b", imagen: IMG, fetch: s.fetch })).toStrictEqual({ estado: "enviado", validacion_id: "val_9" });
     expect(s.llamadas[0]?.url).toBe(`${SRV}/v/a%20b/inicio`);
     for (const l of s.llamadas) expect(l.init?.credentials).toBe("omit");
+  });
+
+  it.each([
+    ["otro origen", "https://otro.example/subir"],
+    ["http del mismo host", "http://api.lector-cedula.example/v1/validations/v/images"],
+    ["otro puerto", "https://api.lector-cedula.example:8443/x"],
+    ["relativa", "/v1/validations/v/images"],
+    ["javascript", "javascript:alert(1)"],
+  ])("SDK-42 upload.url de otro origen (%s): no sube y sesion-invalida", async (_n, url) => {
+    const s = servidorFalso(json({ validation_id: "v", upload: { url } }));
+    expect(await enviarCaptura({ servidor: SRV, sesion: TOKEN, imagen: IMG, fetch: s.fetch })).toStrictEqual({ estado: "fallido", codigo: "sesion-invalida" });
+    expect(s.llamadas).toHaveLength(1);
+  });
+
+  it.each([
+    ["servidor http no local", "http://api.example", "http://api.example/x"],
+    ["servidor no es URL", "no-es-url", "https://api.example/x"],
+    ["upload numérico", SRV, 5 as unknown as string],
+  ])("SDK-42 destino inseguro o inválido (%s): sesion-invalida", async (_n, servidor, url) => {
+    const s = servidorFalso(json({ validation_id: "v", upload: { url } }));
+    expect(await enviarCaptura({ servidor, sesion: TOKEN, imagen: IMG, fetch: s.fetch })).toStrictEqual({ estado: "fallido", codigo: "sesion-invalida" });
+    expect(s.llamadas).toHaveLength(1);
+  });
+
+  it("SDK-42 http://127.0.0.1 con el mismo origen se acepta", async () => {
+    const s = servidorFalso(json({ validation_id: "v", upload: { url: "http://127.0.0.1:8000/v1/x" } }));
+    expect(await enviarCaptura({ servidor: "http://127.0.0.1:8000", sesion: TOKEN, imagen: IMG, fetch: s.fetch })).toStrictEqual({ estado: "enviado", validacion_id: "v" });
+    expect(s.llamadas[1]?.url).toBe("http://127.0.0.1:8000/v1/x");
+  });
+
+  it("SDK-42 upload.url en http://localhost se acepta si el servidor es el mismo localhost", async () => {
+    const s = servidorFalso(json({ validation_id: "v", upload: { url: "http://localhost:8000/v1/x" } }));
+    expect(await enviarCaptura({ servidor: "http://localhost:8000", sesion: TOKEN, imagen: IMG, fetch: s.fetch })).toStrictEqual({ estado: "enviado", validacion_id: "v" });
+  });
+
+  it.each([
+    ["tarjeta de identidad", { ...AMARILLA, tipoDocumento: "tarjeta-identidad" } as Lectura],
+    ["menor de edad", { ...AMARILLA, menorDeEdad: true } as Lectura],
+  ])("SDK-43 Menor de edad sin envío (%s): resultado local, sin red, menor-no-enviado", async (_n, lectura) => {
+    const s = servidorFalso(INICIO_OK());
+    const c = crearLector({ servidor: SRV, sesion: TOKEN, admitirTi: true }, crearFalsos({ fetch: s.fetch, lecturas: [lectura] }).deps);
+    await c.iniciar(VIDEO);
+    const e = await esperar(c.obtenerEstado, (x) => x.envio?.estado === "fallido");
+    expect(e.fase).toBe("resultado");
+    expect(e.resultado?.campos.nuip).toBe("9999123456");
+    expect(e.envio).toStrictEqual({ estado: "fallido", codigo: "menor-no-enviado" });
+    expect(s.llamadas).toHaveLength(0);
+  });
+
+  it("SDK-43 con enviarMenores: true el envío de la tarjeta de identidad ocurre", async () => {
+    const s = servidorFalso(INICIO_OK());
+    const ti = { ...AMARILLA, tipoDocumento: "tarjeta-identidad", menorDeEdad: true } as Lectura;
+    const c = crearLector({ servidor: SRV, sesion: TOKEN, admitirTi: true, enviarMenores: true }, crearFalsos({ fetch: s.fetch, lecturas: [ti] }).deps);
+    await c.iniciar(VIDEO);
+    const e = await esperar(c.obtenerEstado, (x) => x.envio?.estado === "enviado");
+    expect(e.resultado?.validacion_id).toBe("val_123");
+    expect(s.llamadas).toHaveLength(2);
+  });
+
+  it("SDK-43 enviarMenores no booleano es opción inválida", () => {
+    expect(crearLector({ servidor: SRV, sesion: TOKEN, enviarMenores: "si" as never }, crearFalsos().deps).obtenerEstado().error?.opcion).toBe("enviarMenores");
   });
 });

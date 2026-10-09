@@ -164,7 +164,7 @@ export function crearLector(opciones: OpcionesLector = {}, deps?: DependenciasLe
     } catch {
       if (gen !== generacion) return;
       liberarTodo(true);
-      emitir({ tipo: "cancelar", error: error("calidad-error") });
+      emitir({ tipo: "fallo", error: error("calidad-error") });
       return;
     }
     if (gen !== generacion) return;
@@ -237,6 +237,15 @@ export function crearLector(opciones: OpcionesLector = {}, deps?: DependenciasLe
       return emitir({ tipo: "fallo", error: error("documento-no-admitido") });
     }
     medirLectura();
+    const menor = r.tipoDocumento === "tarjeta-identidad" || (r as { menorDeEdad?: boolean }).menorDeEdad === true;
+    if (conEnvio && menor && opciones.enviarMenores !== true) {
+      return emitir({
+        tipo: "resultado",
+        resultado: aPresentacion(r),
+        contenido: FUENTES.has(r.fuente) ? r.fuente : null,
+        envio: { estado: "fallido", codigo: "menor-no-enviado" },
+      });
+    }
     emitir({
       tipo: "resultado",
       resultado: aPresentacion(r),
@@ -262,19 +271,10 @@ export function crearLector(opciones: OpcionesLector = {}, deps?: DependenciasLe
       if (gen === generacion) emitir({ tipo: "fallo", error: error("motor-no-disponible") });
       return;
     }
-    if (gen !== generacion || !(await abrir(gen, v))) {
-      // Cancelado mientras se pedía el permiso: permiso -> activo -> inicio (transiciones permitidas).
-      if (gen !== generacion && !destruido && estado.fase === "permiso" && cancelado === gen) {
-        emitir({ tipo: "camara-lista" });
-        emitir({ tipo: "cancelar" });
-      }
-      return;
-    }
+    if (gen !== generacion || !(await abrir(gen, v))) return;
     emitir({ tipo: "camara-lista" });
     bucle(gen, v, deps);
   }
-
-  let cancelado = -1;
 
   return {
     async iniciar(v) {
@@ -286,7 +286,6 @@ export function crearLector(opciones: OpcionesLector = {}, deps?: DependenciasLe
     },
     cancelar() {
       if (destruido) return;
-      cancelado = generacion;
       reintentos.reiniciar();
       liberarTodo(true);
       emitir({ tipo: "cancelar" });

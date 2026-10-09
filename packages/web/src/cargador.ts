@@ -47,9 +47,11 @@ export function baseRecursos(recursos: string): string {
   return abs.endsWith("/") ? abs : `${abs}/`;
 }
 
-/** Recursos por omisión: la carpeta `assets/` del paquete, resuelta por el bundler del integrador. */
+/** Recursos por omisión: la carpeta `assets/` junto al módulo, resuelta en tiempo de ejecución (sin análisis del bundler). */
 export function recursosPorOmision(): string {
-  return new URL("./assets/", import.meta.url).href;
+  // Sin `new URL(...)`: Turbopack y webpack lo analizan como un asset y fallan con una carpeta (SDK-12, Next). Se
+  // resuelve en tiempo de ejecución; con bundlers, el integrador pasa `recursos`.
+  return import.meta.url.replace(/[^/]*$/u, "assets/");
 }
 
 async function leerCache(cache: CacheMinima | null, url: string): Promise<ArrayBuffer | null> {

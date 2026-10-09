@@ -27,8 +27,12 @@ export interface OpcionesSecuencia {
   readonly presupuestoMs?: number;
 }
 
+/**
+ * `respaldoDe` solo en la llamada final de respaldo de una pista PDF417 (OFF-27c: el Worker acota la MRZ a TD1 y 4
+ * llamadas).
+ */
 /** Lee un frame con un solo lector (`respaldo: false`) o, con `null`, con el orden de OFF-06. */
-export type LeerFrame = (frame: FrameLectura, lector: TipoLectura | null) => Promise<ResultadoLectura>;
+export type LeerFrame = (frame: FrameLectura, lector: TipoLectura | null, respaldoDe?: TipoLectura) => Promise<ResultadoLectura>;
 
 const NINGUNO: ResultadoLectura = { ok: false, tipo: "pdf417", error: "pdf417-no-encontrado" };
 
@@ -48,9 +52,9 @@ export async function leerSecuencia(
   const pasos: PasoSecuencia[] = [];
   let resultado = NINGUNO;
   const inicio = opciones.ahora();
-  const paso = async (frame: FrameLectura, lector: TipoLectura | null, ultima: boolean): Promise<void> => {
+  const paso = async (frame: FrameLectura, lector: TipoLectura | null, ultima: boolean, respaldoDe?: TipoLectura): Promise<void> => {
     const t = opciones.ahora();
-    const pendiente = leer(frame, lector);
+    const pendiente = respaldoDe === undefined ? leer(frame, lector) : leer(frame, lector, respaldoDe);
     if (ultima) frame.pixeles.fill(0);
     resultado = await pendiente;
     pasos.push({ origen: frame.origen, ancho: frame.ancho, alto: frame.alto, codigo: codigoResultado(resultado), ms: Math.round(opciones.ahora() - t) });
@@ -63,7 +67,7 @@ export async function leerSecuencia(
       if (!noEncontrado(resultado)) return { resultado, pasos };
     }
     const primero = frames[0];
-    if (pista !== null && primero !== undefined) await paso(primero, pista === "pdf417" ? "mrz" : "pdf417", true);
+    if (pista !== null && primero !== undefined) await (pista === "pdf417" ? paso(primero, "mrz", true, "pdf417") : paso(primero, "pdf417", true));
   } finally {
     for (const f of frames) f.pixeles.fill(0);
   }

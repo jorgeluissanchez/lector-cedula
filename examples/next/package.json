@@ -1,0 +1,20 @@
+{
+  "name": "@lector-cedula/ejemplo-next",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ejemplo headless de @lector-cedula/react en Next con UI propia y sin servidor por omisión (sdk-integracion, tarea 3b.4).",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@lector-cedula/react": "0.1.0",
+    "@lector-cedula/web": "0.1.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "scripts": {
+    "build": "node ../copiar-recursos.mjs public/lector-cedula && next build",
+    "typecheck": "tsc --noEmit -p .",
+    "start": "next start --port 4192"
+  }
+}

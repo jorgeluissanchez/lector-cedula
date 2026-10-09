@@ -12,6 +12,20 @@ export interface DatosEnvio {
   readonly fetch: typeof fetch;
 }
 
+/** `upload.url` debe ser del mismo origen que `servidor` y segura (https o http localhost). */
+export function urlSubidaValida(url: string, servidor: string): boolean {
+  let u: URL;
+  let s: URL;
+  try {
+    u = new URL(url);
+    s = new URL(servidor);
+  } catch {
+    return false;
+  }
+  if (u.origin !== s.origin) return false;
+  return u.protocol === "https:" || (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1"));
+}
+
 const fallido = (codigo: CodigoEnvio): EnvioLector => ({ estado: "fallido", codigo });
 
 async function slug(r: Response): Promise<string> {
@@ -46,14 +60,17 @@ export async function enviarCaptura(d: DatosEnvio): Promise<EnvioLector> {
   } catch {
     return fallido("servidor-no-disponible");
   }
-  if (typeof id !== "string" || typeof url !== "string") return fallido("sesion-invalida");
-  // El servidor exige anverso y reverso (AV-07); el lector captura una sola cara: va en ambas partes.
+  // `String(url)` de un valor no textual nunca es una URL válida.
+  if (typeof id !== "string" || !urlSubidaValida(String(url), base)) return fallido("sesion-invalida");
+  // Excepción temporal (SDK-38, tarea 4.3): el servidor exige anverso y reverso (AV-07) y el lector captura una sola
+  // cara, así que la misma imagen va en ambas partes.
   const cuerpo = new FormData();
+  const destino = String(url);
   cuerpo.append("front", d.imagen, "front.jpg");
   cuerpo.append("back", d.imagen, "back.jpg");
   let subida: Response;
   try {
-    subida = await d.fetch(url, { method: "POST", body: cuerpo, credentials: "omit" });
+    subida = await d.fetch(destino, { method: "POST", body: cuerpo, credentials: "omit" });
   } catch {
     return fallido("servidor-no-disponible");
   }
