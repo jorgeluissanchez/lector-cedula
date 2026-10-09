@@ -1,11 +1,26 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/parsers" },
-    { "path": "packages/fixtures" },
-    { "path": "packages/capture" },
-    { "path": "packages/fraud" },
-    { "path": "packages/servidor" },
-    { "path": "apps/pwa" }
+    {
+      "path": "packages/parsers"
+    },
+    {
+      "path": "packages/fixtures"
+    },
+    {
+      "path": "packages/capture"
+    },
+    {
+      "path": "packages/fraud"
+    },
+    {
+      "path": "packages/servidor"
+    },
+    {
+      "path": "packages/web"
+    },
+    {
+      "path": "apps/pwa"
+    }
   ]
 }

@@ -56,6 +56,13 @@ export default defineConfig({
     },
     // despliegue-produccion (DP-07): el mismo build con exactamente las cabeceras de vercel.json.
     { command: "node tools/despliegue/servir-vercel.mjs 4180", url: "http://localhost:4180", reuseExistingServer: !process.env.CI, timeout: 60_000 },
+    // sdk-integracion (tarea 3.4): ejemplo headless sin servidor con los assets del paquete copiados.
+    {
+      command: "npm run build -w @lector-cedula/web && npx vite build examples/vanilla && npx vite preview examples/vanilla --port 4190 --strictPort",
+      url: "http://localhost:4190",
+      reuseExistingServer: !process.env.CI,
+      timeout: 400_000,
+    },
   ],
   use: {
     trace: "on-first-retry",
@@ -64,8 +71,17 @@ export default defineConfig({
     launchOptions: { args: CAMARA },
   },
   projects: [
-    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/], use: { ...devices["Desktop Chrome"] } },
-    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/], use: { ...devices["Pixel 7"] } },
+    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/], use: { ...devices["Desktop Chrome"] } },
+    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/], use: { ...devices["Pixel 7"] } },
+    // sdk-integracion (tarea 3.4): núcleo headless sobre examples/vanilla; cada spec elige su vídeo.
+    ...[
+      { name: "sdk-chromium", dispositivo: DISPOSITIVOS.escritorio },
+      { name: "sdk-pixel7", dispositivo: DISPOSITIVOS.pixel },
+    ].map(({ name, dispositivo }) => ({
+      name,
+      testDir: "e2e/sdk",
+      use: { ...dispositivo, baseURL: "http://localhost:4190", video: "retain-on-failure" as const, launchOptions: { args: CAMARA } },
+    })),
     ...proyectosCaptura,
     ...proyectosLectura,
     // despliegue-produccion (DP-07): PWA servida con las cabeceras de producción (CSP incluida).

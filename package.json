@@ -38,7 +38,8 @@
     "test:lighthouse": "npm run build -w @lector-cedula/pwa && node tools/lighthouse.mjs",
     "test:webkit": "node tools/visual.mjs --webkit",
     "fraude:sinteticos": "tsc -b && node tools/fraude/generar-sinteticos.mjs",
-    "eval:fraude": "tsc -b && node evals/runners/fraude/eval-fraude.mjs"
+    "eval:fraude": "tsc -b && node evals/runners/fraude/eval-fraude.mjs",
+    "check:tamano-sdk": "node tools/tamano-sdk.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

@@ -1,0 +1,12 @@
+{
+  "name": "@lector-cedula/ejemplo-vanilla",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ejemplo headless de @lector-cedula/web sin framework ni servidor (sdk-integracion, tarea 3.4).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@lector-cedula/web",
+  "version": "0.1.0",
+  "description": "Núcleo headless del lector de cédula colombiana: crearLector (máquina de estados sin UI), leerDocumento, carga verificada y offline del motor (cambio sdk-integracion).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./sw": {
+      "types": "./dist/sw.d.ts",
+      "default": "./dist/sw.js"
+    },
+    "./assets/*": "./dist/assets/*"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b && node scripts/construir-assets.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lector-cedula/capture": "0.0.0"
+  }
+}

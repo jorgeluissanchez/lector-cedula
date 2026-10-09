@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lector de cédula: ejemplo headless (vanilla)</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; background: #f4f6f8; color: #14202b; }
+      .marco { position: relative; max-width: 640px; background: #000; border-radius: 12px; overflow: hidden; }
+      video { display: block; width: 100%; }
+      #guia { position: absolute; border: 3px dashed #ffd400; border-radius: 10px; display: none; }
+      .acciones { display: flex; gap: .5rem; margin: 1rem 0; flex-wrap: wrap; }
+      button { font: inherit; padding: .6rem 1rem; border-radius: 8px; border: 0; background: #0a5cff; color: #fff; }
+      dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Lector de cédula (headless, sin servidor)</h1>
+    <div class="marco"><video id="video" playsinline muted></video><div id="guia" aria-hidden="true"></div></div>
+    <div class="acciones">
+      <button type="button" data-prueba="precargar">Precargar motor</button>
+      <button type="button" data-prueba="iniciar">Iniciar</button>
+      <button type="button" data-prueba="cancelar">Cancelar</button>
+      <button type="button" data-prueba="reintentar">Reintentar</button>
+      <button type="button" data-prueba="destruir">Destruir</button>
+    </div>
+    <dl aria-live="polite">
+      <dt>Fase</dt><dd data-prueba="fase">inicio</dd>
+      <dt>Calidad</dt><dd data-prueba="calidad"></dd>
+      <dt>Contenido</dt><dd data-prueba="contenido"></dd>
+      <dt>Intento</dt><dd data-prueba="intento"></dd>
+      <dt>NUIP</dt><dd data-prueba="nuip"></dd>
+      <dt>Error</dt><dd data-prueba="error"></dd>
+      <dt>Motor</dt><dd data-prueba="motor"></dd>
+    </dl>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
