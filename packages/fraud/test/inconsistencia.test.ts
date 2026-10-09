@@ -138,3 +138,39 @@ describe("FRA-18 vencimiento solo en la digital", () => {
     expect(detectarInconsistencia("digital", { visible: { fechaVencimiento: "2026-10-08" } }, reloj).motivo).toBeNull();
   });
 });
+
+describe("FRA-11 bordes (mutación)", () => {
+  it("mes 13 y fechas con texto alrededor son imposibles", () => {
+    for (const f of ["2001-13-01", "x2001-01-01", "2001-01-01x"]) expect(detectarInconsistencia("amarilla", { pdf417: { fechaNacimiento: f } }, reloj).motivo?.detalle, f).toBe("fecha-imposible");
+    expect(detectarInconsistencia("amarilla", { pdf417: { fechaExpedicion: "2001-02-30" } }, reloj).motivo?.detalle).toBe("fecha-imposible");
+    expect(detectarInconsistencia("amarilla", { pdf417: { fechaExpedicion: "2027-01-01" } }, reloj).motivo?.detalle).toBe("fecha-imposible");
+  });
+
+  it("campos no textuales se ignoran y sin MRZ no se omite nada más que lo visible", () => {
+    expect(detectarInconsistencia("amarilla", { pdf417: { nuip: 12, fechaNacimiento: 5 }, visible: { nuip: "9999123456" } }, reloj)).toStrictEqual({ motivo: null, omitidas: [] });
+  });
+
+  it("visible ilegible o fuente ilegible no comparan", () => {
+    expect(detectarInconsistencia("amarilla", { pdf417: { nuip: "9999123456" }, visible: { nuip: "ABC" } }, reloj).motivo?.detalle).toBe("nuip-formato");
+    expect(detectarInconsistencia("amarilla", { pdf417: { nuip: "ABC" }, visible: { nuip: "9999123456" } }, reloj).motivo?.detalle).toBe("nuip-formato");
+    expect(detectarInconsistencia("amarilla", { visible: { nuip: "9999123456" } }, reloj).motivo).toBeNull();
+  });
+
+  it("vencimiento ilegible o el mismo día no vence", () => {
+    expect(detectarInconsistencia("digital", { visible: { fechaVencimiento: "nunca" } }, reloj).motivo?.detalle).toBe("fecha-imposible");
+  });
+
+  it("reloj que lanza o inválido: nada es futuro ni vencido", () => {
+    const malo = () => {
+      throw new Error("x");
+    };
+    expect(detectarInconsistencia("digital", { visible: { fechaVencimiento: "2001-01-01", fechaNacimiento: "2090-01-01" } }, malo).motivo).toBeNull();
+    expect(detectarInconsistencia("digital", { mrz: { lineas: MRZ.lineas } }, () => new Date(Number.NaN)).motivo).toBeNull();
+  });
+
+  it("la MRZ aporta nacimiento y vencimiento", () => {
+    const fx = generarMrzTd1({ ...PERSONA_BASE, fechaVencimiento: "2026-01-31" });
+    const r = detectarInconsistencia("digital", { mrz: { lineas: fx.lineas }, visible: { fechaExpedicion: "1980-01-01" } }, reloj);
+    expect(r.motivo?.detalle).toBe("vencido");
+  });
+});

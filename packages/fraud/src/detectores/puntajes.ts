@@ -66,5 +66,8 @@ export function puntajeRecorte(m: MedidasImagen): Motivo | null {
 }
 
 export function puntajeEdicion(m: MedidasImagen): Motivo | null {
-  return combinar("edicion", [["doble-compresion", rampa(m.dobleCompresion, 4, 12)]]);
+  return combinar("edicion", [
+    ["doble-compresion", rampa(m.dobleCompresion, 4, 12)],
+    ["superposicion", rampa(m.superposicion, 6, 22)],
+  ]);
 }

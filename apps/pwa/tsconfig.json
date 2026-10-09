@@ -23,6 +23,9 @@
   "references": [
     {
       "path": "../../packages/capture"
+    },
+    {
+      "path": "../../packages/fraud"
     }
   ]
 }

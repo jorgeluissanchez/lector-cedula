@@ -233,12 +233,31 @@ La pantalla `resultado` MUST mostrar el nivel de riesgo y los motivos en españo
 - **WHEN** la cámara simulada reproduce `amarilla-1080p.y4m`
 - **THEN** `data-riesgo-nivel` es `bajo`
 
+### Requirement: FRA-20 Señal no disponible en la PWA
+La PWA MUST calcular la señal en un Worker propio (`fraude.worker`) tras una lectura correcta de la cédula, con los frames de vídeo de la captura (copias que el Worker pone a cero) y el rectángulo de la guía como cuadrilátero, y esperarla como máximo 3000 ms. Si el Worker falla, excede el tiempo o el documento no es una cédula, `resultado` MUST mostrarse igual con `data-riesgo-nivel` `no-disponible` y sin motivos.
+
+#### Scenario: Guía como cuadrilátero
+- **WHEN** la entrada declara `cuadrilateroAproximado: true` (la PWA usa la guía de encuadre)
+- **THEN** no se emiten `recorte`, `marco-pantalla` ni `sin-holograma`, y `senalesOmitidas` contiene `"geometria"` y `"holograma"`
+
+#### Scenario: Worker de fraude que no responde
+- **WHEN** el cliente de fraude no recibe respuesta en 3000 ms
+- **THEN** resuelve `null`, termina el Worker y `resultado` tiene `data-riesgo-nivel` `no-disponible`
+
+#### Scenario: Motivos en español
+- **WHEN** la señal tiene motivos `pantalla` y `fotocopia`
+- **THEN** la pantalla muestra "Parece una foto de una pantalla" y "Parece una fotocopia o una impresión", y `data-riesgo-motivos` es `pantalla fotocopia`
+
 ### Requirement: FRA-18 Vencimiento solo en la cédula digital
 El `detalle` `vencido` MUST emitirse solo cuando `tipo` es `"digital"` (decisión P5); la cédula amarilla no tiene fecha de vencimiento.
 
 #### Scenario: La amarilla nunca vence
 - **WHEN** se evalúa la amarilla con datos que incluyen una fecha `vencimiento` `2026-01-31` y el reloj inyectado es `2026-10-08`
 - **THEN** no se emite `vencido`
+
+#### Scenario: Sin reloj válido no hay vencimiento
+- **WHEN** se evalúa la digital con vencimiento `2001-01-01` y el reloj inyectado lanza o devuelve una fecha inválida
+- **THEN** no se emite `vencido`; una fecha de vencimiento ilegible produce `fecha-imposible`
 
 ### Requirement: FRA-19 Set de campo bloqueado hasta revisión legal
 La recolección de ataques físicos (fotocopias, pantallas) con cédulas reales MUST NOT empezar hasta que exista una aprobación legal escrita en `docs/legal/` (decisión P4).

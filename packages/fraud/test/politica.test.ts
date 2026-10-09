@@ -2,6 +2,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  CODIGOS_MOTIVO,
   CONFIG_FRAUDE_POR_DEFECTO,
   type ConfigFraude,
   type Motivo,
@@ -151,5 +152,37 @@ describe("FRA-04 política", () => {
       }),
       { numRuns: 1000 },
     );
+  });
+});
+
+describe("FRA-04 y FRA-05 bordes (mutación)", () => {
+  it("vocabulario cerrado de códigos", () => {
+    expect(CODIGOS_MOTIVO).toStrictEqual(["pantalla", "fotocopia", "recorte", "edicion", "inconsistencia"]);
+  });
+
+  it("motivoUnico se conserva tal cual (también false) y no aparece si no se da", () => {
+    const con = validarConfigFraude({ bloquearSi: { puntajeMinimo: 70, motivosMinimos: 2, motivoUnico: false } });
+    expect(con.ok && con.config.bloquearSi).toStrictEqual({ puntajeMinimo: 70, motivosMinimos: 2, motivoUnico: false });
+    const sin = validarConfigFraude({ bloquearSi: { puntajeMinimo: 70, motivosMinimos: 2 } });
+    expect(sin.ok && sin.config.bloquearSi).toStrictEqual({ puntajeMinimo: 70, motivosMinimos: 2 });
+  });
+
+  it("pesos en los bordes 0 y 1; no numéricos o NaN se rechazan", () => {
+    const r = validarConfigFraude({ pesos: { pantalla: 0, fotocopia: 1 } });
+    expect(r.ok && r.config.pesos).toStrictEqual({ ...CONFIG_FRAUDE_POR_DEFECTO.pesos, pantalla: 0, fotocopia: 1 });
+    for (const v of [Number.NaN, "1", null]) expect(validarConfigFraude({ pesos: { recorte: v } })).toStrictEqual({ ok: false, error: "config-fraude-invalida", campo: "pesos.recorte" });
+  });
+
+  it("modelo habilitado se copia; sin booleano se rechaza", () => {
+    const r = validarConfigFraude({ modelo: { habilitado: true } });
+    expect(r.ok && r.config.modelo).toStrictEqual({ habilitado: true });
+    expect(validarConfigFraude({ modelo: {} })).toStrictEqual({ ok: false, error: "config-fraude-invalida", campo: "modelo.habilitado" });
+  });
+
+  it("bloquear con puntaje igual al mínimo; una config sin validar con motivosMinimos 1 sigue exigiendo 2", () => {
+    const c = { ...CONFIG_FRAUDE_POR_DEFECTO, bloquearSi: { puntajeMinimo: 70, motivosMinimos: 2 } };
+    expect(decidirAccion(70, [m("pantalla", 0.5), m("recorte", 0.5)], c)).toBe("bloquear");
+    const cruda = { ...CONFIG_FRAUDE_POR_DEFECTO, bloquearSi: { puntajeMinimo: 70, motivosMinimos: 1 } };
+    expect(decidirAccion(90, [m("pantalla", 0.9)], cruda)).toBe("revisar");
   });
 });

@@ -16,6 +16,7 @@ const N: MedidasImagen = {
   esquinasRectas: 0,
   esquinasDecidibles: 4,
   dobleCompresion: 1,
+  superposicion: 0,
 };
 
 describe("rampa", () => {
@@ -98,5 +99,24 @@ describe("FRA-10 edición", () => {
     expect(puntajeEdicion({ ...N, dobleCompresion: 4 })).toBeNull();
     expect(puntajeEdicion({ ...N, dobleCompresion: 8 })).toStrictEqual({ codigo: "edicion", puntaje: 0.5, detalle: "doble-compresion" });
     expect(puntajeEdicion({ ...N, dobleCompresion: 30 })?.puntaje).toBe(1);
+  });
+  it("superposición por grupo rectangular de bloques sin ruido coherente", () => {
+    expect(puntajeEdicion({ ...N, superposicion: 6 })).toBeNull();
+    expect(puntajeEdicion({ ...N, superposicion: 14 })).toStrictEqual({ codigo: "edicion", puntaje: 0.5, detalle: "superposicion" });
+    expect(puntajeEdicion({ ...N, superposicion: 22 })).toStrictEqual({ codigo: "edicion", puntaje: 1, detalle: "superposicion" });
+    expect(puntajeEdicion({ ...N, superposicion: 22, dobleCompresion: 30 })?.detalle).toBe("doble-compresion");
+  });
+});
+
+describe("bordes de puntajes (mutación)", () => {
+  it("frecuencia exactamente en el límite de rejilla resuelta es subpixeles", () => {
+    expect(puntajePantalla({ ...N, subpixeles: 200, frecuenciaSubpixeles: 256 / 3 })?.detalle).toBe("subpixeles");
+  });
+  it("banding null no aporta", () => {
+    expect(puntajePantalla({ ...N, banding: null })).toBeNull();
+  });
+  it("relación ID-1 es 85,60/53,98 y una desviación exacta de la tolerancia no es motivo", () => {
+    expect(ASPECTO_ID1).toBeCloseTo(1.5858, 4);
+    expect(puntajeRecorte({ ...N, aspecto: ASPECTO_ID1 - 0.02 })).toBeNull();
   });
 });

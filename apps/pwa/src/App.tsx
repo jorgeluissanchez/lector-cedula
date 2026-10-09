@@ -7,8 +7,18 @@ import { ESTADO_INICIAL, reducir, type CodigoError } from "./estado";
 import { iniciarIndicador, TEXTOS_OFFLINE, type EstadoOffline } from "./precache/indicador";
 import { fragmentos, RUTA_POLITICA, RUTA_TERMINOS, TEXTO_ALCANCE, type Bloque } from "./legal";
 import { LICENCIA_CC_BY_SA, RUTA_AVISOS, SECCIONES_LICENCIAS, TEXTO_ENLACE_FUENTES } from "./licencias";
+import { MOTIVOS_RIESGO } from "./fraude";
 import { camposVisibles } from "./resultado";
 import { crearSesion } from "./sesion";
+
+/** deteccion-fraude (FRA-17, FRA-20): la señal informa; no oculta ni bloquea los datos leídos. */
+const TEXTOS_RIESGO: Readonly<Record<string, string>> = {
+  bajo: "Riesgo bajo",
+  medio: "Riesgo medio: revisa el documento físico",
+  alto: "Riesgo alto: revisa el documento físico",
+  "no-disponible": "Señal de riesgo no disponible",
+};
+const TEXTO_AUTENTICIDAD = "Es una señal orientativa calculada en tu dispositivo; la autenticidad solo la confirma la Registraduría.";
 
 const TEXTOS_ERROR: Readonly<Record<CodigoError, string>> = { ...TEXTOS_ERROR_CAMARA, ...TEXTOS_ENTORNO };
 
@@ -233,7 +243,13 @@ export function App() {
           </section>
         )}
         {p === "resultado" && (
-          <section class="resultado" aria-live="polite" aria-labelledby="titulo-resultado">
+          <section
+            class="resultado"
+            aria-live="polite"
+            aria-labelledby="titulo-resultado"
+            data-riesgo-nivel={estado.riesgo?.nivel ?? "no-disponible"}
+            data-riesgo-motivos={(estado.riesgo?.motivos ?? []).map((m) => m.codigo).join(" ")}
+          >
             <h2 id="titulo-resultado">{estado.lectura.tipo === "pdf417" ? "Cédula amarilla" : "Cédula digital"}</h2>
             <p class="descargo">{LEGAL.descargo}</p>
             <dl>
@@ -254,6 +270,19 @@ export function App() {
                 </div>
               ))}
             </dl>
+            <section class="riesgo" aria-labelledby="titulo-riesgo" data-riesgo={estado.riesgo?.nivel ?? "no-disponible"}>
+              <h3 id="titulo-riesgo">{TEXTOS_RIESGO[estado.riesgo?.nivel ?? "no-disponible"]}</h3>
+              {(estado.riesgo?.motivos.length ?? 0) > 0 && (
+                <ul>
+                  {estado.riesgo?.motivos.map((m) => (
+                    <li key={m.codigo} data-motivo={m.codigo}>
+                      {MOTIVOS_RIESGO[m.codigo]}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p class="nota-riesgo">{TEXTO_AUTENTICIDAD}</p>
+            </section>
           </section>
         )}
         {depurar && diagnostico !== null && (p === "leyendo" || p === "resultado" || p === "error-lectura") && (

@@ -8,7 +8,11 @@ import { chunkDivipol, nombreRecurso, pluginPwa } from "./plugin-pwa";
 // Decisión 10: `src/sw.ts` es una segunda entrada que se emite como `dist/sw.js` (alcance `/`).
 export default defineConfig({
   resolve: {
-    alias: { "@lector-cedula/capture": fileURLToPath(new URL("../../packages/capture/src/index.ts", import.meta.url)) },
+    alias: {
+      "@lector-cedula/capture": fileURLToPath(new URL("../../packages/capture/src/index.ts", import.meta.url)),
+      // deteccion-fraude (FRA-17): solo el índice del paquete; el generador sintético no entra en el bundle.
+      "@lector-cedula/fraud": fileURLToPath(new URL("../../packages/fraud/src/index.ts", import.meta.url)),
+    },
   },
   // OFF-21: aviso, autorización y descargo, extraídos en la compilación de docs/legal (sin duplicar el texto).
   define: { __TEXTOS_LEGALES__: JSON.stringify(textosLegales()) },

@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "sintetico": true,
+  "umbral": 40,
+  "muestrasPorClase": 50,
+  "semillaInicial": 1001,
+  "p95MsNode": 527,
+  "documentos": {
+    "amarilla": {
+      "bpcer": 0,
+      "bpcerIc": [
+        0,
+        0.071348
+      ],
+      "apcerMax": 0,
+      "bpcerApcer5": 0,
+      "auc": 1,
+      "n": {
+        "autenticos": 50,
+        "ataques": 300
+      },
+      "especies": {
+        "editada": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "fotocopia-color": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "fotocopia-gris": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "impresion": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "pantalla": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "recortada": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        }
+      }
+    },
+    "digital": {
+      "bpcer": 0,
+      "bpcerIc": [
+        0,
+        0.071348
+      ],
+      "apcerMax": 0,
+      "bpcerApcer5": 0,
+      "auc": 1,
+      "n": {
+        "autenticos": 50,
+        "ataques": 300
+      },
+      "especies": {
+        "editada": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "fotocopia-color": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "fotocopia-gris": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "impresion": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "pantalla": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        },
+        "recortada": {
+          "apcer": 0,
+          "ic": [
+            0,
+            0.071348
+          ],
+          "n": 50
+        }
+      }
+    }
+  }
+}

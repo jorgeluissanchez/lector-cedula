@@ -28,6 +28,8 @@ export interface OpcionesEscena {
   frames?: number;
   /** Bandas de refresco que avanzan 12 px por frame (solo con `pantalla`). */
   banding?: boolean;
+  /** Solo con `editada`: el parche se pega sin ruido de sensor y sin recompresión (superposición, FRA-10). */
+  superposicion?: boolean;
   distorsion?: Distorsion;
 }
 
@@ -218,7 +220,7 @@ function desenfocar(f: FrameRGBA, sigma: number): void {
 export function generarEscena(o: OpcionesEscena): EscenaSintetica {
   const { tipo, clase, semilla } = o;
   const nFrames = Math.min(5, Math.max(1, Math.floor(o.frames ?? (o.banding === true ? 5 : 3))));
-  const r = prng(hash(`${tipo}|${clase}|${semilla}|${o.banding === true ? "b" : ""}`));
+  const r = prng(hash(`${tipo}|${clase}|${semilla}|${o.banding === true ? "b" : ""}${o.superposicion === true ? "s" : ""}`));
   const dist = o.distorsion ?? {};
   const escalaPx = 560 + r() * 80; // ancho de la tarjeta en px
   const pxmm = escalaPx / MM_W;
@@ -327,15 +329,17 @@ export function generarEscena(o: OpcionesEscena): EscenaSintetica {
           const tinta = (y - rect.y0) % 20 < 11 && Math.sin((x - rect.x0) * 0.45) > -0.4;
           const base = colorTarjeta(tipo, 31, 30, fase0, variante);
           const c = tinta ? [35, 35, 45] : base;
-          for (let k = 0; k < 3; k++) data[i + k] = (c[k] as number) + 2 * gauss(r);
+          for (let k = 0; k < 3; k++) data[i + k] = (c[k] as number) + (o.superposicion === true ? 0 : 2 * gauss(r));
         }
-      recomprimirLuma(frame, 60, rect);
-      recomprimirLuma(frame, 92);
+      if (o.superposicion !== true) {
+        recomprimirLuma(frame, 60, rect);
+        recomprimirLuma(frame, 92);
+      }
     }
     if (dist.jpeg !== undefined) recomprimirLuma(frame, dist.jpeg);
     frames.push(frame);
   }
-  const nombreClase = o.banding === true ? `${clase}-banding` : clase;
+  const nombreClase = o.banding === true ? `${clase}-banding` : o.superposicion === true && clase === "editada" ? `${clase}-superposicion` : clase;
   return {
     id: `${tipo}-${nombreClase}-semilla-${semilla}`,
     sintetico: true,
@@ -360,6 +364,11 @@ export function escenaPorNombre(nombre: string, extra?: Omit<OpcionesEscena, "ti
     banding = true;
   }
   if (clase === "impresion-color") clase = "impresion";
+  let superposicion = false;
+  if (clase === "editada-superposicion") {
+    clase = "editada";
+    superposicion = true;
+  }
   if (!(CLASES_SINTETICAS as readonly string[]).includes(clase)) throw new Error(`escena-desconocida: ${nombre}`);
-  return generarEscena({ ...extra, tipo: m[1] as TipoDocumento, clase: clase as ClaseSintetica, semilla: Number(m[3]), banding });
+  return generarEscena({ ...extra, tipo: m[1] as TipoDocumento, clase: clase as ClaseSintetica, semilla: Number(m[3]), banding, superposicion });
 }

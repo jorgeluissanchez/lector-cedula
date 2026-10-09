@@ -94,6 +94,8 @@ export interface EntradaFraude {
   /** Esquinas de la tarjeta en el frame: superior izquierda, superior derecha, inferior derecha, inferior izquierda. */
   cuadrilatero: [Punto, Punto, Punto, Punto];
   tipo: "amarilla" | "digital";
+  /** El cuadrilátero es la guía de encuadre y no los bordes detectados: se omiten las señales geométricas (FRA-20). */
+  cuadrilateroAproximado?: boolean;
   datos?: DatosDocumento;
   reloj: () => Date;
 }

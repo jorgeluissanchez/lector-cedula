@@ -34,6 +34,7 @@ import {
   nuevoWorkerLector,
   type ClienteLector,
 } from "./lectura";
+import { crearClienteFraude, datosParaFraude, framesParaFraude, nuevoWorkerFraude, type ClienteFraude } from "./fraude";
 import { crearReintentos } from "./reintentos";
 import { leerSecuencia, MAX_FRAMES_LECTURA } from "./secuencia";
 
@@ -93,6 +94,8 @@ function entornoFoto(): EntornoFoto {
 export function crearSesion(obs: Observador): Sesion {
   let cliente: ClienteCalidad | null = null;
   let lector: ClienteLector | null = null;
+  // deteccion-fraude (FRA-17): Worker propio, creado en la primera señal y reutilizado.
+  let fraude: ClienteFraude | null = null;
   let lectura: AbortController | null = null;
   let camara: Camara | null = null;
   let video: HTMLVideoElement | null = null;
@@ -159,6 +162,17 @@ export function crearSesion(obs: Observador): Sesion {
     const base = { ...diagnostico, captura: capturas };
     obs.diagnostico?.({ ...base, pasos: [], totalMs: null });
     const p = pista;
+    // FRA-17 y FRA-03: copias de los frames de vídeo para la señal (la secuencia pone a cero los originales); se ponen
+    // a cero en cuanto se envían al Worker de fraude o si la lectura no termina en resultado.
+    const copiasFraude = framesParaFraude(frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }], c.ancho, c.alto).map((f) => ({
+      ancho: f.ancho,
+      alto: f.alto,
+      pixeles: new Uint8ClampedArray(f.pixeles),
+    }));
+    const cuadrilateroFraude = c.cuadrilatero;
+    const limpiarCopias = () => {
+      for (const f of copiasFraude) f.pixeles.fill(0);
+    };
     // OFF-28 (c): la secuencia pone a cero cada frame tras su última lectura; la captura se libera al terminar.
     const { resultado: r, pasos } = await leerSecuencia(
       frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }],
@@ -166,7 +180,7 @@ export function crearSesion(obs: Observador): Sesion {
       (f, lector) => obtenerLector().leer(f, hoyEnBogota(), control.signal, lector === null ? {} : { pista: lector, respaldo: false }),
       { ahora: () => performance.now() },
     );
-    if (control.signal.aborted) return;
+    if (control.signal.aborted) return limpiarCopias();
     liberarCaptura();
     obs.diagnostico?.({ ...base, pasos, totalMs: performance.now() - inicio });
     lectura = null;
@@ -176,12 +190,26 @@ export function crearSesion(obs: Observador): Sesion {
       r.error !== "cancelada" &&
       reintentos.decidir(r) === "reintentar"
     ) {
+      limpiarCopias();
       obs.evento({ tipo: "reintento" });
       await arrancar();
       return;
     }
     reintentos.reiniciar();
-    obs.evento({ tipo: "leida", resultado: r });
+    if (!r.ok) {
+      limpiarCopias();
+      obs.evento({ tipo: "leida", resultado: r });
+      return;
+    }
+    const doc = datosParaFraude(r);
+    let riesgo = null;
+    if (doc !== null && copiasFraude.length > 0) {
+      fraude ??= crearClienteFraude(nuevoWorkerFraude);
+      const pendiente = fraude.evaluar({ frames: copiasFraude, cuadrilatero: cuadrilateroFraude, tipo: doc.tipo, datos: doc.datos, ahora: new Date().toISOString() });
+      limpiarCopias();
+      riesgo = await pendiente;
+    } else limpiarCopias();
+    obs.evento({ tipo: "leida", resultado: r, riesgo });
   }
 
   function detener(): void {

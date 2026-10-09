@@ -9,7 +9,7 @@ import { escenaPorNombre, generarEscena } from "../src/sintetico/index.js";
 
 const MEDIDAS_NEUTRAS: MedidasImagen = {
   subpixeles: 0, frecuenciaSubpixeles: 0, reflejo: 0, luzExterior: 100, banding: null, saturacion: 0.4, texturaPlana: 1,
-  holograma: null, aspecto: 85.6 / 53.98, esquinasRectas: 0, esquinasDecidibles: 4, dobleCompresion: 0,
+  holograma: null, aspecto: 85.6 / 53.98, esquinasRectas: 0, esquinasDecidibles: 4, dobleCompresion: 0, superposicion: 0,
 };
 
 const motivo = (s: SenalRiesgo, codigo: string) => s.motivos.find((m) => m.codigo === codigo);
@@ -197,6 +197,21 @@ describe("FRA-10 edición digital", { timeout: 60_000 }, () => {
   it("FRA-10 parche pegado", () => {
     const e = motivo(evaluarFraude(escenaPorNombre("digital-editada-semilla-4").entrada), "edicion");
     expect(["doble-compresion", "superposicion"]).toContain(e?.detalle);
+  });
+
+  it("FRA-10 superposición: parche pegado sin el ruido del sensor", () => {
+    const e = generarEscena({ tipo: "digital", clase: "editada", semilla: 5, superposicion: true });
+    expect(e.id).toBe("digital-editada-superposicion-semilla-5");
+    expect(motivo(evaluarFraude(e.entrada), "edicion")?.detalle).toBe("superposicion");
+  });
+
+  it("FRA-10 metamórfica: auténticos con distorsión no producen edicion", () => {
+    for (const distorsion of [{ blur: 1 }, { jpeg: 70 }, { brillo: -0.2 }]) {
+      for (const tipo of ["amarilla", "digital"] as const) {
+        const s = evaluarFraude(generarEscena({ tipo, clase: "autentica", semilla: 2, distorsion }).entrada);
+        expect(motivo(s, "edicion"), JSON.stringify({ tipo, distorsion })).toBeUndefined();
+      }
+    }
   });
 
   it("FRA-10 peso por defecto 0,5", () => {

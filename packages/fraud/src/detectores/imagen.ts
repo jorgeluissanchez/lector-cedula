@@ -34,6 +34,8 @@ export interface MedidasImagen {
   esquinasDecidibles: number;
   /** Mayor grupo conexo de bloques 8x8 con firma de doble cuantización. */
   dobleCompresion: number;
+  /** Mayor grupo rectangular de bloques 8x8 con ruido de sensor muy inferior al de la tarjeta. */
+  superposicion: number;
 }
 
 const luma = (r: number, g: number, b: number) => 0.299 * r + 0.587 * g + 0.114 * b;
@@ -307,6 +309,7 @@ function dobleCompresion(f: FrameRGBA, q: readonly Punto[]): number {
     const marcado = new Uint8Array(coefs.length);
     let total = 0;
     let evaluables = 0;
+    let restoSuma = 0;
     coefs.forEach((c, idx) => {
       let s = 0;
       let n = 0;
@@ -322,15 +325,31 @@ function dobleCompresion(f: FrameRGBA, q: readonly Punto[]): number {
         if (s / n < 0.12) {
           marcado[idx] = 1;
           total++;
-        }
+        } else restoSuma += s / n;
       }
     });
-    if (evaluables === 0 || total / evaluables > 0.5) continue;
-    // Mayor componente conexa (vecindad 4).
-    const visto = new Uint8Array(coefs.length);
-    for (let i = 0; i < coefs.length; i++) {
+    // Una sola compresión a esta calidad deja todo el resto también cerca de la rejilla (residuo medio < 0,2):
+    // no es doble cuantización localizada.
+    const restoMedio = evaluables > total ? restoSuma / (evaluables - total) : 0;
+    if (evaluables === 0 || total / evaluables > 0.5 || restoMedio < 0.2) continue;
+    mejor = Math.max(mejor, mayorComponente(marcado, bw, bh).tam);
+  }
+  return mejor;
+}
+
+/** Mayor componente conexa (vecindad 4) de bloques marcados y la fracción de su caja que ocupa. */
+export function mayorComponente(marcado: Uint8Array, bw: number, bh: number): { tam: number; relleno: number } {
+  let mejor = 0;
+  let relleno = 0;
+  {
+    const visto = new Uint8Array(marcado.length);
+    for (let i = 0; i < marcado.length; i++) {
       if (marcado[i] !== 1 || visto[i] === 1) continue;
       let tam = 0;
+      let minX = bw;
+      let maxX = -1;
+      let minY = bh;
+      let maxY = -1;
       const pila = [i];
       visto[i] = 1;
       while (pila.length > 0) {
@@ -338,6 +357,10 @@ function dobleCompresion(f: FrameRGBA, q: readonly Punto[]): number {
         tam++;
         const jx = j % bw;
         const jy = (j - jx) / bw;
+        minX = Math.min(minX, jx);
+        maxX = Math.max(maxX, jx);
+        minY = Math.min(minY, jy);
+        maxY = Math.max(maxY, jy);
         for (const [nx, ny] of [
           [jx + 1, jy],
           [jx - 1, jy],
@@ -352,10 +375,61 @@ function dobleCompresion(f: FrameRGBA, q: readonly Punto[]): number {
           }
         }
       }
-      mejor = Math.max(mejor, tam);
+      if (tam > mejor) {
+        mejor = tam;
+        relleno = tam / ((maxX - minX + 1) * (maxY - minY + 1));
+      }
     }
   }
-  return mejor;
+  return { tam: mejor, relleno };
+}
+
+/**
+ * Superposición (FRA-10): ruido de sensor por bloque 8x8 como mediana del valor absoluto del laplaciano de la
+ * luminancia. Un parche pegado sin el ruido de la cámara forma un rectángulo de bloques con ruido < 35 % de la
+ * mediana de la tarjeta. Devuelve el tamaño del mayor grupo si ocupa >= 70 % de su caja y < 30 % de la tarjeta.
+ */
+function superposicion(f: FrameRGBA, q: readonly Punto[]): number {
+  const xs = q.map((p) => p.x);
+  const ys = q.map((p) => p.y);
+  const x0 = Math.max(1, Math.ceil(Math.min(...xs) / 8) * 8 + 16);
+  const y0 = Math.max(1, Math.ceil(Math.min(...ys) / 8) * 8 + 16);
+  const x1 = Math.min(f.width - 9, Math.floor(Math.max(...xs) / 8) * 8 - 16);
+  const y1 = Math.min(f.height - 9, Math.floor(Math.max(...ys) / 8) * 8 - 16);
+  if (x1 <= x0 || y1 <= y0) return 0;
+  const bw = Math.floor((x1 - x0) / 8);
+  const bh = Math.floor((y1 - y0) / 8);
+  const L = (x: number, y: number) => {
+    const i = (y * f.width + x) * 4;
+    return luma(f.data[i] as number, f.data[i + 1] as number, f.data[i + 2] as number);
+  };
+  const ruido = new Float64Array(bw * bh);
+  const r = new Float64Array(64);
+  for (let by = 0; by < bh; by++)
+    for (let bx = 0; bx < bw; bx++) {
+      for (let y = 0; y < 8; y++)
+        for (let x = 0; x < 8; x++) {
+          const px = x0 + bx * 8 + x;
+          const py = y0 + by * 8 + y;
+          r[y * 8 + x] = Math.abs(4 * L(px, py) - L(px - 1, py) - L(px + 1, py) - L(px, py - 1) - L(px, py + 1));
+        }
+      const orden = Array.from(r).sort((a, b) => a - b);
+      ruido[by * bw + bx] = ((orden[31] as number) + (orden[32] as number)) / 2;
+    }
+  const orden = Array.from(ruido).sort((a, b) => a - b);
+  const mediana = orden[orden.length >> 1] ?? 0;
+  if (mediana <= 0) return 0;
+  const marcado = new Uint8Array(ruido.length);
+  let total = 0;
+  ruido.forEach((v, i) => {
+    if (v < 0.35 * mediana) {
+      marcado[i] = 1;
+      total++;
+    }
+  });
+  if (total / ruido.length >= 0.3) return 0;
+  const c = mayorComponente(marcado, bw, bh);
+  return c.relleno >= 0.7 ? c.tam : 0;
 }
 
 /** Calcula todas las medidas. Lanza solo ante entradas incoherentes que el llamador ya validó. */
@@ -382,5 +456,6 @@ export function medirImagen(frames: readonly FrameRGBA[], q: readonly Punto[], c
     esquinasRectas: esq.rectas,
     esquinasDecidibles: esq.decidibles,
     dobleCompresion: dobleCompresion(f0, q),
+    superposicion: superposicion(f0, q),
   };
 }

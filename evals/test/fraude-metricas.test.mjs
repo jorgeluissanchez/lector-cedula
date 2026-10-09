@@ -128,3 +128,59 @@ describe("FRA-15 esquema del reporte de campo", () => {
     expect(validarReporteCampo([]).ok).toBe(false);
   });
 });
+
+describe("FRA-14 y FRA-15 bordes (mutación)", () => {
+  it("AUC sin ataques o sin auténticos es 0,5", () => {
+    expect(auc([], [10])).toBe(0.5);
+    expect(auc([10], [])).toBe(0.5);
+  });
+
+  it("BPCER a APCER 5 %: el umbral 0 también se considera y el objetivo es inclusivo", () => {
+    expect(bpcerAApcer({ x: [0] }, [-1, 50], 0.05)).toBe(0.5);
+    const especies = { pantalla: [...puntajes(95, 80), ...puntajes(5, 30)] };
+    expect(bpcerAApcer(especies, [...puntajes(90, 10), ...puntajes(10, 45)], 0.05)).toBe(0);
+  });
+
+  it("métricas separadas por tipo, especies en orden y bordes del umbral", () => {
+    const filas = [
+      { tipo: "digital", clase: "recortada", puntaje: 40 },
+      { tipo: "digital", clase: "autentica", puntaje: 40 },
+      { tipo: "digital", clase: "autentica", puntaje: 39 },
+      { tipo: "amarilla", clase: "pantalla", puntaje: 39 },
+      { tipo: "amarilla", clase: "editada", puntaje: 39 },
+      { tipo: "amarilla", clase: "autentica", puntaje: 0 },
+    ];
+    const m = metricasPorDocumento(filas, 40);
+    expect(Object.keys(m)).toStrictEqual(["amarilla", "digital"]);
+    expect(Object.keys(m.amarilla.especies)).toStrictEqual(["editada", "pantalla"]);
+    expect(m.digital.especies.recortada).toStrictEqual({ apcer: 0, ic: [0, 0.793451], n: 1 });
+    expect(m.amarilla.especies.pantalla).toStrictEqual({ apcer: 1, ic: [0.206549, 1], n: 1 });
+    expect(m.digital.bpcer).toBe(0.5);
+    expect(m.digital.bpcerIc).toStrictEqual([0.094531, 0.905469]);
+    expect(m.amarilla.bpcerIc).toStrictEqual([0, 0.793451]);
+    expect(m.amarilla.n).toStrictEqual({ autenticos: 1, ataques: 2 });
+  });
+
+  it("regresión: cada métrica 'mayor es peor' se compara y los conteos e intervalos no", () => {
+    for (const k of ["bpcer", "apcerMax", "bpcerApcer5"]) {
+      const b = { documentos: { amarilla: { [k]: 0.02 } } };
+      expect(compararConBaseline({ documentos: { amarilla: { [k]: 0.05 } } }, b)).toStrictEqual([`documentos.amarilla.${k}: 0.02 -> 0.05`]);
+      expect(compararConBaseline({ documentos: { amarilla: { [k]: 0 } } }, b)).toStrictEqual([]);
+    }
+    const b = { documentos: { amarilla: { n: { ataques: 10 }, ic: [0, 0.1], auc: 0.9, nombre: null } } };
+    expect(compararConBaseline({ documentos: { amarilla: { n: { ataques: 1 }, ic: [0.5, 0.9], auc: 0.9 } } }, b)).toStrictEqual([]);
+    expect(compararConBaseline({ documentos: null }, b)).toStrictEqual(["documentos.amarilla.auc: ausente"]);
+  });
+
+  it("FRA-15 un reporte completo del corredor es válido; fecha solo AAAA-MM; null y arreglos de texto no", () => {
+    const filas = ["amarilla", "digital"].flatMap((tipo) =>
+      ["autentica", "pantalla", "fotocopia-gris", "fotocopia-color", "impresion", "recortada", "editada"].map((clase) => ({ tipo, clase, puntaje: 50 })),
+    );
+    const completo = { version: 1, umbral: 40, fecha: "2026-10", documentos: metricasPorDocumento(filas, 40) };
+    expect(validarReporteCampo(completo)).toStrictEqual({ ok: true });
+    for (const fecha of ["2026-10-08", "x2026-10", "2026-1", 202610]) expect(validarReporteCampo({ ...completo, fecha })).toStrictEqual({ ok: false, clave: "fecha" });
+    expect(validarReporteCampo({ ...completo, umbral: null })).toStrictEqual({ ok: false, clave: "umbral" });
+    expect(validarReporteCampo({ version: 1, documentos: { amarilla: { ic: [0, "x"] } } })).toStrictEqual({ ok: false, clave: "valor" });
+    expect(validarReporteCampo("x")).toStrictEqual({ ok: false, clave: "raiz" });
+  });
+});

@@ -87,9 +87,11 @@ export function detectarInconsistencia(tipo: "amarilla" | "digital", datos: unkn
     }
     if (c.nuip !== undefined && normalizarNuip(c.nuip) === null) hallados.add("nuip-formato");
     // P5 / FRA-18: solo la digital vence.
-    if (tipo === "digital" && c.fechaVencimiento !== undefined) {
+    // Sin reloj válido (hoy infinito) no se decide ningún vencimiento.
+    if (c.fechaVencimiento !== undefined) {
       const v = dia(c.fechaVencimiento);
-      if (v !== null && v < hoy) hallados.add("vencido");
+      if (v === null) hallados.add("fecha-imposible");
+      else if (tipo === "digital" && Number.isFinite(hoy) && v < hoy) hallados.add("vencido");
     }
   }
 
