@@ -11,6 +11,10 @@ export const TEXTO_DESCARGO = "No es una verificación oficial de la Registradur
 export const TEXTO_ALCANCE = "Solo para cédulas de ciudadanía de mayores de edad.";
 export const RUTA_POLITICA = "/assets/politica-tratamiento.html";
 export const RUTA_TERMINOS = "/assets/terminos-de-uso.html";
+/** OD-35: solo existe con `VITE_ADMITIR_TI=true`. */
+export const RUTA_AUTORIZACION_TI = "/assets/autorizacion-representante-ti.html";
+/** OD-34b: texto literal de la casilla del representante legal (sin marcar por defecto). */
+export const TEXTO_CASILLA_REPRESENTANTE = "Soy el representante legal del menor y autorizo el tratamiento";
 
 export interface Fragmento {
   readonly texto: string;

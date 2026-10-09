@@ -7,7 +7,7 @@ import { detectarPresencia, evaluarConPresencia } from "../calidad/presencia.js"
 import { analizarFrame } from "../calidad/score.js";
 import { crearConfiguracionUmbrales } from "../calidad/umbrales.js";
 import type { DetectorDocumento } from "../interfaces.js";
-import type { ContenidoPresencia, MensajeDelWorker } from "./protocolo.js";
+import type { ContenidoPresencia, ContenidoPresenciaTd, MensajeDelWorker } from "./protocolo.js";
 
 /** Alcance mínimo del Worker (evita depender de la combinación de `lib` DOM y WebWorker). */
 export interface AlcanceWorker {
@@ -23,6 +23,8 @@ const dimensionValida = (v: unknown): v is number => typeof v === "number" && Nu
 /** OFF-22 (pwa-lectura-offline): con `presencia`, un frame sin cédula en la guía nunca llega al umbral de `listo`. */
 export interface OpcionesWorkerCalidad {
   readonly presencia?: boolean;
+  /** OD-20: `true` envía `"mrz-td1"` y `"mrz-td3"`; sin él, la forma heredada (`"mrz"` y `null` para el TD3). */
+  readonly contenidoTd?: boolean;
 }
 
 export function iniciarWorkerCalidad(alcance: AlcanceWorker, detector: DetectorDocumento, opciones: OpcionesWorkerCalidad = {}): void {
@@ -64,14 +66,14 @@ export function iniciarWorkerCalidad(alcance: AlcanceWorker, detector: DetectorD
       // OFF-22 y OFF-25: la presencia solo se busca si el frame supera el umbral o solo le falta nitidez.
       // OFF-27: el contenido detectado viaja como pista de tipo; `null` si la presencia no se evaluó.
       const cuadrilatero = deteccion.cuadrilatero;
-      let contenido: ContenidoPresencia = null;
+      let contenido: ContenidoPresencia | ContenidoPresenciaTd = null;
       const resultado =
         opciones.presencia === true && cuadrilatero !== null
           ? evaluarConPresencia(
               r.resultado,
               () => {
                 const p = detectarPresencia(frame, cuadrilatero);
-                contenido = p.contenido === "mrz-td1" ? "mrz" : p.contenido === "mrz-td3" ? null : p.contenido;
+                contenido = opciones.contenidoTd === true ? p.contenido : p.contenido === "mrz-td1" ? "mrz" : p.contenido === "mrz-td3" ? null : p.contenido;
                 return p.presente;
               },
               configuracion.umbrales.umbralListo,

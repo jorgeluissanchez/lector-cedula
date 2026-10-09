@@ -25,6 +25,12 @@ const suave = (sigma, ruido) => `,gblur=sigma=${sigma},noise=alls=${ruido}:allf=
 const amarillaSuave = enGuia.replace(SIN_REFLEJO, `${SIN_REFLEJO},lutyuv=y='150+(val-150)*0.2'`) + suave(2.5, 4);
 const digitalSuave = enGuia + suave(5, 8);
 
+// otros-documentos (OD-23): página de datos del pasaporte (ID-3, 125x88 mm) con el alto de la guía, centrada.
+const ANCHO_PASAPORTE = Math.round((GUIA.alto * 125) / 88 / 2) * 2;
+const pasaporteEnGuia = `${FONDO};[0:v]scale=${ANCHO_PASAPORTE}:${GUIA.alto},${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=${(1920 - ANCHO_PASAPORTE) / 2}:${GUIA.y}:shortest=1`;
+/** Pasaporte colombiano sintético de OD-01 (packages/parsers/test/ayudas/generador-mrz-icao.ts, PASAPORTE_COL). */
+export const LINEAS_PASAPORTE_COL = ["P<COLPEREZ<NUNEZ<<ANA<MARIA<<<<<<<<<<<<<<<<<", "AZ12345673COL9002155F31021451234567890<<<<78"];
+
 const enGuia720 = `color=c=0x303030:s=1280x720:r=10[f];[0:v]scale=1028:648,${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=126:36:shortest=1`;
 const completa = "[0:v]scale=1920:1080,format=yuv420p";
 
@@ -40,6 +46,8 @@ export const ESCENAS_CEDULA = [
   { nombre: "tarjeta-ilegible-1080p", fuente: "ilegible", filtro: enGuia, ancho: 1920, alto: 1080 },
   { nombre: "amarilla-suave-1080p", fuente: "amarilla", filtro: amarillaSuave, ancho: 1920, alto: 1080 },
   { nombre: "digital-suave-1080p", fuente: "digital", filtro: digitalSuave, ancho: 1920, alto: 1080 },
+  // otros-documentos (OD-23): pasaporte sintético en la guía.
+  { nombre: "pasaporte-col-1080p", fuente: "pasaporte", filtro: pasaporteEnGuia, ancho: 1920, alto: 1080 },
 ];
 
 function png(ancho, alto, valor) {
@@ -80,7 +88,7 @@ function tarjetaIlegible() {
   return png(1011, 638, (x, y) => (x >= 150 && x < 850 && y >= 200 && y < 440 && barras[x - 150] ? 0 : 255));
 }
 
-/** PNG sintéticos de PERSONA_BASE (semilla 1): `amarilla` (PDF417) y `digital` (reverso con MRZ). */
+/** PNG sintéticos de PERSONA_BASE (semilla 1): `amarilla` (PDF417) y `digital` (reverso con MRZ); `pasaporte` de OD-01. */
 export async function fuentesCedula() {
   const pdf417 = generarPdf417(PERSONA_BASE, { semilla: 1 });
   const mrz = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
@@ -88,7 +96,8 @@ export async function fuentesCedula() {
   const render = await crearRenderizador();
   try {
     const digital = (await render.render(mrz.lineas)).bytes;
-    return { amarilla, digital, sinDocumento: sinDocumento(), ilegible: tarjetaIlegible(), lineasMrz: mrz.lineas, nuip: PERSONA_BASE.nuip };
+    const pasaporte = (await render.render(LINEAS_PASAPORTE_COL)).bytes;
+    return { amarilla, digital, pasaporte, sinDocumento: sinDocumento(), ilegible: tarjetaIlegible(), lineasMrz: mrz.lineas, nuip: PERSONA_BASE.nuip };
   } finally {
     await render.cerrar();
   }

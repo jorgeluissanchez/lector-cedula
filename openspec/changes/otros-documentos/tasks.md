@@ -13,7 +13,7 @@
 
 ## 2. Captura y lectura (`packages/capture`)
 
-- [ ] 2.1 (parcial: `detectarPresencia` ya devuelve `"mrz-td1"`/`"mrz-td3"`, prueba `packages/capture/test/lectura/od-20-presencia-td3.test.ts`; el Worker de calidad sigue enviando `"mrz"`/`null` hasta que la PWA acepte los valores nuevos, ver `ContenidoPresencia` en `packages/capture/src/navegador/protocolo.ts`) Presencia con `"mrz-td1"` / `"mrz-td3"` y alias `"mrz"`. Cubre: OD-20. Tipos: unitaria y rendimiento. Verificación: `npx vitest run packages/capture/test/calidad`.
+- [x] 2.1 Presencia con `"mrz-td1"` / `"mrz-td3"` y alias `"mrz"`. El Worker de calidad los envía con la opción `contenidoTd: true` (la PWA); sin ella conserva la forma heredada `"mrz"`/`null` para `@lector-cedula/web`, aún no migrado. Pruebas: `packages/capture/test/lectura/od-20-presencia-td3.test.ts` (presencia, Worker y rendimiento) y `apps/pwa/test/od-otros-documentos.test.ts` (pista TD3 en la secuencia y el cliente). Cubre: OD-20. Tipos: unitaria y rendimiento. Verificación: `npx vitest run packages/capture/test/lectura/od-20 apps/pwa/test/od-otros-documentos`.
 - [x] 2.2 Lector MRZ con `formato: "td3"` y plan de giros. Cubre: OD-21. Tipos: integración con OCR real y metamórficas. Verificación: `npx vitest run packages/capture/test/mrz --maxWorkers=2`.
 - [x] 2.3 `leerDocumento` con salida unificada, orden por pista, CE sin 2D. Cubre: OD-13, OD-21, OD-22, OD-22a. Tipos: unitaria con espías. Verificación: `npx vitest run packages/capture/test/lectura`.
 - [x] 2.4 Parámetro `admitirTarjetaIdentidad` y regla de edad OFF-24b. Cubre: OD-30a, OD-31, OD-32, OD-32a, OD-33. Tipos: unitaria de frontera en ambos valores. Verificación: `npx vitest run packages/capture/test/lectura`.
@@ -33,9 +33,9 @@
 
 ## 6. PWA (`apps/pwa`)
 
-- [ ] 6.1 `VITE_ADMITIR_TI` con validación en build. Cubre: OD-30. Tipos: unitaria. Verificación: `npx vitest run apps/pwa/test/config`.
-- [ ] 6.2 Etiquetas por documento, mensajes nuevos y guía ID-3. Cubre: OD-23. Tipos: unitaria, E2E y accesibilidad (planner, generator, healer de Playwright; vídeo `pasaporte-col-1080p`). Verificación: `npm run test:e2e`.
-- [ ] 6.3 Pantalla `autorizacion-representante` y enlaces legales condicionados. Cubre: OD-34b, OD-35. Tipos: E2E y accesibilidad (vídeo `ti-amarilla-1080p`, dos builds). Verificación: `npm run test:e2e`.
+- [x] 6.1 `VITE_ADMITIR_TI` con validación en build. Cubre: OD-30. Tipos: unitaria. Verificación: `npx vitest run apps/pwa/test/config`.
+- [x] 6.2 Etiquetas por documento, mensajes nuevos y guía ID-3. Cubre: OD-23. Tipos: unitaria, E2E y accesibilidad (planner, generator, healer de Playwright; vídeo `pasaporte-col-1080p`). Verificación: `npm run test:e2e` (E2E `e2e/lectura/pasaporte.spec.ts` en verde en `lectura-chromium`; la guía ID-1 admite la página ID-3 del vídeo sin cambios).
+- [ ] 6.3 (parcial: pantalla, casilla, enlace condicionado y pruebas unitarias hechos en `apps/pwa`; falta el E2E con `ti-amarilla-1080p` y una segunda compilación con `VITE_ADMITIR_TI=true`, que requiere la plantilla de 7.1) Pantalla `autorizacion-representante` y enlaces legales condicionados. Cubre: OD-34b, OD-35. Tipos: E2E y accesibilidad (vídeo `ti-amarilla-1080p`, dos builds). Verificación: `npm run test:e2e`.
 
 ## 7. Legal y privacidad
 

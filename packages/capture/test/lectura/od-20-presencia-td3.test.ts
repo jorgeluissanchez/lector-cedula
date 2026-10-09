@@ -7,7 +7,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { crearRenderizador } from "../../../../evals/sinteticos/render-mrz.mjs";
 import { detectarPresencia } from "../../src/calidad/presencia.js";
 import type { FrameAnalisis } from "../../src/calidad/tipos.js";
-import { guiaEnAnalisis } from "../../src/flujo/guia.js";
+import { crearDetectorGuia, guiaEnAnalisis } from "../../src/flujo/guia.js";
+import type { MensajeDelWorker } from "../../src/navegador/protocolo.js";
+import { iniciarWorkerCalidad, type AlcanceWorker, type OpcionesWorkerCalidad } from "../../src/navegador/worker-calidad.js";
 import { pixelesSinteticos } from "../pdf417/sintetica.js";
 import { CE_SINTETICA, PASAPORTE_COL } from "../../../parsers/test/ayudas/generador-mrz-icao.js";
 import { cara, documentoEnGuia, girar90, hojaEnBlanco, type Imagen, pared, tarjetaEnGuia, tarjetaVerticalEnGuia, texto } from "./escenas-presencia.js";
@@ -69,5 +71,31 @@ describe("OD-20 Pista de formato desde la presencia", { timeout: 60_000 }, () =>
     expect(medir(documentoEnGuia(pasaporte))).toBeLessThan(250);
     expect(medir(documentoEnGuia(girar90(girar90(pasaporte))))).toBeLessThan(250);
     expect(medir(tarjetaEnGuia(girar90(girar90(digital))))).toBeLessThan(250);
+  });
+});
+
+describe("OD-20 Contenido en la respuesta del Worker de calidad", { timeout: 60_000 }, () => {
+  async function analizar(f: FrameAnalisis, opciones: OpcionesWorkerCalidad) {
+    const recibidos: MensajeDelWorker[] = [];
+    const alcance: AlcanceWorker = { onmessage: null, postMessage: (m) => void recibidos.push(m) };
+    iniciarWorkerCalidad(alcance, crearDetectorGuia(), opciones);
+    const pixeles = new Uint8ClampedArray(f.pixeles).buffer;
+    alcance.onmessage?.({ data: { tipo: "analizar", id: 1, ancho: f.ancho, alto: f.alto, anchoOriginal: f.anchoOriginal, altoOriginal: f.altoOriginal, pixeles } } as MessageEvent);
+    await expect.poll(() => recibidos.length).toBe(1);
+    return (recibidos[0] as Extract<MensajeDelWorker, { tipo: "resultado" }>).contenido;
+  }
+
+  it("OD-20 con contenidoTd: pdf417, mrz-td1 (digital y CE) y mrz-td3 (pasaporte y girado 180)", async () => {
+    const td = { presencia: true, contenidoTd: true } as const;
+    expect(await analizar(tarjetaEnGuia(amarilla), td)).toBe("pdf417");
+    expect(await analizar(tarjetaEnGuia(digital), td)).toBe("mrz-td1");
+    expect(await analizar(tarjetaEnGuia(ce), td)).toBe("mrz-td1");
+    expect(await analizar(documentoEnGuia(pasaporte), td)).toBe("mrz-td3");
+    expect(await analizar(documentoEnGuia(girar90(girar90(pasaporte))), td)).toBe("mrz-td3");
+  });
+
+  it("OD-20 sin contenidoTd (consumidores aún no migrados): alias mrz y null para el TD3", async () => {
+    expect(await analizar(tarjetaEnGuia(digital), { presencia: true })).toBe("mrz");
+    expect(await analizar(documentoEnGuia(pasaporte), { presencia: true })).toBeNull();
   });
 });

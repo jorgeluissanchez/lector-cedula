@@ -6,7 +6,7 @@
  * cero tras su última lectura (el cliente copia los píxeles al Worker) y todos al terminar (OFF-11). Devuelve también
  * los pasos para el modo diagnóstico (OFF-29).
  */
-import { clasificarErrorLectura, type FrameLectura, type OrigenFrame, type ResultadoLectura, type TipoLectura } from "@lector-cedula/capture";
+import { clasificarErrorLectura, type FrameLectura, type OrigenFrame, type PistaLectura, type ResultadoLectura } from "@lector-cedula/capture";
 
 export type { FrameLectura } from "@lector-cedula/capture";
 
@@ -28,7 +28,10 @@ export interface OpcionesSecuencia {
 }
 
 /** Lee un frame con un solo lector (`respaldo: false`) o, con `null`, con el orden de OFF-06. */
-export type LeerFrame = (frame: FrameLectura, lector: TipoLectura | null) => Promise<ResultadoLectura>;
+export type LeerFrame = (frame: FrameLectura, lector: PistaLectura | null) => Promise<ResultadoLectura>;
+
+/** OFF-27 y OD-20: respaldo único del final; tras el TD3, el TD1 (OD-21: TD3 antes que TD1); tras la MRZ, el PDF417. */
+const RESPALDO: Readonly<Record<PistaLectura, PistaLectura>> = { pdf417: "mrz", mrz: "pdf417", "mrz-td1": "pdf417", "mrz-td3": "mrz-td1" };
 
 const NINGUNO: ResultadoLectura = { ok: false, tipo: "pdf417", error: "pdf417-no-encontrado" };
 
@@ -40,7 +43,7 @@ const noEncontrado = (r: ResultadoLectura): boolean => !r.ok && clasificarErrorL
 
 export async function leerSecuencia(
   frames: readonly FrameLectura[],
-  pista: TipoLectura | null,
+  pista: PistaLectura | null,
   leer: LeerFrame,
   opciones: OpcionesSecuencia,
 ): Promise<{ resultado: ResultadoLectura; pasos: PasoSecuencia[] }> {
@@ -48,7 +51,7 @@ export async function leerSecuencia(
   const pasos: PasoSecuencia[] = [];
   let resultado = NINGUNO;
   const inicio = opciones.ahora();
-  const paso = async (frame: FrameLectura, lector: TipoLectura | null, ultima: boolean): Promise<void> => {
+  const paso = async (frame: FrameLectura, lector: PistaLectura | null, ultima: boolean): Promise<void> => {
     const t = opciones.ahora();
     const pendiente = leer(frame, lector);
     if (ultima) frame.pixeles.fill(0);
@@ -63,7 +66,7 @@ export async function leerSecuencia(
       if (!noEncontrado(resultado)) return { resultado, pasos };
     }
     const primero = frames[0];
-    if (pista !== null && primero !== undefined) await paso(primero, pista === "pdf417" ? "mrz" : "pdf417", true);
+    if (pista !== null && primero !== undefined) await paso(primero, RESPALDO[pista], true);
   } finally {
     for (const f of frames) f.pixeles.fill(0);
   }

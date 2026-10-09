@@ -9,6 +9,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { leerCabeceraY4m } from "./y4m.mjs";
 import { ESCENAS_CEDULA, fuentesCedula } from "./cedulas.mjs";
+import { ESCENAS_FRAUDE, fuentesFraude } from "./fraude.mjs";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SALIDA = "e2e/videos/sinteticos";
@@ -64,9 +65,12 @@ async function main() {
   try {
     writeFileSync(join(tmp, "amarilla.png"), fuentes.amarilla);
     writeFileSync(join(tmp, "digital.png"), fuentes.digital);
+    writeFileSync(join(tmp, "pasaporte.png"), fuentes.pasaporte);
     writeFileSync(join(tmp, "sin-documento.png"), fuentes.sinDocumento);
     writeFileSync(join(tmp, "ilegible.png"), fuentes.ilegible);
-    for (const e of ESCENAS_CEDULA) {
+    // deteccion-fraude (5.1b): reverso a color, pantalla y fotocopia.
+    for (const [nombre, bytes] of Object.entries(await fuentesFraude())) writeFileSync(join(tmp, `${nombre}.png`), bytes);
+    for (const e of [...ESCENAS_CEDULA, ...ESCENAS_FRAUDE]) {
       const destino = `${SALIDA}/${e.nombre}.y4m`;
       docker([`${RAIZ}:/w`, `${tmp}:/src:ro`], ["-loop", "1", "-i", `/src/${e.fuente}.png`, "-filter_complex", e.filtro, "-frames:v", "10", "-pix_fmt", "yuv420p", "-y", destino]);
       if (!comprobar(e, destino)) fallos++;

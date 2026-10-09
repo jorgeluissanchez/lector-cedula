@@ -97,3 +97,18 @@ export function textosLegales(existe: (ruta: string) => boolean = (r) => existsS
   const descargo = (existe(pub("descargo-y-enlaces.md")) ? descargoMd(leer(pub("descargo-y-enlaces.md"))) : null) ?? TEXTO_DESCARGO;
   return { aviso, autorizacion, descargo };
 }
+
+/** OD-34b y OD-35: plantilla de la autorización del representante legal de un menor (texto de la pantalla y página). */
+export const ARCHIVO_AUTORIZACION_TI = "autorizacion-representante-ti.md";
+
+/**
+ * Bloques de la autorización del representante (OD-34b), solo con `VITE_ADMITIR_TI=true`; si no, `null` (ni texto ni
+ * enlace, OD-35). Encendido sin la plantilla en docs/legal/ (o en publicacion/), la compilación falla: no se admite un
+ * menor sin el texto de la autorización.
+ */
+export function textosAutorizacionTi(admitirTi: boolean, existe: (ruta: string) => boolean = (r) => existsSync(join(RAIZ, r)), leer: (ruta: string) => string = (r) => readFileSync(join(RAIZ, r), "utf8")): readonly Bloque[] | null {
+  if (!admitirTi) return null;
+  const ruta = fuenteLegal(ARCHIVO_AUTORIZACION_TI, existe);
+  if (!existe(ruta)) throw new Error(`VITE_ADMITIR_TI=true exige docs/legal/${ARCHIVO_AUTORIZACION_TI} (OD-35)`);
+  return bloquesMd(leer(ruta));
+}

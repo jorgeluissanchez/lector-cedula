@@ -16,11 +16,13 @@ export type MensajeAlWorker =
     };
 
 /**
- * OFF-27: contenido de cédula que vio la presencia (pista de tipo para la lectura). TRANSITORIO (otros-documentos,
- * OD-20): el Worker sigue enviando `"mrz"` por `"mrz-td1"` y `null` por `"mrz-td3"` hasta que la PWA (tarea 6.x)
- * acepte los valores nuevos; `detectarPresencia` ya devuelve `"mrz-td1"` y `"mrz-td3"`.
+ * OFF-27: contenido de cédula que vio la presencia (pista de tipo para la lectura), forma heredada: `"mrz"` es TD1 y el
+ * TD3 llega como `null`. Es la salida del Worker sin `contenidoTd` (consumidores aún no migrados, como @lector-cedula/web).
  */
 export type ContenidoPresencia = "pdf417" | "mrz" | null;
+
+/** OD-20 (otros-documentos): contenido del Worker con `contenidoTd: true` (la PWA). */
+export type ContenidoPresenciaTd = "pdf417" | "mrz-td1" | "mrz-td3" | null;
 
 export type CodigoErrorWorker = "frame-invalido" | "cuadrilatero-invalido" | "mensaje-invalido";
 
@@ -34,6 +36,6 @@ export type MensajeDelWorker =
       /** El mismo buffer recibido, devuelto por transferencia. */
       readonly pixeles: ArrayBuffer;
       /** OFF-27: `null` si la presencia no se evaluó o no hay cédula. */
-      readonly contenido: ContenidoPresencia;
+      readonly contenido: ContenidoPresencia | ContenidoPresenciaTd;
     }
   | { readonly tipo: "error"; readonly id: number; readonly codigo: CodigoErrorWorker; readonly pixeles?: ArrayBuffer };

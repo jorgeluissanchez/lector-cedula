@@ -3,7 +3,7 @@
  * (la captura original la libera quien llama), cancela con `AbortSignal` mandando `cancelar` al Worker y resuelve
  * de inmediato, y convierte un error del Worker en `motor`. No guarda ningún resultado.
  */
-import type { ResultadoLectura, TipoLectura } from "@lector-cedula/capture";
+import type { PistaLectura, ResultadoLectura } from "@lector-cedula/capture";
 
 export interface PuertoLector {
   postMessage(mensaje: unknown, transferir?: Transferable[]): void;
@@ -18,10 +18,11 @@ export interface PixelesCaptura {
   readonly pixeles: Uint8ClampedArray;
 }
 
-/** OFF-27 y OFF-28: pista de tipo y respaldo del otro lector. */
+/** OFF-27, OFF-28 y OD-20: pista de tipo (TD1 o TD3) y respaldo del otro lector; OD-30a: parámetro de la TI. */
 export interface OpcionesLecturaCliente {
-  readonly pista?: TipoLectura;
+  readonly pista?: PistaLectura;
   readonly respaldo?: boolean;
+  readonly admitirTarjetaIdentidad?: boolean;
 }
 
 export interface ClienteLector {
@@ -71,6 +72,7 @@ export function crearClienteLector(puerto: PuertoLector): ClienteLector {
         const extra = {
           ...(opciones.pista === undefined ? {} : { pista: opciones.pista }),
           ...(opciones.respaldo === undefined ? {} : { respaldo: opciones.respaldo }),
+          ...(opciones.admitirTarjetaIdentidad === true ? { admitirTarjetaIdentidad: true } : {}),
         };
         puerto.postMessage({ tipo: "leer", id, ancho: captura.ancho, alto: captura.alto, pixeles, fechaReferencia, ...extra }, [pixeles]);
       });

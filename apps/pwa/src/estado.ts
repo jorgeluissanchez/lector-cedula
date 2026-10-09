@@ -15,6 +15,11 @@ export type Estado =
   | { readonly pantalla: "error"; readonly codigo: CodigoError; readonly aviso: string | null }
   /** deteccion-fraude (FRA-17, FRA-20): `riesgo` null si la señal no está disponible. */
   | { readonly pantalla: "resultado"; readonly aviso: null; readonly lectura: LecturaCorrecta; readonly riesgo?: SenalRiesgo | null }
+  /**
+   * otros-documentos (OD-34b): lectura de un menor (TI o `menorDeEdad`) retenida solo en memoria hasta que el
+   * representante legal autorice; "Cancelar" o la página oculta la descartan.
+   */
+  | { readonly pantalla: "autorizacion-representante"; readonly aviso: null; readonly lectura: LecturaCorrecta; readonly riesgo?: SenalRiesgo | null }
   | { readonly pantalla: "error-lectura"; readonly aviso: null; readonly errorLectura: CodigoErrorLectura }
   /** OFF-20: "Acerca de y licencias", con la pantalla a la que vuelve "Volver". */
   | { readonly pantalla: "licencias"; readonly aviso: null; readonly anterior: Estado };
@@ -31,6 +36,8 @@ export type Evento =
   | { readonly tipo: "leida"; readonly resultado: ResultadoLectura; readonly riesgo?: SenalRiesgo | null }
   /** OFF-26: lectura fallida con reintentos disponibles; vuelve a la cámara sin mostrar el error. */
   | { readonly tipo: "reintento" }
+  /** OD-34b: casilla marcada y "Continuar" en `autorizacion-representante`. */
+  | { readonly tipo: "autorizar" }
   | { readonly tipo: "licencias" }
   | { readonly tipo: "volver" }
   | { readonly tipo: "cancelar" }
@@ -38,11 +45,19 @@ export type Evento =
 
 export const ESTADO_INICIAL: Estado = Object.freeze({ pantalla: "inicio", aviso: null });
 
-const LECTURA: ReadonlySet<Pantalla> = new Set(["leyendo", "resultado", "error-lectura", "licencias"]);
+const LECTURA: ReadonlySet<Pantalla> = new Set(["leyendo", "autorizacion-representante", "resultado", "error-lectura", "licencias"]);
+
+/** OD-34: antes de mostrar campos de un menor (TI o `menorDeEdad: true`) se exige la autorización del representante. */
+export function requiereAutorizacion(lectura: LecturaCorrecta): boolean {
+  return lectura.tipoDocumento === "tarjeta-identidad" || lectura.menorDeEdad === true;
+}
 
 function leida(e: Estado, r: ResultadoLectura, riesgo: SenalRiesgo | null | undefined): Estado {
   if (e.pantalla !== "leyendo") return e;
-  if (r.ok) return riesgo === undefined ? { pantalla: "resultado", aviso: null, lectura: r } : { pantalla: "resultado", aviso: null, lectura: r, riesgo };
+  if (r.ok) {
+    const pantalla = requiereAutorizacion(r) ? "autorizacion-representante" : "resultado";
+    return riesgo === undefined ? { pantalla, aviso: null, lectura: r } : { pantalla, aviso: null, lectura: r, riesgo };
+  }
   if (r.error === "cancelada") return e;
   return { pantalla: "error-lectura", aviso: null, errorLectura: clasificarErrorLectura(r).codigo };
 }
@@ -63,6 +78,9 @@ export function reducir(e: Estado, ev: Evento): Estado {
       return leida(e, ev.resultado, ev.riesgo);
     case "reintento":
       return e.pantalla === "leyendo" ? { pantalla: "activo", aviso: null } : e;
+    case "autorizar":
+      if (e.pantalla !== "autorizacion-representante") return e;
+      return "riesgo" in e ? { pantalla: "resultado", aviso: null, lectura: e.lectura, riesgo: e.riesgo ?? null } : { pantalla: "resultado", aviso: null, lectura: e.lectura };
     case "licencias":
       return e.pantalla === "inicio" || e.pantalla === "resultado" ? { pantalla: "licencias", aviso: null, anterior: e } : e;
     case "volver":

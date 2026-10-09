@@ -44,6 +44,10 @@ Con `admitirTarjetaIdentidad` en `true`, `leerDocumento` MUST: (a) dar `"tarjeta
 - **WHEN** con el parámetro encendido se lee una TI sintética (PDF417 prefijo `I3`) con `fechaNacimiento` `2008-10-09` y otra con `2008-10-08`, ambas con `fechaReferencia` `2026-10-08`
 - **THEN** la primera es `tarjeta-identidad` y la segunda `{ ok: false, error: "ti-mayor-de-edad" }`
 
+#### Scenario: Mensaje de la PWA para una TI de un mayor
+- **WHEN** la PWA clasifica el error `ti-mayor-de-edad`
+- **THEN** el código es `ti-mayor-de-edad`, el mensaje es "Esta tarjeta de identidad es de una persona mayor de edad. Usa la cédula de ciudadanía." y no hay reintento automático
+
 ### Requirement: OD-32b Menores de 7 años
 Con `admitirTarjetaIdentidad` en `true`, una persona menor de 7 años a la `fechaReferencia` MUST dar `{ ok: false, tipo, error: "documento-no-admitido" }`: su documento es el registro civil (decisión del orquestador 2).
 
@@ -99,6 +103,10 @@ Con el parámetro encendido la PWA MUST enlazar la plantilla `docs/legal/autoriz
 #### Scenario: Archivos y enlaces
 - **WHEN** una prueba de Vitest lee `docs/legal/`
 - **THEN** existen `autorizacion-representante-ti.md` con las cadenas `Ley 1581 de 2012`, `artículo 7` y `Decreto 1377 de 2013`, y `CHECKLIST-CUMPLIMIENTO.md` contiene `LECTOR_ADMITIR_TI`
+
+#### Scenario: Plantilla ausente con el parámetro encendido
+- **WHEN** se construye la PWA con `VITE_ADMITIR_TI=true` y no existe `docs/legal/autorizacion-representante-ti.md` (ni en `docs/legal/publicacion/`)
+- **THEN** la construcción falla con un mensaje que nombra `autorizacion-representante-ti.md`
 
 #### Scenario: Enlaces solo con el parámetro
 - **WHEN** el E2E carga la PWA construida con `VITE_ADMITIR_TI=false` y con `true`

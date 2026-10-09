@@ -18,7 +18,8 @@
     "vite.config.ts",
     "plugin-pwa.ts",
     "avisos-terceros.ts",
-    "legal-paginas.ts"
+    "legal-paginas.ts",
+    "config.ts"
   ],
   "references": [
     {

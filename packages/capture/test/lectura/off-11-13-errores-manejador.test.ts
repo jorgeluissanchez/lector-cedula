@@ -33,7 +33,7 @@ describe("OFF-13 Errores de lectura", () => {
   });
 
   it("OFF-13 textos fijos por código", () => {
-    expect(Object.keys(TEXTOS_ERROR_LECTURA).sort()).toStrictEqual(["menor-de-edad", "motor", "no-encontrado", "no-valido", "tiempo-agotado"]);
+    expect(Object.keys(TEXTOS_ERROR_LECTURA).sort()).toStrictEqual(["documento-no-admitido", "menor-de-edad", "motor", "no-encontrado", "no-valido", "ti-mayor-de-edad", "tiempo-agotado"]);
   });
 });
 

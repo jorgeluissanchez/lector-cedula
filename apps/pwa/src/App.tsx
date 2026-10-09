@@ -5,10 +5,10 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "p
 import { diagnosticoActivo, lineasDiagnostico, type Diagnostico } from "./diagnostico";
 import { ESTADO_INICIAL, reducir, type CodigoError } from "./estado";
 import { iniciarIndicador, TEXTOS_OFFLINE, type EstadoOffline } from "./precache/indicador";
-import { fragmentos, RUTA_POLITICA, RUTA_TERMINOS, TEXTO_ALCANCE, type Bloque } from "./legal";
+import { fragmentos, RUTA_AUTORIZACION_TI, RUTA_POLITICA, RUTA_TERMINOS, TEXTO_ALCANCE, TEXTO_CASILLA_REPRESENTANTE, type Bloque } from "./legal";
 import { LICENCIA_CC_BY_SA, RUTA_AVISOS, SECCIONES_LICENCIAS, TEXTO_ENLACE_FUENTES } from "./licencias";
 import { fraudeActivo, MOTIVOS_RIESGO } from "./fraude";
-import { camposVisibles } from "./resultado";
+import { camposVisibles, tituloResultado } from "./resultado";
 import { crearSesion } from "./sesion";
 
 /** deteccion-fraude (FRA-17, FRA-20): la señal informa; no oculta ni bloquea los datos leídos. */
@@ -23,26 +23,33 @@ const TEXTO_AUTENTICIDAD = "Es una señal orientativa calculada en tu dispositiv
 const TEXTOS_ERROR: Readonly<Record<CodigoError, string>> = { ...TEXTOS_ERROR_CAMARA, ...TEXTOS_ENTORNO };
 
 /** CAM-10 y OFF-11: al ocultarse la página se detiene la cámara o se descarta la lectura y su resultado. */
-const PANTALLAS_OCULTABLES: ReadonlySet<string> = new Set(["activo", "listo", "leyendo", "resultado", "error-lectura"]);
+const PANTALLAS_OCULTABLES: ReadonlySet<string> = new Set(["activo", "listo", "leyendo", "autorizacion-representante", "resultado", "error-lectura"]);
 
 export const TEXTO_LEYENDO = "Leyendo documento…";
 
 /** OFF-21: textos extraídos de docs/legal en la compilación (vite.config.ts). */
 declare const __TEXTOS_LEGALES__: { readonly aviso: readonly Bloque[]; readonly autorizacion: string; readonly descargo: string };
 const LEGAL = __TEXTOS_LEGALES__;
+/** otros-documentos (OD-30, OD-34b, OD-35): parámetro de la TI y texto de la autorización, validados al compilar. */
+declare const __ADMITIR_TI__: boolean;
+declare const __AUTORIZACION_TI__: readonly Bloque[] | null;
+const ADMITIR_TI = __ADMITIR_TI__;
+const AUTORIZACION_TI = __AUTORIZACION_TI__;
+export const TEXTO_AUTORIZACION_PENDIENTE = "Se necesita la autorización del representante legal";
+const TEXTO_ENLACE_AUTORIZACION_TI = "Autorización del representante legal";
 
 function Texto(props: { texto: string }) {
   return <>{fragmentos(props.texto).map((f, i) => (f.fuerte ? <strong key={i}>{f.texto}</strong> : f.texto))}</>;
 }
 
-function BloquesAviso() {
+function BloquesAviso(props: { bloques: readonly Bloque[] }) {
   const salida = [];
   let items: string[] = [];
   const volcar = () => {
     if (items.length > 0) salida.push(<ul key={`l${salida.length}`}>{items.map((t) => <li key={t}><Texto texto={t} /></li>)}</ul>);
     items = [];
   };
-  for (const b of LEGAL.aviso) {
+  for (const b of props.bloques) {
     if (b.tipo === "item") {
       items.push(b.texto);
       continue;
@@ -100,13 +107,18 @@ export function App() {
     () =>
       crearSesion(
         { evento: despachar, feedback: setFeedback, ...(depurar ? { diagnostico: setDiagnostico } : {}) },
-        { fraude: fraudeActivo(import.meta.env.VITE_FRAUDE as string | undefined, location.search) },
+        { fraude: fraudeActivo(import.meta.env.VITE_FRAUDE as string | undefined, location.search), admitirTarjetaIdentidad: ADMITIR_TI },
       ),
     [depurar],
   );
   const [offline, setOffline] = useState<EstadoOffline>("pendiente");
   // OFF-21: la autorización vive solo en memoria de la página; nunca se guarda (OFF-11).
   const [autorizado, setAutorizado] = useState(false);
+  // OD-34b: casilla del representante, sin marcar cada vez que se entra en la pantalla; solo en memoria.
+  const [representante, setRepresentante] = useState(false);
+  useEffect(() => {
+    if (estado.pantalla === "autorizacion-representante") setRepresentante(false);
+  }, [estado.pantalla]);
   const pantallaRef = useRef(estado.pantalla);
   // OFF-23: segundos transcurridos en `leyendo` (fuera de la región aria-live para no repetir anuncios).
   const [segundos, setSegundos] = useState(0);
@@ -155,6 +167,7 @@ export function App() {
     despachar({ tipo: "licencias" });
   };
   const volver = () => despachar({ tipo: "volver" });
+  const autorizar = () => despachar({ tipo: "autorizar" });
 
   const p = estado.pantalla;
   const textoEstado =
@@ -166,7 +179,9 @@ export function App() {
                 ? TEXTOS_ERROR_LECTURA[estado.errorLectura]
                 : p === "resultado"
                   ? "Lectura completada"
-                  : "";
+                  : p === "autorizacion-representante"
+                    ? TEXTO_AUTORIZACION_PENDIENTE
+                    : "";
 
   return (
     <main
@@ -174,6 +189,7 @@ export function App() {
       data-pantalla={p}
       data-error={p === "error" ? estado.codigo : p === "error-lectura" ? estado.errorLectura : undefined}
       data-tipo={p === "resultado" ? estado.lectura.tipo : undefined}
+      data-tipo-documento={p === "resultado" ? estado.lectura.tipoDocumento : undefined}
     >
       {p === "activo" && (
         <div class="escena">
@@ -188,7 +204,7 @@ export function App() {
             <p>Ubica la cédula frente a la cámara trasera. La imagen no sale de tu dispositivo.</p>
             <p class="alcance">{TEXTO_ALCANCE}</p>
             <section class="aviso-privacidad" aria-label="Aviso de privacidad">
-              <BloquesAviso />
+              <BloquesAviso bloques={LEGAL.aviso} />
               <p class="enlaces-legales">
                 <a class="enlace" href={RUTA_POLITICA}>
                   Política de tratamiento
@@ -197,6 +213,14 @@ export function App() {
                 <a class="enlace" href={RUTA_TERMINOS}>
                   Términos de uso
                 </a>
+                {ADMITIR_TI && (
+                  <>
+                    {" · "}
+                    <a class="enlace" href={RUTA_AUTORIZACION_TI}>
+                      {TEXTO_ENLACE_AUTORIZACION_TI}
+                    </a>
+                  </>
+                )}
               </p>
               <label class="autorizacion">
                 <input type="checkbox" checked={autorizado} onChange={(e) => setAutorizado((e.currentTarget as HTMLInputElement).checked)} />
@@ -246,6 +270,26 @@ export function App() {
             </p>
           </section>
         )}
+        {p === "autorizacion-representante" && (
+          <section class="autorizacion-representante" aria-labelledby="titulo-autorizacion-representante">
+            <h1 id="titulo-autorizacion-representante">{TEXTO_ENLACE_AUTORIZACION_TI}</h1>
+            <p>El documento leído es de una persona menor de edad. Sus datos solo se muestran con la autorización expresa de su representante legal.</p>
+            {AUTORIZACION_TI !== null && (
+              <div class="texto-autorizacion">
+                <BloquesAviso bloques={AUTORIZACION_TI} />
+              </div>
+            )}
+            <p>
+              <a class="enlace" href={RUTA_AUTORIZACION_TI} rel="noopener" target="_blank">
+                {TEXTO_ENLACE_AUTORIZACION_TI} (texto completo)
+              </a>
+            </p>
+            <label class="autorizacion">
+              <input type="checkbox" checked={representante} onChange={(e) => setRepresentante((e.currentTarget as HTMLInputElement).checked)} />
+              <span>{TEXTO_CASILLA_REPRESENTANTE}</span>
+            </label>
+          </section>
+        )}
         {p === "resultado" && (
           <section
             class="resultado"
@@ -254,7 +298,8 @@ export function App() {
             data-riesgo-nivel={"riesgo" in estado ? (estado.riesgo?.nivel ?? "no-disponible") : undefined}
             data-riesgo-motivos={"riesgo" in estado ? (estado.riesgo?.motivos ?? []).map((m) => m.codigo).join(" ") : undefined}
           >
-            <h2 id="titulo-resultado">{estado.lectura.tipo === "pdf417" ? "Cédula amarilla" : "Cédula digital"}</h2>
+            <h2 id="titulo-resultado">{tituloResultado(estado.lectura).documento}</h2>
+            {tituloResultado(estado.lectura).variante !== null && <p class="variante">{tituloResultado(estado.lectura).variante}</p>}
             <p class="descargo">{LEGAL.descargo}</p>
             <dl>
               {camposVisibles(estado.lectura).map((c) => (
@@ -316,6 +361,12 @@ export function App() {
             </>
           )}
           {p === "leyendo" && <Boton texto="Cancelar" alPulsar={cancelarLectura} secundario />}
+          {p === "autorizacion-representante" && (
+            <>
+              <Boton texto="Continuar" alPulsar={autorizar} deshabilitado={!representante} />
+              <Boton texto="Cancelar" alPulsar={cancelar} secundario />
+            </>
+          )}
           {p === "resultado" && <Boton texto="Leer otra" alPulsar={iniciar} />}
           {p === "error-lectura" && (
             <>

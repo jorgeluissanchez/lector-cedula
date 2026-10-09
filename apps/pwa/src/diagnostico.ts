@@ -8,7 +8,7 @@ export interface Diagnostico {
   /** Número de captura dentro de los reintentos (OFF-26). */
   readonly captura: number;
   readonly resolucionPista: { readonly ancho: number; readonly alto: number } | null;
-  readonly pista: "pdf417" | "mrz" | null;
+  readonly pista: "pdf417" | "mrz-td1" | "mrz-td3" | null;
   readonly fotoMs: number | null;
   readonly pasos: readonly PasoSecuencia[];
   readonly totalMs: number | null;

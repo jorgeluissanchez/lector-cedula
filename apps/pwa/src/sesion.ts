@@ -21,7 +21,7 @@ import {
   type Camara,
   type CapturaAceptada,
   type ClienteCalidad,
-  type ContenidoPresencia,
+  type ContenidoPresenciaTd,
   type Cuadrilatero,
   type EntornoFoto,
   type FrameLectura,
@@ -91,8 +91,17 @@ function entornoFoto(): EntornoFoto {
   return { ...(ImageCapture === undefined ? {} : { ImageCapture }), aPixeles: fotoAPixeles };
 }
 
-export function crearSesion(obs: Observador, opciones: { readonly fraude?: boolean } = {}): Sesion {
-  let cliente: ClienteCalidad | null = null;
+/** FRA-21: señal de fraude; OD-30a: `admitirTarjetaIdentidad` (VITE_ADMITIR_TI) pasa a `leerDocumento`. */
+export interface OpcionesSesion {
+  readonly fraude?: boolean;
+  readonly admitirTarjetaIdentidad?: boolean;
+}
+
+/** OD-20: la presencia vio una MRZ (TD1 o TD3): sin foto de alta resolución ni frames extra (OFF-27, OFF-28). */
+const esMrz = (c: ContenidoPresenciaTd): boolean => c === "mrz-td1" || c === "mrz-td3";
+
+export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Sesion {
+  let cliente: ClienteCalidad<ContenidoPresenciaTd> | null = null;
   let lector: ClienteLector | null = null;
   // deteccion-fraude (FRA-17): Worker propio, creado en la primera señal y reutilizado.
   let fraude: ClienteFraude | null = null;
@@ -102,7 +111,7 @@ export function crearSesion(obs: Observador, opciones: { readonly fraude?: boole
   let captura: CapturaAceptada | null = null;
   // OFF-28: frames de lectura de la captura aceptada (foto, frame aceptado y frames consecutivos), pista y diagnóstico.
   let frames: FrameLectura[] = [];
-  let pista: ContenidoPresencia = null;
+  let pista: ContenidoPresenciaTd = null;
   let diagnostico: Omit<Diagnostico, "captura" | "pasos" | "totalMs"> = { resolucionPista: null, pista: null, fotoMs: null };
   let capturas = 0;
   let generacion = 0;
@@ -116,9 +125,9 @@ export function crearSesion(obs: Observador, opciones: { readonly fraude?: boole
   // OFF-26: cuenta de lecturas de la captura en curso; los botones la reinician, el reintento silencioso no.
   const reintentos = crearReintentos(() => performance.now());
 
-  function obtenerCliente(): ClienteCalidad {
-    // CAM-12: el Worker se descarga solo después de pulsar "Iniciar cámara".
-    cliente ??= crearClienteCalidad(
+  function obtenerCliente(): ClienteCalidad<ContenidoPresenciaTd> {
+    // CAM-12: el Worker se descarga solo después de pulsar "Iniciar cámara". OD-20: inicia con `contenidoTd`.
+    cliente ??= crearClienteCalidad<ContenidoPresenciaTd>(
       new Worker(new URL("./calidad.worker.ts", import.meta.url), {
         type: "module",
       }),
@@ -177,7 +186,11 @@ export function crearSesion(obs: Observador, opciones: { readonly fraude?: boole
     const { resultado: r, pasos } = await leerSecuencia(
       frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }],
       p,
-      (f, lector) => obtenerLector().leer(f, hoyEnBogota(), control.signal, lector === null ? {} : { pista: lector, respaldo: false }),
+      (f, lector) =>
+        obtenerLector().leer(f, hoyEnBogota(), control.signal, {
+          ...(lector === null ? {} : { pista: lector, respaldo: false }),
+          ...(opciones.admitirTarjetaIdentidad === true ? { admitirTarjetaIdentidad: true } : {}),
+        }),
       { ahora: () => performance.now() },
     );
     if (control.signal.aborted) return limpiarCopias();
@@ -236,7 +249,7 @@ export function crearSesion(obs: Observador, opciones: { readonly fraude?: boole
 
   async function revalidar(
     v: HTMLVideoElement,
-    c: ClienteCalidad,
+    c: ClienteCalidad<ContenidoPresenciaTd>,
     gen: number,
   ): Promise<void> {
     const completo = tomarFrameCaptura(v);
@@ -261,7 +274,7 @@ export function crearSesion(obs: Observador, opciones: { readonly fraude?: boole
     };
     const pistaVideo = camara?.stream.getVideoTracks()[0];
     let fotoMs: number | null = null;
-    if (contenido !== "mrz" && pistaVideo !== undefined) {
+    if (!esMrz(contenido) && pistaVideo !== undefined) {
       const t = performance.now();
       const foto = await tomarFoto(pistaVideo, entornoFoto());
       if (foto !== null) {
@@ -305,7 +318,7 @@ export function crearSesion(obs: Observador, opciones: { readonly fraude?: boole
 
   async function analizar(
     v: HTMLVideoElement,
-    c: ClienteCalidad,
+    c: ClienteCalidad<ContenidoPresenciaTd>,
     gen: number,
   ): Promise<void> {
     const inicio = performance.now();

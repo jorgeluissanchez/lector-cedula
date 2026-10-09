@@ -7,6 +7,10 @@ El detector de presencia (OFF-22, OFF-22b) MUST distinguir en las 4 orientacione
 - **WHEN** el Worker de calidad con presencia analiza en la guía la amarilla, la digital y la CE sintéticas, la página de datos de un pasaporte sintético (proporción ID-3, 125x88 mm) y, aparte, el pasaporte girado 180°
 - **THEN** los `contenido` son `"pdf417"`, `"mrz-td1"`, `"mrz-td1"`, `"mrz-td3"` y `"mrz-td3"`
 
+#### Scenario: Worker con contenidoTd y consumidores sin migrar
+- **WHEN** el Worker de calidad se inicia con `{ presencia: true, contenidoTd: true }` (la PWA) y, aparte, solo con `{ presencia: true }` (consumidores aún no migrados, como `@lector-cedula/web`), y analiza la digital y el pasaporte sintéticos
+- **THEN** el primero envía `"mrz-td1"` y `"mrz-td3"`, y el segundo la forma heredada `"mrz"` y `null`
+
 #### Scenario: Alias mrz
 - **WHEN** se llama `leerDocumento` con `pista: "mrz"` y dependencias inyectadas con una digital válida
 - **THEN** el resultado es igual al de `pista: "mrz-td1"`

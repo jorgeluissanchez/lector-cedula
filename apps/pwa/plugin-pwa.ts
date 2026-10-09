@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import type { OutputBundle } from "rollup";
 import type { Plugin } from "vite";
 import { textoAvisosTerceros } from "./avisos-terceros";
-import { leerLegal, mdAHtml } from "./legal-paginas";
+import { ARCHIVO_AUTORIZACION_TI, leerLegal, mdAHtml } from "./legal-paginas";
 import { construirManifiesto } from "./src/precache/manifiesto";
 
 function trozo(tipo: string, datos: Buffer): Buffer {
@@ -89,7 +89,8 @@ export function chunkDivipol(id: string): string | undefined {
   return /[\\/]parsers[\\/](src|dist)[\\/]divipol[\\/]tabla\.generated\.[jt]s$/u.test(id) ? "divipol" : undefined;
 }
 
-export function pluginPwa(): Plugin {
+/** OD-35: con `admitirTi`, la autorización del representante se emite como página y entra en la precaché. */
+export function pluginPwa(opciones: { readonly admitirTi?: boolean } = {}): Plugin {
   return {
     name: "lector-cedula-pwa",
     apply: "build",
@@ -117,6 +118,8 @@ export function pluginPwa(): Plugin {
       // OFF-21: política de tratamiento y términos de uso, en la precaché (disponibles sin conexión).
       this.emitFile({ type: "asset", fileName: "assets/politica-tratamiento.html", source: mdAHtml(leerLegal("politica-tratamiento-datos.md"), "Política de tratamiento de datos") });
       this.emitFile({ type: "asset", fileName: "assets/terminos-de-uso.html", source: mdAHtml(leerLegal("terminos-de-uso.md"), "Términos de uso") });
+      if (opciones.admitirTi === true)
+        this.emitFile({ type: "asset", fileName: "assets/autorizacion-representante-ti.html", source: mdAHtml(leerLegal(ARCHIVO_AUTORIZACION_TI), "Autorización del representante legal") });
       const sw = bundle["sw.js"];
       if (sw === undefined || sw.type !== "chunk") throw new Error("sw.js no se emitió");
       const archivos = Object.values(bundle)

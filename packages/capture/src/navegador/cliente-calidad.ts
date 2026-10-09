@@ -5,7 +5,7 @@
  */
 import type { DeteccionDocumento, FrameAnalisis, ResultadoCalidad } from "../calidad/tipos.js";
 import type { ResultadoConfiguracion } from "../calidad/umbrales.js";
-import type { CodigoErrorWorker, ContenidoPresencia, MensajeDelWorker } from "./protocolo.js";
+import type { CodigoErrorWorker, ContenidoPresencia, ContenidoPresenciaTd, MensajeDelWorker } from "./protocolo.js";
 
 /** Lo mínimo de `Worker` que usa el cliente. */
 export interface PuertoWorker {
@@ -15,27 +15,28 @@ export interface PuertoWorker {
   terminate(): void;
 }
 
-export type RespuestaAnalisis =
+export type RespuestaAnalisis<C extends ContenidoPresencia | ContenidoPresenciaTd = ContenidoPresencia> =
   | {
       readonly ok: true;
       readonly resultado: ResultadoCalidad;
       readonly deteccion: DeteccionDocumento;
       /** El buffer enviado, devuelto por el Worker. */
       readonly pixeles: Uint8ClampedArray;
-      /** OFF-27: pista de tipo para la lectura. */
-      readonly contenido: ContenidoPresencia;
+      /** OFF-27 y OD-20: pista de tipo para la lectura; su forma la fija la opción `contenidoTd` del Worker. */
+      readonly contenido: C;
     }
   | { readonly ok: false; readonly codigo: CodigoErrorWorker };
 
-export interface ClienteCalidad {
+export interface ClienteCalidad<C extends ContenidoPresencia | ContenidoPresenciaTd = ContenidoPresencia> {
   /** Transfiere `frame.pixeles.buffer`: tras la llamada queda con `byteLength` 0. */
-  analizar(frame: FrameAnalisis): Promise<RespuestaAnalisis>;
+  analizar(frame: FrameAnalisis): Promise<RespuestaAnalisis<C>>;
   configurar(umbrales: unknown): Promise<ResultadoConfiguracion>;
   /** Termina el Worker; las peticiones pendientes se resuelven con `mensaje-invalido`. */
   terminar(): void;
 }
 
-export function crearClienteCalidad(worker: PuertoWorker): ClienteCalidad {
+/** `C` declara la forma del contenido que envía el Worker (`ContenidoPresenciaTd` si se inició con `contenidoTd: true`). */
+export function crearClienteCalidad<C extends ContenidoPresencia | ContenidoPresenciaTd = ContenidoPresencia>(worker: PuertoWorker): ClienteCalidad<C> {
   let siguienteId = 0;
   const pendientes = new Map<number, (m: MensajeDelWorker | null) => void>();
 
@@ -65,7 +66,7 @@ export function crearClienteCalidad(worker: PuertoWorker): ClienteCalidad {
       const pixeles = frame.pixeles.buffer as ArrayBuffer;
       const { ancho, alto, anchoOriginal, altoOriginal } = frame;
       const m = await enviar({ tipo: "analizar", ancho, alto, anchoOriginal, altoOriginal, pixeles }, [pixeles]);
-      if (m?.tipo === "resultado") return { ok: true, resultado: m.resultado, deteccion: m.deteccion, pixeles: new Uint8ClampedArray(m.pixeles), contenido: m.contenido ?? null };
+      if (m?.tipo === "resultado") return { ok: true, resultado: m.resultado, deteccion: m.deteccion, pixeles: new Uint8ClampedArray(m.pixeles), contenido: (m.contenido ?? null) as C };
       return { ok: false, codigo: m?.tipo === "error" ? m.codigo : "mensaje-invalido" };
     },
     async configurar(umbrales) {

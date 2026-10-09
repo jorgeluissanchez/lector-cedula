@@ -50,7 +50,7 @@ export { crearFeedback, TEXTOS_FEEDBACK, textoSituacion, type Feedback, type Sit
 // Navegador (CAL-09, CAM-07, CAM-11): Worker, cliente, frames y captura.
 export { iniciarWorkerCalidad, type AlcanceWorker } from "./navegador/worker-calidad.js";
 export { crearClienteCalidad, type ClienteCalidad, type PuertoWorker, type RespuestaAnalisis } from "./navegador/cliente-calidad.js";
-export type { CodigoErrorWorker, ContenidoPresencia, MensajeAlWorker, MensajeDelWorker } from "./navegador/protocolo.js";
+export type { CodigoErrorWorker, ContenidoPresencia, ContenidoPresenciaTd, MensajeAlWorker, MensajeDelWorker } from "./navegador/protocolo.js";
 export { tomarFrameAnalisis, tomarFrameCaptura, type FrameCompleto } from "./navegador/frames.js";
 export { fotoAPixeles, LIMITE_FOTO_MS, tomarFoto, type EntornoFoto, type FrameLectura, type OrigenFrame } from "./navegador/foto.js";
 export { crearCapturaAceptada, type DatosCaptura } from "./navegador/captura.js";
@@ -90,7 +90,7 @@ export {
 export { iniciarCamara, RESTRICCIONES_CAMARA, type Camara, type Medios } from "./navegador/camara.js";
 
 // Lectura en el dispositivo (cambio pwa-lectura-offline): máscara, orquestación PDF417 -> MRZ y errores.
-export type { DependenciasLectura, ErrorLectura, OpcionesLectura, ResultadoLectura, TipoLectura } from "./lectura/tipos.js";
+export type { CamposDocumento, DependenciasLectura, ErrorLectura, FuenteLectura, OpcionesLectura, PistaLectura, ResultadoLectura, TipoDocumento, TipoLectura } from "./lectura/tipos.js";
 export { enmascararCamposMrz, enmascararCamposPdf417, enmascararNombre, enmascararResultadoMrz, enmascararUltimos2 } from "./lectura/mascara.js";
 export { leerDocumento } from "./lectura/leer.js";
 export { crearLectorCodigosPdf417 } from "./lectura/codigos.js";

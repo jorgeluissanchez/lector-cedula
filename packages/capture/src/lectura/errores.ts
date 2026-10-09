@@ -1,7 +1,9 @@
 // Clasificación de errores de lectura (OFF-13): código y texto fijo de la pantalla `error-lectura`.
 
 export type CodigoErrorLectura =
-  "no-encontrado" | "tiempo-agotado" | "no-valido" | "menor-de-edad" | "motor";
+  "no-encontrado" | "tiempo-agotado" | "no-valido" | "menor-de-edad" | "motor"
+  /** otros-documentos (OD-23 y OD-32): sin reintento automático. */
+  | "documento-no-admitido" | "ti-mayor-de-edad";
 
 export const TEXTOS_ERROR_LECTURA: Readonly<
   Record<CodigoErrorLectura, string>
@@ -14,6 +16,8 @@ export const TEXTOS_ERROR_LECTURA: Readonly<
   "menor-de-edad":
     "Este lector solo admite cédulas de ciudadanía de mayores de edad.",
   motor: "No se pudo iniciar el lector en este dispositivo.",
+  "documento-no-admitido": "Este tipo de documento no está admitido en este servicio.",
+  "ti-mayor-de-edad": "Esta tarjeta de identidad es de una persona mayor de edad. Usa la cédula de ciudadanía.",
 });
 
 function codigo(r: unknown): CodigoErrorLectura {
@@ -24,9 +28,12 @@ function codigo(r: unknown): CodigoErrorLectura {
   // OFF-27: con pista PDF417 sin respaldo (o tras el respaldo MRZ), "no encontrado" del PDF417.
   if (error === "pdf417-no-encontrado" && tipo === "pdf417") return "no-encontrado";
   if (error === "tiempo-agotado") return "tiempo-agotado";
-  if (error === "pdf417-no-valido" || error === "mrz-no-valida")
+  // OD-23: los errores del parser TD3 (formato o código que no es de pasaporte) son un documento no válido.
+  if (error === "pdf417-no-valido" || error === "mrz-no-valida" || error === "no-es-pasaporte" || error === "formato-td3")
     return "no-valido";
   if (error === "menor-de-edad") return "menor-de-edad";
+  if (error === "documento-no-admitido") return "documento-no-admitido";
+  if (error === "ti-mayor-de-edad") return "ti-mayor-de-edad";
   return "motor";
 }
 
