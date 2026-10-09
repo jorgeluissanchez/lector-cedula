@@ -2,11 +2,13 @@
 // transferido, lee con `leerDocumento` y responde el resultado (enmascarado salvo con `enmascarar: false`, OFF-09). Pone a cero los píxeles recibidos en
 // todas las ramas (los bytes del PDF417 los pone a cero `leerDocumento`). `cancelar` aborta la lectura de ese id.
 import { leerDocumento } from "./leer.js";
-import type { DependenciasLectura, OpcionesLectura, ResultadoLectura } from "./tipos.js";
+import type { DependenciasLectura, OpcionesLectura, PistaLectura, ResultadoLectura } from "./tipos.js";
 
-/** OFF-27: solo `"pdf417"` y `"mrz"` son pistas; cualquier otro valor equivale a no tenerla. */
+const PISTAS: readonly PistaLectura[] = ["pdf417", "mrz", "mrz-td1", "mrz-td3"];
+
+/** OFF-27 y OD-20: solo `"pdf417"`, `"mrz"`, `"mrz-td1"` y `"mrz-td3"` son pistas; cualquier otro valor equivale a no tenerla. */
 function opcionesPista(m: MensajeLeer): Pick<OpcionesLectura, "pista" | "respaldo"> {
-  const pista = m.pista === "pdf417" || m.pista === "mrz" ? m.pista : undefined;
+  const pista = PISTAS.find((p) => p === m.pista);
   return pista === undefined ? {} : { pista, ...(m.respaldo === false ? { respaldo: false } : {}) };
 }
 
@@ -21,6 +23,8 @@ export interface MensajeLeer {
   readonly pista?: unknown;
   /** OFF-28: `false` desactiva el respaldo del otro lector. */
   readonly respaldo?: unknown;
+  /** OD-30a: solo `true` admite la TI y los menores; otro valor equivale a `false`. */
+  readonly admitirTarjetaIdentidad?: unknown;
 }
 
 export interface MensajeCancelar {
@@ -80,6 +84,7 @@ export function crearManejadorLector(
           senal: control.signal,
           enmascarar,
           ...opcionesPista(m),
+          ...(m.admitirTarjetaIdentidad === true ? { admitirTarjetaIdentidad: true } : {}),
         },
       ).catch((): ResultadoLectura => ({ ok: false, error: "motor" }));
       return { tipo: "resultado", id: m.id, resultado };

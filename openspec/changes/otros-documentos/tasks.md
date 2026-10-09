@@ -13,10 +13,10 @@
 
 ## 2. Captura y lectura (`packages/capture`)
 
-- [ ] 2.1 Presencia con `"mrz-td1"` / `"mrz-td3"` y alias `"mrz"`. Cubre: OD-20. Tipos: unitaria y rendimiento. Verificación: `npx vitest run packages/capture/test/calidad`.
-- [ ] 2.2 Lector MRZ con `formato: "td3"` y plan de giros. Cubre: OD-21. Tipos: integración con OCR real y metamórficas. Verificación: `npx vitest run packages/capture/test/mrz --maxWorkers=2`.
-- [ ] 2.3 `leerDocumento` con salida unificada, orden por pista, CE sin 2D. Cubre: OD-13, OD-21, OD-22, OD-22a. Tipos: unitaria con espías. Verificación: `npx vitest run packages/capture/test/lectura`.
-- [ ] 2.4 Parámetro `admitirTarjetaIdentidad` y regla de edad OFF-24b. Cubre: OD-30a, OD-31, OD-32, OD-32a, OD-33. Tipos: unitaria de frontera en ambos valores. Verificación: `npx vitest run packages/capture/test/lectura`.
+- [ ] 2.1 (parcial: `detectarPresencia` ya devuelve `"mrz-td1"`/`"mrz-td3"`, prueba `packages/capture/test/lectura/od-20-presencia-td3.test.ts`; el Worker de calidad sigue enviando `"mrz"`/`null` hasta que la PWA acepte los valores nuevos, ver `ContenidoPresencia` en `packages/capture/src/navegador/protocolo.ts`) Presencia con `"mrz-td1"` / `"mrz-td3"` y alias `"mrz"`. Cubre: OD-20. Tipos: unitaria y rendimiento. Verificación: `npx vitest run packages/capture/test/calidad`.
+- [x] 2.2 Lector MRZ con `formato: "td3"` y plan de giros. Cubre: OD-21. Tipos: integración con OCR real y metamórficas. Verificación: `npx vitest run packages/capture/test/mrz --maxWorkers=2`.
+- [x] 2.3 `leerDocumento` con salida unificada, orden por pista, CE sin 2D. Cubre: OD-13, OD-21, OD-22, OD-22a. Tipos: unitaria con espías. Verificación: `npx vitest run packages/capture/test/lectura`.
+- [x] 2.4 Parámetro `admitirTarjetaIdentidad` y regla de edad OFF-24b. Cubre: OD-30a, OD-31, OD-32, OD-32a, OD-33. Tipos: unitaria de frontera en ambos valores. Verificación: `npx vitest run packages/capture/test/lectura`.
 
 ## 3. Evals
 

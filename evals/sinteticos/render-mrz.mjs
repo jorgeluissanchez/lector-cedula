@@ -10,6 +10,9 @@ const RUTA_FUENTE = new URL("./fuentes/OCRB.otf", import.meta.url);
 
 export const ANCHO_R = 1011;
 export const ALTO_R = 638;
+/** Página de datos del pasaporte (ID-3, 125x88 mm) para la TD3 de otros-documentos (OD-21). */
+export const ANCHO_P = 1250;
+export const ALTO_P = 880;
 
 /** Distorsiones leves del conjunto E (LMI-06). */
 export const DISTORSIONES = ["rotacion+2", "rotacion-2", "blur1", "brillo+20", "brillo-20", "jpeg70", "escala0.8", "ruido8", "rotacion180"];
@@ -38,18 +41,21 @@ window.__mrz = {
   },
   lienzo(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; },
   reverso(lineas) {
-    const c = this.lienzo(${ANCHO_R}, ${ALTO_R});
+    // TD3 (otros-documentos, OD-21): página de datos del pasaporte ID-3 a 1250x880 con 2 líneas de 44 al pie.
+    const td3 = lineas.length === 2;
+    const c = td3 ? this.lienzo(${ANCHO_P}, ${ALTO_P}) : this.lienzo(${ANCHO_R}, ${ALTO_R});
     const x = c.getContext("2d");
     x.fillStyle = "#F2EFE6"; x.fillRect(0, 0, c.width, c.height);
     x.fillStyle = "#111111"; x.font = "28px sans-serif"; x.textBaseline = "alphabetic";
-    x.fillText("REPUBLICA DE COLOMBIA - DOCUMENTO SINTETICO", 40, 60);
-    x.fillStyle = "#BBBBBB"; x.fillRect(700, 120, 260, 260);
+    x.fillText(td3 ? "PASAPORTE - DOCUMENTO SINTETICO" : "REPUBLICA DE COLOMBIA - DOCUMENTO SINTETICO", 40, 60);
+    x.fillStyle = "#BBBBBB"; x.fillRect(td3 ? 60 : 700, 120, 260, td3 ? 330 : 260);
+    if (td3) { x.fillStyle = "#333333"; x.font = "26px sans-serif"; ["APELLIDOS", "NOMBRES", "NACIONALIDAD", "FECHA"].forEach((t, i) => x.fillText(t, 380, 160 + 70 * i)); }
     // Caja de tinta de las 3 líneas: se dibujan aparte sobre transparente y se mide el alfa.
     const t = this.lienzo(c.width, c.height);
     const tx = t.getContext("2d");
     for (const ctx of [x, tx]) {
       ctx.fillStyle = "#111111"; ctx.font = "36px 'OCRB-prueba'"; ctx.textBaseline = "alphabetic";
-      lineas.forEach((l, i) => { if (l) ctx.fillText(l, 40, 520 + 50 * i); });
+      lineas.forEach((l, i) => { if (l) ctx.fillText(l, td3 ? 50 : 40, td3 ? 770 + 56 * i : 520 + 50 * i); });
     }
     const d = tx.getImageData(0, 0, t.width, t.height).data;
     let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;

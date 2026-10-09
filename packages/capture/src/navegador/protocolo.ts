@@ -15,7 +15,11 @@ export type MensajeAlWorker =
       readonly pixeles: ArrayBuffer;
     };
 
-/** OFF-27: contenido de cédula que vio la presencia (pista de tipo para la lectura). */
+/**
+ * OFF-27: contenido de cédula que vio la presencia (pista de tipo para la lectura). TRANSITORIO (otros-documentos,
+ * OD-20): el Worker sigue enviando `"mrz"` por `"mrz-td1"` y `null` por `"mrz-td3"` hasta que la PWA (tarea 6.x)
+ * acepte los valores nuevos; `detectarPresencia` ya devuelve `"mrz-td1"` y `"mrz-td3"`.
+ */
 export type ContenidoPresencia = "pdf417" | "mrz" | null;
 
 export type CodigoErrorWorker = "frame-invalido" | "cuadrilatero-invalido" | "mensaje-invalido";

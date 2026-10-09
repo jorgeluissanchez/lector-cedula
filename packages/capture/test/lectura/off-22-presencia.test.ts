@@ -29,14 +29,14 @@ const presencia = (f: FrameAnalisis) => detectarPresencia(f, guiaEnAnalisis(f.an
 describe("OFF-22 Presencia de documento", { timeout: 60_000 }, () => {
   it("OFF-22 Cédulas sintéticas: amarilla (PDF417), digital y digital girada (MRZ)", () => {
     expect(presencia(tarjetaEnGuia(amarilla))).toMatchObject({ presente: true, contenido: "pdf417" });
-    expect(presencia(tarjetaEnGuia(digital))).toMatchObject({ presente: true, contenido: "mrz" });
-    expect(presencia(tarjetaVerticalEnGuia(girar90(digital)))).toMatchObject({ presente: true, contenido: "mrz" });
+    expect(presencia(tarjetaEnGuia(digital))).toMatchObject({ presente: true, contenido: "mrz-td1" });
+    expect(presencia(tarjetaVerticalEnGuia(girar90(digital)))).toMatchObject({ presente: true, contenido: "mrz-td1" });
   });
 
   it("OFF-22 Cédula digital en las cuatro orientaciones (mrz-giro-180)", () => {
     const g180 = girar90(girar90(digital));
-    expect(presencia(tarjetaEnGuia(g180))).toMatchObject({ presente: true, contenido: "mrz" });
-    expect(presencia(tarjetaVerticalEnGuia(girar90(g180)))).toMatchObject({ presente: true, contenido: "mrz" });
+    expect(presencia(tarjetaEnGuia(g180))).toMatchObject({ presente: true, contenido: "mrz-td1" });
+    expect(presencia(tarjetaVerticalEnGuia(girar90(g180)))).toMatchObject({ presente: true, contenido: "mrz-td1" });
   });
 
   it("OFF-22 Escenas sin cédula nítidas: cara, pared, hoja en blanco y texto cualquiera", () => {

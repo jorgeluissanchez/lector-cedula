@@ -1,105 +1,253 @@
-// Orquestación pura de la lectura (OFF-06, OFF-08, OFF-27; design.md, decisión 2). Sin pista, el mismo orden que
-// tools/leer-foto.mjs: primero PDF417; solo si el error es `pdf417-no-encontrado`, la MRZ TD1 con el plan de giros. Con
-// `pista` (el contenido que vio la presencia, OFF-27) empieza por ese lector y prueba el otro solo como respaldo cuando
-// el primero no encuentra nada (y `respaldo` no es `false`). Devuelve el resultado enmascarado salvo con
-// `enmascarar: false` (OFF-09; la PWA muestra los datos completos) y pone a cero los bytes del PDF417 tras parsearlos (OFF-11).
+// Orquestación pura de la lectura (OFF-06, OFF-08, OFF-27; design.md, decisión 2; otros-documentos OD-13, OD-20 a
+// OD-22a y OD-30a a OD-33). Sin pista, el mismo orden que tools/leer-foto.mjs: primero PDF417; solo si el error es
+// `pdf417-no-encontrado`, la MRZ TD1 con el plan de giros. Con `pista` (el contenido que vio la presencia, OFF-27, OD-20)
+// empieza por ese lector y prueba los demás solo como respaldo cuando el primero no encuentra nada (y `respaldo` no es
+// `false`): `"mrz-td3"` -> TD3, TD1, PDF417; `"mrz"`/`"mrz-td1"` -> TD1, PDF417; `"pdf417"` -> PDF417, TD1. El éxito lleva
+// la salida unificada (`tipoDocumento`, `fuente`, `campos`, `warnings`) y conserva un ciclo `tipo` y `resultado` (OD-22).
+// Devuelve el resultado enmascarado salvo con `enmascarar: false` (OFF-09; la PWA muestra los datos completos) y pone a
+// cero los bytes del PDF417 tras parsearlos (OFF-11). La autorización del representante (OD-34) la pide quien muestra
+// el resultado: aquí solo se marca `tipoDocumento: "tarjeta-identidad"` o `menorDeEdad: true`.
+import type { CamposCedulaAmarilla } from "@lector-cedula/parsers";
+import type { DocumentoMrz, ResultadoParserMrz } from "../mrz/lector.js";
 import type { Pixeles } from "../pdf417/decodificar.js";
-import { esMayorDeEdad } from "./edad.js";
+import { cumplioAnios, EDAD_MINIMA_TI, esMayorDeEdad } from "./edad.js";
 import { conLugarNacimiento } from "./lugar.js";
-import { enmascararCamposPdf417, enmascararResultadoMrz } from "./mascara.js";
+import { enmascararCamposPdf417, enmascararNombre, enmascararResultadoMrz, enmascararUltimos2 } from "./mascara.js";
 import type {
+  CamposDocumento,
   DependenciasLectura,
+  FuenteLectura,
   OpcionesLectura,
   ResultadoLectura,
-  TipoLectura,
+  TipoDocumento,
 } from "./tipos.js";
 
 const CANCELADA: ResultadoLectura = { ok: false, error: "cancelada" };
+const COLOMBIA = "COL";
+/** OD-33: prefijo `I3` (bytes 0x49 0x33) de la TI en el PDF417 (hipótesis H12). */
+const PREFIJO_TI = [0x49, 0x33] as const;
 
 /** Función aparte: la señal puede abortarse durante un `await` (TypeScript estrecharía `aborted` a `false`). */
 function abortada(senal: AbortSignal | undefined): boolean {
   return senal?.aborted === true;
 }
 
-/** Resultado de un lector: `null` si no encontró nada (se puede probar el otro). */
-type Paso = { readonly final: ResultadoLectura } | { readonly noEncontrado: ResultadoLectura };
+/**
+ * Resultado de un lector: `final` termina la lectura; `noEncontrado` permite probar el siguiente; `soloCe` (OD-13) es
+ * un PDF417 no válido que solo cede ante una CE leída por MRZ.
+ */
+type Paso =
+  | { readonly final: ResultadoLectura }
+  | { readonly noEncontrado: ResultadoLectura }
+  | { readonly soloCe: ResultadoLectura };
 
-async function pasoPdf417(
-  pixeles: Pixeles,
-  deps: DependenciasLectura,
+type Lector = "pdf417" | "mrz-td1" | "mrz-td3";
+
+const unir = (...partes: (string | null)[]): string => partes.filter((p): p is string => p !== null && p !== "").join(" ");
+
+function enmascararCampos(c: CamposDocumento): CamposDocumento {
+  return {
+    ...c,
+    numeroDocumento: enmascararUltimos2(c.numeroDocumento),
+    apellidos: enmascararNombre(c.apellidos),
+    nombres: enmascararNombre(c.nombres),
+    ...("nuip" in c ? { nuip: enmascararUltimos2(c.nuip) } : {}),
+  };
+}
+
+function exito(
+  base: { tipo: "pdf417" | "mrz"; intento: string; resultado: unknown; tipoDocumento: TipoDocumento; fuente: FuenteLectura; warnings: readonly string[] },
+  campos: CamposDocumento,
   opciones: OpcionesLectura,
-): Promise<Paso> {
+  menorDeEdad = false,
+): ResultadoLectura {
+  const enmascarar = opciones.enmascarar ?? true;
+  return { ok: true, ...base, campos: enmascarar ? enmascararCampos(campos) : campos, ...(menorDeEdad ? { menorDeEdad: true as const } : {}) };
+}
+
+function camposAmarilla(c: CamposCedulaAmarilla & { lugarNacimiento?: unknown }): CamposDocumento {
+  return {
+    numeroDocumento: c.numeroDocumento,
+    apellidos: unir(c.primerApellido, c.segundoApellido),
+    nombres: unir(c.primerNombre, c.segundoNombre),
+    fechaNacimiento: c.fechaNacimiento,
+    sexo: c.sexo,
+    nacionalidad: COLOMBIA,
+    paisEmisor: COLOMBIA,
+    fechaVencimiento: null,
+    nuip: c.numeroDocumento,
+    rh: c.rh,
+    lugarNacimiento: c.lugarNacimiento ?? null,
+  };
+}
+
+function camposDigital(r: ResultadoParserMrz): CamposDocumento {
+  const c = r.campos;
+  return {
+    numeroDocumento: c.nuip,
+    apellidos: c.apellidos,
+    nombres: c.nombres,
+    fechaNacimiento: c.fechaNacimiento,
+    sexo: c.sexo,
+    nacionalidad: c.nacionalidad,
+    paisEmisor: COLOMBIA,
+    fechaVencimiento: c.fechaVencimiento,
+    nuip: c.nuip,
+  };
+}
+
+function camposIcao(d: DocumentoMrz): CamposDocumento {
+  const c = d.campos;
+  return {
+    numeroDocumento: c.numeroDocumento,
+    apellidos: c.apellidos,
+    nombres: c.nombres,
+    fechaNacimiento: c.fechaNacimiento,
+    sexo: c.sexo,
+    nacionalidad: c.nacionalidad,
+    paisEmisor: c.estadoEmisor,
+    fechaVencimiento: c.fechaVencimiento,
+  };
+}
+
+/** Resultado obsoleto (`resultado`) de una CE o un pasaporte, con la misma máscara que `campos`. */
+function documentoEnmascarado(d: DocumentoMrz, enmascarar: boolean): DocumentoMrz {
+  if (!enmascarar) return d;
+  const c = d.campos;
+  return { ...d, campos: { ...c, numeroDocumento: enmascararUltimos2(c.numeroDocumento), apellidos: enmascararNombre(c.apellidos), nombres: enmascararNombre(c.nombres) } } as DocumentoMrz;
+}
+
+async function pasoPdf417(pixeles: Pixeles, deps: DependenciasLectura, opciones: OpcionesLectura): Promise<Paso> {
   const { senal, fechaReferencia, enmascarar = true } = opciones;
+  const admitirTi = opciones.admitirTarjetaIdentidad === true;
   const imagen = await deps.decodificar(pixeles);
   if (abortada(senal)) {
     if (imagen.ok) imagen.bytes.fill(0);
     return { final: CANCELADA };
   }
   if (!imagen.ok) {
-    if (imagen.error === "pdf417-no-encontrado")
-      return { noEncontrado: { ok: false, tipo: "pdf417", error: "pdf417-no-encontrado" } };
+    if (imagen.error === "pdf417-no-encontrado") return { noEncontrado: { ok: false, tipo: "pdf417", error: "pdf417-no-encontrado" } };
     return { final: { ok: false, error: imagen.error } };
   }
+  const prefijoTi = imagen.bytes[0] === PREFIJO_TI[0] && imagen.bytes[1] === PREFIJO_TI[1];
   let resultado: ReturnType<DependenciasLectura["parsearPdf417"]>;
   try {
     resultado = deps.parsearPdf417(imagen.bytes, { divipol: deps.buscarDivipol });
   } finally {
     imagen.bytes.fill(0);
   }
-  if (!resultado.ok) return { final: { ok: false, tipo: "pdf417", error: "pdf417-no-valido" } };
-  if (!esMayorDeEdad(resultado.campos.fechaNacimiento, fechaReferencia))
-    return { final: { ok: false, tipo: "pdf417", error: "menor-de-edad" } };
+  if (!resultado.ok) {
+    const r: ResultadoLectura = { ok: false, tipo: "pdf417", error: "pdf417-no-valido" };
+    // OD-13: con pista PDF417, el código 2D de una CE no se interpreta; solo la MRZ de una CE puede sustituirlo.
+    return opciones.pista === "pdf417" && opciones.respaldo !== false ? { soloCe: r } : { final: r };
+  }
+  const nacimiento = resultado.campos.fechaNacimiento;
+  const mayor = esMayorDeEdad(nacimiento, fechaReferencia);
+  const rechazo = (error: "menor-de-edad" | "ti-mayor-de-edad" | "documento-no-admitido"): Paso => ({ final: { ok: false, tipo: "pdf417", error } });
+  let tipoDocumento: TipoDocumento = "cedula-ciudadania";
+  const hipotesis: string[] = [];
+  if (!admitirTi) {
+    // OD-31: con el parámetro apagado, OFF-24 sin cambios; una TI identificada por su prefijo también es menor-de-edad.
+    if (!mayor || prefijoTi) return rechazo("menor-de-edad");
+  } else if (prefijoTi && mayor) {
+    return rechazo("ti-mayor-de-edad");
+  } else if (!mayor) {
+    // OD-32b: por debajo de 7 años el documento es el registro civil.
+    if (!cumplioAnios(nacimiento, fechaReferencia, EDAD_MINIMA_TI)) return rechazo("documento-no-admitido");
+    // OD-32 (a) y OD-33: TI por edad (H10) y, con prefijo I3, por la marca (H12).
+    tipoDocumento = "tarjeta-identidad";
+    hipotesis.push("H10", ...(prefijoTi ? ["H12"] : []));
+  }
   const conLugar = conLugarNacimiento(resultado, deps.buscarDivipol);
   return {
-    final: {
-      ok: true,
-      tipo: "pdf417",
-      intento: imagen.intento,
-      resultado: enmascarar ? { ...conLugar, campos: enmascararCamposPdf417(conLugar.campos) } : conLugar,
-    },
+    final: exito(
+      {
+        tipo: "pdf417",
+        intento: imagen.intento,
+        resultado: enmascarar ? { ...conLugar, campos: enmascararCamposPdf417(conLugar.campos) } : conLugar,
+        tipoDocumento,
+        fuente: "pdf417",
+        warnings: [...conLugar.warnings, ...hipotesis],
+      },
+      camposAmarilla(conLugar.campos),
+      opciones,
+    ),
   };
 }
 
-async function pasoMrz(
-  pixeles: Pixeles,
-  deps: DependenciasLectura,
-  opciones: OpcionesLectura,
-): Promise<Paso> {
-  const { senal, fechaReferencia, enmascarar = true } = opciones;
-  const lectura = await deps.lectorMrz.leer(pixeles, { fechaReferencia });
-  if (abortada(senal)) return { final: CANCELADA };
-  if (!lectura.ok) {
-    const r: ResultadoLectura = { ok: false, tipo: "mrz", error: lectura.error };
-    return lectura.error === "mrz-no-encontrada" ? { noEncontrado: r } : { final: r };
-  }
-  if (!lectura.resultado.valido) return { final: { ok: false, tipo: "mrz", error: "mrz-no-valida" } };
-  const nacimiento = lectura.resultado.campos.fechaNacimiento;
-  // Stryker disable next-line ConditionalExpression: equivalente; con `valido` la fecha nunca es null (MZ-17), se comprueba para estrechar el tipo.
-  if (nacimiento === null || !esMayorDeEdad(nacimiento, fechaReferencia))
-    return { final: { ok: false, tipo: "mrz", error: "menor-de-edad" } };
-  return {
-    final: {
-      ok: true,
-      tipo: "mrz",
-      intento: lectura.intento,
-      resultado: enmascarar ? enmascararResultadoMrz(lectura.resultado) : lectura.resultado,
-    },
+function pasoMrz(formato: "td1" | "td3") {
+  return async (pixeles: Pixeles, deps: DependenciasLectura, opciones: OpcionesLectura): Promise<Paso> => {
+    const { senal, fechaReferencia, enmascarar = true } = opciones;
+    const lectura = await deps.lectorMrz.leer(pixeles, formato === "td3" ? { fechaReferencia, formato } : { fechaReferencia });
+    if (abortada(senal)) return { final: CANCELADA };
+    if (!lectura.ok) {
+      if (lectura.error === "documento-no-admitido")
+        return { final: { ok: false, tipo: "mrz", error: lectura.error, ...("warnings" in lectura ? { warnings: lectura.warnings } : {}) } };
+      const r: ResultadoLectura = { ok: false, tipo: "mrz", error: lectura.error };
+      return lectura.error === "mrz-no-encontrada" ? { noEncontrado: r } : { final: r };
+    }
+    const menor: ResultadoLectura = { ok: false, tipo: "mrz", error: "menor-de-edad" };
+    if ("documento" in lectura) {
+      // OD-32a y OD-32b: CE o pasaporte; un menor solo con el parámetro encendido (y nunca por debajo de 7 años).
+      const d = lectura.documento;
+      const nacimiento = d.campos.fechaNacimiento;
+      const esMenor = !esMayorDeEdad(nacimiento, fechaReferencia);
+      if (esMenor && opciones.admitirTarjetaIdentidad !== true) return { final: menor };
+      if (esMenor && !cumplioAnios(nacimiento, fechaReferencia, EDAD_MINIMA_TI))
+        return { final: { ok: false, tipo: "mrz", error: "documento-no-admitido" } };
+      return {
+        final: exito(
+          { tipo: "mrz", intento: lectura.intento, resultado: documentoEnmascarado(d, enmascarar), tipoDocumento: d.tipoDocumento, fuente: d.fuente, warnings: d.warnings },
+          camposIcao(d),
+          opciones,
+          esMenor,
+        ),
+      };
+    }
+    const r = lectura.resultado;
+    if (!r.valido) return { final: { ok: false, tipo: "mrz", error: "mrz-no-valida" } };
+    const nacimiento = r.campos.fechaNacimiento;
+    // OD-32 (d): la digital IC+COL solo es de mayores, con el parámetro encendido o apagado.
+    // Stryker disable next-line ConditionalExpression: equivalente; con `valido` la fecha nunca es null (MZ-17), se comprueba para estrechar el tipo.
+    if (nacimiento === null || !esMayorDeEdad(nacimiento, fechaReferencia)) return { final: menor };
+    return {
+      final: exito(
+        { tipo: "mrz", intento: lectura.intento, resultado: enmascarar ? enmascararResultadoMrz(r) : r, tipoDocumento: "cedula-ciudadania", fuente: "mrz-td1", warnings: r.warnings },
+        camposDigital(r),
+        opciones,
+      ),
+    };
   };
 }
 
-const PASOS: Readonly<Record<TipoLectura, typeof pasoPdf417>> = { pdf417: pasoPdf417, mrz: pasoMrz };
+const PASOS: Readonly<Record<Lector, (p: Pixeles, d: DependenciasLectura, o: OpcionesLectura) => Promise<Paso>>> = {
+  pdf417: pasoPdf417,
+  "mrz-td1": pasoMrz("td1"),
+  "mrz-td3": pasoMrz("td3"),
+};
 
-export async function leerDocumento(
-  pixeles: Pixeles,
-  deps: DependenciasLectura,
-  opciones: OpcionesLectura,
-): Promise<ResultadoLectura> {
+/** OFF-06, OFF-27 y OD-21: orden de los lectores según la pista (`"mrz"` es alias de `"mrz-td1"`). */
+function orden(pista: OpcionesLectura["pista"]): readonly Lector[] {
+  if (pista === "mrz-td3") return ["mrz-td3", "mrz-td1", "pdf417"];
+  if (pista === "mrz" || pista === "mrz-td1") return ["mrz-td1", "pdf417"];
+  return ["pdf417", "mrz-td1"];
+}
+
+export async function leerDocumento(pixeles: Pixeles, deps: DependenciasLectura, opciones: OpcionesLectura): Promise<ResultadoLectura> {
   if (abortada(opciones.senal)) return CANCELADA;
-  const primero: TipoLectura = opciones.pista ?? "pdf417";
-  const a = await PASOS[primero](pixeles, deps, opciones);
-  if ("final" in a) return a.final;
+  const lectores = orden(opciones.pista);
   // Sin pista la MRZ siempre se intenta tras no encontrar el PDF417 (OFF-06); con pista, salvo `respaldo: false`.
-  if (opciones.pista !== undefined && opciones.respaldo === false) return a.noEncontrado;
-  const b = await PASOS[primero === "pdf417" ? "mrz" : "pdf417"](pixeles, deps, opciones);
-  return "final" in b ? b.final : b.noEncontrado;
+  const intentar = opciones.pista !== undefined && opciones.respaldo === false ? lectores.slice(0, 1) : lectores;
+  let ultimo: ResultadoLectura = CANCELADA;
+  let soloCe: ResultadoLectura | null = null;
+  for (const lector of intentar) {
+    const paso = await PASOS[lector](pixeles, deps, opciones);
+    if ("final" in paso) {
+      if (soloCe === null || paso.final === CANCELADA) return paso.final;
+      return paso.final.ok && paso.final.tipoDocumento === "cedula-extranjeria" ? paso.final : soloCe;
+    }
+    if ("soloCe" in paso) soloCe = paso.soloCe;
+    else ultimo = paso.noEncontrado;
+  }
+  return soloCe ?? ultimo;
 }

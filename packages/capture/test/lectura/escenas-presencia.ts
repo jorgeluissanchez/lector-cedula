@@ -212,3 +212,11 @@ export async function degradar(f: FrameAnalisis, d: Degradacion): Promise<FrameA
   }
   return { ...f, pixeles: p };
 }
+
+/** OD-20: documento con su propia proporción (p. ej. pasaporte ID-3) centrado en la guía, con el alto de la guía. */
+export function documentoEnGuia(img: Imagen): FrameAnalisis {
+  const d = lienzo();
+  const ancho = Math.round((img.width * GUIA.alto) / img.height);
+  pegar(d, img, { x: Math.round((W - ancho) / 2), y: GUIA.y, ancho, alto: GUIA.alto });
+  return reducir(d);
+}

@@ -71,7 +71,7 @@ export function iniciarWorkerCalidad(alcance: AlcanceWorker, detector: DetectorD
               r.resultado,
               () => {
                 const p = detectarPresencia(frame, cuadrilatero);
-                contenido = p.contenido;
+                contenido = p.contenido === "mrz-td1" ? "mrz" : p.contenido === "mrz-td3" ? null : p.contenido;
                 return p.presente;
               },
               configuracion.umbrales.umbralListo,

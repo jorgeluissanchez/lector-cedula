@@ -7,7 +7,7 @@
  * Sin las dos señales el frame no puede pasar a `listo`: la calidad se limita por debajo del umbral con motivo `acerca`.
  */
 import { PROPORCION_ID1 } from "../flujo/guia.js";
-import { girar, localizarConEvidencia, type PixelesRgba } from "../mrz/localizar.js";
+import { evidenciaTd3, girar, localizarConEvidencia, type PixelesRgba } from "../mrz/localizar.js";
 import type { Cuadrilatero, FrameAnalisis, ResultadoCalidad } from "./tipos.js";
 
 /** Salto de luminancia que cuenta como borde. */
@@ -54,7 +54,8 @@ export interface Rect {
 
 export interface Presencia {
   readonly tarjeta: Rect | null;
-  readonly contenido: "pdf417" | "mrz" | null;
+  /** OD-20: `"mrz-td1"` (3 líneas de 30: digital, CE) o `"mrz-td3"` (2 líneas de 44: pasaporte). */
+  readonly contenido: "pdf417" | "mrz-td1" | "mrz-td3" | null;
   readonly presente: boolean;
 }
 
@@ -187,6 +188,17 @@ export function hayMrz(p: PixelesRgba): boolean {
   return esMrz(derecha) || (trioUnico(derecha) && esMrz(localizarConEvidencia(girar(p, 180))));
 }
 
+const esTd3 = (e: { ventanas: number; evidencia: number | null }): boolean => e.ventanas > 0 && e.ventanas <= MAX_VENTANAS_MRZ && (e.evidencia ?? 0) >= EVIDENCIA_MINIMA_MRZ;
+
+/**
+ * OD-20: par TD3 (pasaporte) en las 4 orientaciones, con el mismo criterio que hayMrz: vertical, 90 y 270; horizontal,
+ * la derecha y, si no, la girada 180. Solo se busca cuando no hay trío TD1.
+ */
+export function hayMrzTd3(p: PixelesRgba): boolean {
+  if (p.width < p.height) return esTd3(evidenciaTd3(girar(p, 90))) || esTd3(evidenciaTd3(girar(p, 270)));
+  return esTd3(evidenciaTd3(p)) || esTd3(evidenciaTd3(girar(p, 180)));
+}
+
 export function detectarPresencia(frame: FrameAnalisis, guia: Cuadrilatero): Presencia {
   const recorte = recorteGuia(frame, guia);
   if (recorte.ancho < 8 || recorte.alto < 8) return { tarjeta: null, contenido: null, presente: false };
@@ -195,7 +207,9 @@ export function detectarPresencia(frame: FrameAnalisis, guia: Cuadrilatero): Pre
   if (t === null) return { tarjeta: null, contenido: null, presente: false };
   const tarjeta = { x: recorte.x + t.x, y: recorte.y + t.y, ancho: t.ancho, alto: t.alto };
   if (hayPdf417(l, recorte.ancho, t)) return { tarjeta, contenido: "pdf417", presente: true };
-  if (hayMrz(subimagen(frame, tarjeta))) return { tarjeta, contenido: "mrz", presente: true };
+  const imagen = subimagen(frame, tarjeta);
+  if (hayMrz(imagen)) return { tarjeta, contenido: "mrz-td1", presente: true };
+  if (hayMrzTd3(imagen)) return { tarjeta, contenido: "mrz-td3", presente: true };
   if (hayPdf417Suave(l, recorte.ancho, t)) return { tarjeta, contenido: "pdf417", presente: true };
   return { tarjeta, contenido: null, presente: false };
 }

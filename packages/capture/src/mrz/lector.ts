@@ -2,13 +2,14 @@
 // Encadena localizar -> recortar y ampliar -> OCR (Tesseract.js 7.0.0 + mrz.traineddata) -> extraer -> parsear.
 // Privacidad (principio III): la imagen vive solo en memoria; sin red, sin caché en disco ni IndexedDB, sin consola.
 // Tesseract.js se carga con import() diferido en la primera lectura (LMI-09).
-import { parsearMrzCedulaDigital, type ResultadoMrzCedulaDigital } from "@lector-cedula/parsers";
+import { type CamposMrzTd1, clasificarDocumento, parsearMrzCedulaDigital, type ResultadoClasificacion, type ResultadoMrzCedulaDigital } from "@lector-cedula/parsers";
 import { decodificarPixeles, type DecodificadorPixeles, type Pixeles } from "../pdf417/pixeles.js";
 import { enderezar } from "./enderezar.js";
 import { codificarPng, crearWorkerTesseract, opcionesWorker } from "./entorno.js";
-import { extraerLineasMrz } from "./extraer.js";
+import { extraerLineasMrz, extraerLineasTd3 } from "./extraer.js";
 import {
   esPixelesRgba,
+  evidenciaTd3,
   GIROS,
   girar,
   localizarConEvidencia,
@@ -75,9 +76,24 @@ export type IntentoMrz = MetodoLocalizacion | `${MetodoLocalizacion}@${Giro}`;
 
 export type ResultadoParserMrz = Extract<ResultadoMrzCedulaDigital, { ok: true }>;
 
+/** OD-21: formato de la MRZ que se busca; sin él, `"td1"`. */
+export type FormatoMrz = "td1" | "td3";
+
+/** OD-11 y OD-21: documento clasificado que no es la cédula digital (CE por TD1, pasaporte por TD3), con todos sus dígitos válidos. */
+export type DocumentoMrz =
+  | Extract<ResultadoClasificacion, { ok: true; tipoDocumento: "pasaporte" }>
+  | { ok: true; tipoDocumento: "cedula-extranjeria"; fuente: "mrz-td1"; campos: CamposMrzTd1; warnings: string[] };
+
 export type ResultadoLectorMrz =
   | { ok: true; intento: IntentoMrz; digitosValidos: number; resultado: ResultadoParserMrz }
-  | { ok: false; error: ErrorLectorMrz };
+  | { ok: true; intento: IntentoMrz; digitosValidos: number; documento: DocumentoMrz }
+  | { ok: false; error: ErrorLectorMrz }
+  | { ok: false; error: "documento-no-admitido"; warnings: string[] };
+
+/** OD-21: `"td3"` solo si las opciones lo piden expresamente; cualquier otro valor es `"td1"`. */
+export function formatoMrz(opciones: unknown): FormatoMrz {
+  return typeof opciones === "object" && opciones !== null && (opciones as { formato?: unknown }).formato === "td3" ? "td3" : "td1";
+}
 
 export interface LectorMrz {
   leer(imagen: unknown, opciones?: unknown): Promise<ResultadoLectorMrz>;
@@ -194,6 +210,36 @@ export function* intentosMrz(pixeles: PixelesRgba): Generator<IntentoPlan & { re
   }
 }
 
+/**
+ * OD-21: plan de la TD3 con el mismo plan de vistas que LMI-12b (derecha, 90, 270 y 180), ordenadas por la evidencia del
+ * par TD3 (el centro más bajo primero; sin par, al final y en el orden de entrada). Pasada 1: las cajas ajustadas a un
+ * par de líneas de 44 (sin repetir dentro de una vista); pasada 2: los candidatos de localizarFranjaMrz que no se probaron.
+ */
+export function* intentosTd3(pixeles: PixelesRgba): Generator<IntentoPlan & { readonly imagen: PixelesRgba }> {
+  const vistas = ([0, ...GIROS] as (0 | Giro)[]).map((giro) => {
+    const imagen = giro === 0 ? pixeles : girar(pixeles, giro);
+    return { giro, imagen, ...evidenciaTd3(imagen), hechas: new Set<string>() };
+  });
+  // sort es estable: el empate conserva el orden de entrada.
+  vistas.sort((a, b) => (b.evidencia ?? -1) - (a.evidencia ?? -1));
+  for (const v of vistas) {
+    for (const candidato of v.candidatos) {
+      const clave = claveCaja(candidato.caja);
+      if (v.hechas.has(clave)) continue;
+      v.hechas.add(clave);
+      yield { giro: v.giro, imagen: v.imagen, candidato };
+    }
+  }
+  for (const v of vistas) {
+    for (const candidato of localizarConEvidencia(v.imagen).candidatos) {
+      const clave = claveCaja(candidato.caja);
+      if (v.hechas.has(clave)) continue;
+      v.hechas.add(clave);
+      yield { giro: v.giro, imagen: v.imagen, candidato };
+    }
+  }
+}
+
 /** LMI-12b: plan completo de intentos (sin presupuesto). `[]` si la entrada no tiene forma de píxeles. */
 export function planIntentosMrz(pixeles: unknown): IntentoPlan[] {
   if (!esPixelesRgba(pixeles)) return [];
@@ -254,11 +300,13 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
     if (w === null) return { ok: false, error: "modelo-no-disponible" };
     if (terminado) return { ok: false, error: "lector-terminado" };
 
+    const formato = formatoMrz(op);
     let mejor: { intento: IntentoMrz; digitosValidos: number; resultado: ResultadoParserMrz } | null = null;
+    let noAdmitido: { ok: false; error: "documento-no-admitido"; warnings: string[] } | null = null;
     // LMI-12, LMI-12b y LMI-12c: vistas derecha, 90°, 270° y 180° en dos pasadas. LMI-13: presupuesto de llamadas y de tiempo.
     const inicio = ahora();
     let llamadas = 0;
-    const intentos = intentosMrz(pixeles);
+    const intentos = formato === "td3" ? intentosTd3(pixeles) : intentosMrz(pixeles);
     for (;;) {
       if (llamadas >= maxLlamadas || ahora() - inicio >= limiteMs) break;
       // Cede el hilo antes de cada paso síncrono pesado (girar y localizar una vista, recortar y enderezar): con
@@ -273,14 +321,28 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
         .recognize(await codificarPng(enderezar(recortarYAmpliar(imagenVista, candidato.caja))))
         .then((r) => r.data.text)
         .catch(() => "");
-      const resultado = parsearMrzCedulaDigital(extraerLineasMrz(texto), { fechaReferencia: fecha });
-      if (!resultado.ok) continue;
+      const intento = `${candidato.metodo}${giro === 0 ? "" : `@${giro}`}` as IntentoMrz;
+      if (formato === "td3") {
+        // OD-21: el parser TD3 rechaza cualquier dígito de control inválido; un pasaporte clasificado tiene los 5 válidos.
+        const doc = clasificarDocumento(extraerLineasTd3(texto), { fechaReferencia: fecha });
+        if (doc.ok && doc.tipoDocumento === "pasaporte") return { ok: true, intento, digitosValidos: 5, documento: doc };
+        continue;
+      }
+      const lineas = extraerLineasMrz(texto);
+      const resultado = parsearMrzCedulaDigital(lineas, { fechaReferencia: fecha });
+      if (!resultado.ok) {
+        // OD-11 y OD-11b: si no es la cédula digital, el TD1 genérico (todos sus dígitos válidos) puede ser una CE o una TI por MRZ.
+        const doc = clasificarDocumento(lineas, { fechaReferencia: fecha });
+        if (doc.ok && doc.tipoDocumento === "cedula-extranjeria") return { ok: true, intento, digitosValidos: 4, documento: { ...doc, tipoDocumento: "cedula-extranjeria" } };
+        if (!doc.ok && doc.error === "documento-no-admitido" && doc.warnings !== undefined) noAdmitido ??= { ok: false, error: doc.error, warnings: doc.warnings };
+        continue;
+      }
       const digitosValidos = contarValidos(resultado);
-      const sufijo = giro === 0 ? "" : `@${giro}`;
-      if (mejor === null || digitosValidos > mejor.digitosValidos) mejor = { intento: `${candidato.metodo}${sufijo}` as IntentoMrz, digitosValidos, resultado };
+      if (mejor === null || digitosValidos > mejor.digitosValidos) mejor = { intento, digitosValidos, resultado };
       if (digitosValidos === 4) return { ok: true, ...mejor };
     }
-    return mejor === null ? { ok: false, error: "mrz-no-encontrada" } : { ok: true, ...mejor };
+    if (mejor !== null) return { ok: true, ...mejor };
+    return noAdmitido ?? { ok: false, error: "mrz-no-encontrada" };
   }
 
   async function terminar(): Promise<void> {

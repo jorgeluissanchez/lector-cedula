@@ -252,7 +252,8 @@ function percentilSaltos(local: Uint8Array, w: number, hf: number, p: number): n
   return 255;
 }
 
-export function analizarVentana(luma: Uint8Array, w: number, f: CandidatoMrz): AnalisisVentana {
+/** Bordes y bandas de texto de una ventana de LMI-11 (compartido por el trío TD1 y el par TD3 de OD-20). */
+function bandasVentana(luma: Uint8Array, w: number, f: CandidatoMrz) {
   const { y: y0, alto: hf } = f.caja;
   const local = luma.subarray(y0 * w, (y0 + hf) * w);
   const umbral = Math.min(UMBRAL_BORDE_MAXIMO, Math.max(UMBRAL_BORDE_MINIMO, Math.round(FACTOR_UMBRAL * percentilSaltos(local, w, hf, PERCENTIL_UMBRAL))));
@@ -265,7 +266,7 @@ export function analizarVentana(luma: Uint8Array, w: number, f: CandidatoMrz): A
   const util = (x: number): boolean => (bordeCol[x] as number) < FRACCION_COLUMNA_FONDO * hf;
   let utiles = 0;
   for (let x = 0; x < w; x++) if (util(x)) utiles++;
-  if (utiles === 0) return { candidato: f, medidas: null, umbral, bandas: 0, motivo: "sin-columnas-utiles" };
+  if (utiles === 0) return { umbral, utiles, util, borde, encontradas: [] as Banda[] };
   const conteos = new Uint32Array(hf);
   for (let y = 0; y < hf; y++) {
     let n = 0;
@@ -273,6 +274,13 @@ export function analizarVentana(luma: Uint8Array, w: number, f: CandidatoMrz): A
     conteos[y] = n;
   }
   const encontradas = bandas(conteos, 0, Math.max(2, Math.ceil(FRACCION_BORDES_FILA * utiles)));
+  return { umbral, utiles, util, borde, encontradas };
+}
+
+export function analizarVentana(luma: Uint8Array, w: number, f: CandidatoMrz): AnalisisVentana {
+  const { y: y0, alto: hf } = f.caja;
+  const { umbral, utiles, util, borde, encontradas } = bandasVentana(luma, w, f);
+  if (utiles === 0) return { candidato: f, medidas: null, umbral, bandas: 0, motivo: "sin-columnas-utiles" };
   for (let i = encontradas.length - 3; i >= 0; i--) {
     const [a, b, c] = encontradas.slice(i, i + 3) as [Banda, Banda, Banda];
     if (!bandasRegulares(a, b, c)) continue;
@@ -390,4 +398,76 @@ export function girar(p: PixelesRgba, grados: Giro): PixelesRgba {
     }
   }
   return { width: h, height: w, data };
+}
+
+/** OD-20: mínimo de tramos por línea de un par TD3 (44 caracteres; el texto corriente da menos tramos por línea). */
+const TRAMOS_MINIMOS_TD3 = 30;
+
+/**
+ * OD-20: par MRZ TD3 horizontal en la ventana: las 2 bandas más bajas que tienen el mismo alto (LMI-01b), separadas
+ * entre 1,1 y 2,5 altos de línea, sin tocar un borde interior de la ventana y con forma de MRZ (LMI-14, con al menos
+ * TRAMOS_MINIMOS_TD3 tramos por línea). Devuelve el centro vertical del par (en filas de la imagen) y la caja ajustada
+ * al par con margen de medio alto de línea (método `"franja"`), o null.
+ */
+export function parTd3(luma: Uint8Array, w: number, f: CandidatoMrz): { centro: number; candidato: CandidatoMrz } | null {
+  const { y: y0, alto: hf } = f.caja;
+  const { utiles, util, borde, encontradas } = bandasVentana(luma, w, f);
+  if (utiles === 0) return null;
+  for (let i = encontradas.length - 2; i >= 0; i--) {
+    const [a, b] = encontradas.slice(i, i + 2) as [Banda, Banda];
+    const media = (alto(a) + alto(b)) / 2;
+    if (Math.abs(alto(a) - alto(b)) >= TOLERANCIA_ALTURA * media) continue;
+    const separacion = (dobleCentro(b) - dobleCentro(a)) / 2;
+    if (separacion < 1.1 * media || separacion > 2.5 * media) continue;
+    if ((a.inicio === 0 && y0 > 0) || (b.fin === hf - 1 && y0 + hf < luma.length / w)) continue;
+    const tramos = [a, b].map((banda) => {
+      let n = 0;
+      let antes = false;
+      let x0 = w;
+      let x1 = -1;
+      for (let x = 0; x < w; x++) {
+        let hay = false;
+        for (let y = banda.inicio; y <= banda.fin && !hay; y++) hay = util(x) && borde(x, y);
+        if (hay) {
+          x0 = Math.min(x0, x);
+          x1 = x;
+        }
+        if (hay && !antes) n++;
+        antes = hay;
+      }
+      return { n, ancho: x1 - x0 + 1, x0, x1 };
+    });
+    const t = Math.min(...tramos.map((x) => x.n));
+    const ancho = Math.max(...tramos.map((x) => x.ancho));
+    if (t < TRAMOS_MINIMOS_TD3) continue;
+    const relacion = (t * media) / ancho;
+    if (relacion < RELACION_MINIMA || relacion > RELACION_MAXIMA) continue;
+    const margen = Math.round(media * 0.5);
+    const izq = Math.max(0, Math.min(...tramos.map((x) => x.x0)) - margen);
+    const der = Math.min(w, Math.max(...tramos.map((x) => x.x1)) + 1 + margen);
+    const arriba = Math.max(0, a.inicio - margen);
+    const abajo = Math.min(hf, b.fin + 1 + margen);
+    return {
+      centro: y0 + (dobleCentro(a) + dobleCentro(b)) / 4,
+      candidato: { metodo: "franja", caja: { x: izq, y: y0 + arriba, ancho: der - izq, alto: abajo - arriba } },
+    };
+  }
+  return null;
+}
+
+/** OD-20: ventanas de LMI-11 con un par TD3 y la mayor posición vertical relativa de su centro (null si ninguna). */
+export function evidenciaTd3(pixeles: PixelesRgba): { evidencia: number | null; ventanas: number; candidatos: CandidatoMrz[] } {
+  const { width: w, height: h } = pixeles;
+  const luma = luminancias(pixeles);
+  let evidencia: number | null = null;
+  let ventanas = 0;
+  const candidatos: CandidatoMrz[] = [];
+  for (const f of ventanasFranja(w, h)) {
+    const par = parTd3(luma, w, f);
+    if (par === null) continue;
+    ventanas++;
+    candidatos.push(par.candidato);
+    if (evidencia === null || par.centro / h > evidencia) evidencia = par.centro / h;
+  }
+  return { evidencia, ventanas, candidatos };
 }
