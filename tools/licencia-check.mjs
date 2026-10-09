@@ -3,7 +3,8 @@
  * licencia-check: aplica el principio IV de la constitución.
  *
  * Uso:
- *   node tools/licencia-check.mjs                 # dependencias de producción, models/manifest.json y avisos CC BY-SA (DC-12)
+ *   node tools/licencia-check.mjs                 # dependencias de producción, models/manifest.json, avisos CC BY-SA (DC-12)
+ *                                                 # y licencias del tarball de @lector-cedula/web (SDK-26)
  *   node tools/licencia-check.mjs --package a b   # revisa paquetes npm antes de instalarlos (npm view)
  *   node tools/licencia-check.mjs --pip a b       # revisa nombres de paquetes Python contra la lista negra
  *
@@ -145,6 +146,28 @@ export function revisarAvisosCcBySa(raiz) {
   return errores;
 }
 
+// SDK-26 (sdk-integracion): el tarball publicado lleva la licencia propia y los avisos de terceros en su raíz.
+export const LICENCIAS_TARBALL = ["LICENSE", "THIRD_PARTY_LICENSES.txt"];
+
+/** Infracciones de una lista de rutas de `npm pack --dry-run --json` (rutas relativas al paquete). */
+export function evaluarTarballLicencias(nombre, rutas) {
+  const presentes = new Set(rutas);
+  return LICENCIAS_TARBALL.filter((f) => !presentes.has(f)).map((f) => `${nombre}: el tarball (npm pack --dry-run) no contiene ${f}`);
+}
+
+/** Corre `npm pack --dry-run --json --ignore-scripts` en packages/web y evalúa su lista. */
+export function revisarTarballWeb(raiz) {
+  const dir = join(raiz, "packages", "web");
+  if (!existsSync(join(dir, "package.json"))) return [];
+  try {
+    const salida = execSync("npm pack --dry-run --json --ignore-scripts", { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const rutas = (JSON.parse(salida)[0]?.files ?? []).map((f) => f.path);
+    return evaluarTarballLicencias("@lector-cedula/web", rutas);
+  } catch {
+    return ["@lector-cedula/web: no se pudo ejecutar npm pack --dry-run"];
+  }
+}
+
 function leerJson(ruta) {
   return JSON.parse(readFileSync(ruta, "utf8"));
 }
@@ -228,6 +251,7 @@ function main(argv) {
   } else {
     errores = revisarDependenciasProduccion(raiz);
     errores.push(...revisarAvisosCcBySa(raiz));
+    errores.push(...revisarTarballWeb(raiz));
     const manifiesto = join(raiz, "models", "manifest.json");
     if (existsSync(manifiesto)) {
       errores.push(...evaluarManifiestoModelos(leerJson(manifiesto)).map((e) => `modelo ${e.nombre}: ${e.motivo}`));

@@ -11,6 +11,6 @@ Licencia: Creative Commons Atribución-CompartirIgual 4.0 Internacional (CC BY-S
 
 **Software**
 
-El código de la aplicación es MIT y no queda sujeto a CC BY-SA 4.0. Incluye, entre otros, Tesseract (Apache-2.0), Leptonica (BSD-2-Clause) y zlib (Zlib). Lista completa con sus avisos de copyright: [Avisos de terceros](/assets/THIRD_PARTY_LICENSES.txt).
+El código de la aplicación es MIT y no queda sujeto a CC BY-SA 4.0. Incluye, entre otros, Tesseract (Apache-2.0), Leptonica (BSD-2-Clause) y zlib (Zlib). Lista completa con sus avisos de copyright y textos de licencia: el archivo `THIRD_PARTY_LICENSES.txt`, que la aplicación web sirve en `/assets/THIRD_PARTY_LICENSES.txt` y que el paquete npm `@lector-cedula/web` incluye en su raíz y en `dist/assets/THIRD_PARTY_LICENSES.txt`, junto con el `LICENSE` (MIT) del proyecto. Ambos se generan con `tools/avisos-terceros.mjs`.
 
 **Importante:** esta aplicación no es un servicio de la Registraduría ni una verificación oficial del documento.

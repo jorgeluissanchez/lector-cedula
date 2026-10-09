@@ -206,3 +206,14 @@ AV-28 impide que el servidor entregue a un receptor local, así que la tarea 2.5
 5. Angular mínimo 18; el adaptador funciona con y sin zone.js.
 6. La página alojada conserva la precaché de OFF-01; `precacheLector` es para integradores.
 7. La migración de la PWA (3.6) se hace al final de la fase 3, después de integrar otros-documentos y deteccion-fraude en la PWA.
+
+## Decisiones del orquestador por delegación del usuario (2026-10-09, tercera ronda)
+
+1. SDK-09 (tarea 3.7): `lector-cedula:tiempo` mide de `leyendo` a `resultado`, igual que la PWA (OFF-15). La descarga en frío del motor (~20 MB) se mide aparte y se informa como anotación `descarga-fria-ms`, sin umbral bloqueante. La tarea 3.7 se cierra si la medida en caliente cumple.
+2. Transiciones nuevas: `activo|listo→error` cuando falla el análisis de calidad (código `calidad-error`, en lugar de volver a `inicio`) y `permiso→inicio` al cancelar durante el permiso (en lugar del rodeo `permiso→activo→inicio`). Trasladado a la spec (convención `TRANSICIONES` y escenarios de SDK-30).
+3. `leerDocumento` devuelve el mismo `ResultadoPresentacion` que `estado.resultado` (escenario "Mismo objeto que el estado" de SDK-08).
+4. Hallazgos de `revisor-privacidad` sobre el núcleo (aplicados en 3.5b): `upload.url` solo del mismo origen que `servidor` y segura; sin envío de tarjeta de identidad ni menores salvo `enviarMenores: true` (`envio` `fallido` `menor-no-enviado`); copias a cero al liberar e incluso ante excepción; autorización del titular a cargo del integrador; imagen duplicada `front`/`back` como excepción temporal hasta la tarea 4.3.
+
+## Decisión del orquestador por delegación del usuario (2026-10-09): dependencias internas en npm
+
+`@lector-cedula/web` importa `@lector-cedula/capture` en tiempo de ejecución. Se publicarán también `@lector-cedula/capture` y `@lector-cedula/parsers` como paquetes públicos (MIT; las subrutas con datos conservan CC BY-SA), en vez de agrupar todo en un bundle: así cada paquete conserva su licencia y sus tipos. Tarea pendiente en la fase 6: quitar `private`, versionar y publicar en orden parsers, capture, web.

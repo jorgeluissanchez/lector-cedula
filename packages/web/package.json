@@ -17,11 +17,15 @@
     "./assets/*": "./dist/assets/*"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/.tsbuildinfo",
+    "LICENSE",
+    "THIRD_PARTY_LICENSES.txt"
   ],
   "scripts": {
     "build": "tsc -b && node scripts/construir-assets.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepack": "node scripts/construir-assets.mjs --solo-avisos"
   },
   "dependencies": {
     "@lector-cedula/capture": "0.0.0"

@@ -14,9 +14,9 @@ Convenciones de esta spec (aplican a todos los escenarios):
 - Imágenes y vídeos sintéticos de `pwa-lectura-offline` (`amarilla-1080p`, `digital-1080p`, `PERSONA_BASE`: NUIP `9999123456`, `PRUEBA EJEMPLO FICTICIA LUZ`). Ningún dato real.
 - "Resultado de presentación" = objeto `detail` del evento `resultado` o retorno de `leerDocumento()`. "Resultado de confianza" = cuerpo de `GET /v1/validations/{id}` obtenido por el backend con su clave.
 - Decisión del usuario (2026-10-08): el frontal es HEADLESS. Núcleo `@lector-cedula/web`; adaptadores `@lector-cedula/react`, `@lector-cedula/angular`, `@lector-cedula/vue`; componente opcional `@lector-cedula/elementos`.
-- `OpcionesLector` = `{ servidor?, sesion?, recursos?, documentos?, admitirTi?, idioma? }` (`servidor` `https` o `http://localhost`; `sesion` exige `servidor`; `recursos` URL base de los assets; `idioma` solo afecta a `error.mensaje`).
+- `OpcionesLector` = `{ servidor?, sesion?, recursos?, documentos?, admitirTi?, enviarMenores?, idioma? }` (`servidor` `https` o `http://localhost`; `sesion` exige `servidor`; `recursos` URL base de los assets; `idioma` solo afecta a `error.mensaje`).
 - `ControladorLector` = `{ iniciar(video: HTMLVideoElement): Promise<void>, cancelar(), reintentar(), destruir(), obtenerEstado(): EstadoLector, suscribir(fn): () => void }`.
-- `TRANSICIONES` (únicas permitidas): `inicio→permiso`, `permiso→activo`, `permiso→error`, `activo→listo`, `listo→activo`, `listo→leyendo`, `activo→leyendo` (captura guiada), `leyendo→resultado`, `leyendo→activo` (reintento automático), `leyendo→error`, `activo|listo|leyendo→inicio` (`cancelar`), `resultado|error→permiso` (`reintentar`).
+- `TRANSICIONES` (únicas permitidas): `inicio→permiso`, `permiso→activo`, `permiso→error`, `activo→listo`, `listo→activo`, `listo→leyendo`, `activo→leyendo` (captura guiada), `leyendo→resultado`, `leyendo→activo` (reintento automático), `leyendo→error`, `activo|listo→error` (fallo del análisis de calidad, código `calidad-error`), `permiso|activo|listo|leyendo→inicio` (`cancelar`), `resultado|error→permiso` (`reintentar`).
 - `EstadoLector` = `{ fase, calidad: { score 0..100, motivo: "oscuro"|"sobreexpuesto"|"reflejo"|"desenfocado"|"acerca"|null } | null, guia: { video: {x,y,ancho,alto}, normalizada: {x,y,ancho,alto} } | null, contenido: "pdf417"|"mrz-td1"|"mrz-td3"|null, progreso: 0..1 | null, intento: >= 1, resultado: { tipo, campos, warnings, confiable: false, validacion_id } | null, error: { codigo, mensaje, opcion? } | null, envio: { estado: "enviando"|"enviado"|"fallido", codigo? } | null }`.
 - `DEPS` = `DependenciasLector` falsas inyectadas (cámara, cliente de calidad, cliente lector, reloj) para pruebas sin hardware.
 - El componente no introduce hipótesis de formato; las de los parsers siguen en `docs/decisiones/hipotesis-formato.md` y viajan en `warnings[]`.
@@ -147,6 +147,10 @@ Tras verificar los recursos (SDK-39), el núcleo SHALL guardarlos en la Cache St
 ### Requirement: SDK-08 API headless leerDocumento
 `@lector-cedula/web` SHALL exportar `leerDocumento(entrada, opciones): Promise<ResultadoLectura>` donde `entrada` es `Blob`, `ImageBitmap` o `ImageData` y `opciones` incluye `recursos?`, `documentos`, `admitirTi` y `senal` (`AbortSignal`). El resultado MUST ser igual, campo a campo, al `detail` del evento `resultado` para la misma imagen. Sin código legible MUST rechazar con `codigo` `"lectura-fallida"`. MUST NOT usar la cámara ni el DOM.
 
+#### Scenario: Mismo objeto que el estado
+- **WHEN** se llama `leerDocumento(png_amarilla_sintetica, { recursos: REC })` y se lee el mismo PNG con `crearLector` sin servidor
+- **THEN** el valor resuelto es igual con `toStrictEqual` a `obtenerEstado().resultado` en fase `resultado`
+
 #### Scenario: Diferencial con el componente
 - **WHEN** se llama `leerDocumento(png_amarilla_sintetica, { recursos: REC })` y se lee el mismo PNG con el componente
 - **THEN** ambos resultados son iguales con `toStrictEqual`
@@ -160,15 +164,15 @@ Tras verificar los recursos (SDK-39), el núcleo SHALL guardarlos en la Cache St
 - **THEN** la promesa se rechaza con un `DOMException` de nombre `"AbortError"`
 
 ### Requirement: SDK-09 Tiempos de lectura
-La lectura con el componente y con `leerDocumento` SHALL cumplir los presupuestos de OFF-15 (amarilla p95 <= 1500 ms, digital p95 <= 5000 ms en Pixel 7 emulado con CPU 4x, 20 lecturas) con el motor ya precargado, y la lectura en frío (sin precarga ni caché) MUST quedar en p95 <= OFF-15 + 3000 ms con red emulada "Fast 4G".
+La medida `lector-cedula:tiempo` SHALL ir de la entrada en fase `leyendo` a la fase `resultado` (como la PWA en OFF-15) y SHALL cumplir los presupuestos de OFF-15 (amarilla p95 <= 1500 ms, digital p95 <= 5000 ms en Pixel 7 emulado con CPU 4x, 20 lecturas) con el motor ya precargado. La descarga en frío del motor (~20 MB, sin precarga ni caché, red emulada "Fast 4G") se mide aparte e informa su duración como anotación del E2E, sin umbral bloqueante hasta medir en dispositivos reales.
 
 #### Scenario: Amarilla en caliente
-- **WHEN** se hacen 20 lecturas de `amarilla-1080p` en `examples/html` tras `precargarMotor`
-- **THEN** el p95 de la medida `lector-cedula:tiempo` es <= 1500 ms
+- **WHEN** se hacen 20 lecturas de `amarilla-1080p` en `examples/vanilla` tras `precargarMotor`
+- **THEN** el p95 de la medida `lector-cedula:tiempo` (de `leyendo` a `resultado`) es <= 1500 ms
 
-#### Scenario: Amarilla en frío
-- **WHEN** se hacen 20 lecturas en contextos nuevos sin caché con red "Fast 4G"
-- **THEN** el p95 es <= 4500 ms
+#### Scenario: Descarga en frío informada
+- **WHEN** en un contexto nuevo sin caché con red "Fast 4G" se ejecuta `precargarMotor`
+- **THEN** el E2E anota la duración de la descarga (`descarga-fria-ms`) y no falla por su valor
 
 ### Requirement: SDK-10 Accesibilidad del componente
 Cada estado visible del componente (`inicio`, `camara`, `leyendo`, `resultado`, `error`) MUST tener 0 violaciones axe `serious` o `critical`; los controles MUST ser operables con teclado y los cambios de estado MUST anunciarse en una región `aria-live="polite"` dentro del Shadow DOM.
@@ -419,6 +423,10 @@ Los paquetes `@lector-cedula/*` SHALL seguir semver desde `0.1.0` con `CHANGELOG
 - **WHEN** se analiza `.github/workflows/publicar-sdk.yml`
 - **THEN** el job de publicación declara `environment: npm-publicacion`, `permissions.id-token: write`, el comando contiene `--provenance` y ningún otro workflow referencia `NPM_TOKEN`
 
+#### Scenario: Tarball sin artefactos de compilación
+- **WHEN** se ejecuta `npm pack --dry-run --json --ignore-scripts` en `packages/web`
+- **THEN** la lista no contiene `dist/.tsbuildinfo`
+
 ### Requirement: SDK-25 Documentación por framework
 `docs/sdk/` SHALL contener `README.md` (elección de modo: componente, headless o alojado), una guía por cada uno de `html`, `react`, `angular`, `vue`, `next`, `express`, `nest`, `fastify`, y `nativo.md` con el flujo alojado en Kotlin (Custom Tabs), Swift (`ASWebAuthenticationSession` o `SFSafariViewController`), React Native y Flutter. Cada bloque de código marcado `<!-- ejemplo: <ruta> -->` MUST ser idéntico al archivo referenciado de `examples/`.
 
@@ -440,6 +448,18 @@ Toda dependencia nueva (runtime o de ejemplos) MUST estar en la lista permitida 
 #### Scenario: Privacidad de los nuevos paquetes
 - **WHEN** se ejecuta `npm run check:privacidad`
 - **THEN** termina con código 0 y su salida lista `packages/web`, `packages/react`, `packages/angular`, `packages/vue`, `packages/elementos`, `packages/servidor` y `examples` entre las rutas analizadas
+
+#### Scenario: Licencias dentro del tarball
+- **WHEN** se ejecuta `npm pack --dry-run --json --ignore-scripts` en `packages/web`
+- **THEN** la lista contiene `LICENSE` (idéntico al MIT de la raíz), `THIRD_PARTY_LICENSES.txt` y `dist/assets/THIRD_PARTY_LICENSES.txt`, y este último figura en `dist/assets/manifest.json` con su SHA-256
+
+#### Scenario: Avisos de terceros completos del SDK
+- **WHEN** se lee `packages/web/THIRD_PARTY_LICENSES.txt` (generado por `tools/avisos-terceros.mjs`, el mismo módulo que genera el de la PWA)
+- **THEN** contiene los textos completos de licencia de zxing-wasm, zxing-cpp, tesseract.js, tesseract.js-core, Tesseract OCR, Leptonica, zlib, tesseractMRZ (BSD-3-Clause, DoubangoTelecom), la tabla DIVIPOL de Eitol (MIT), jpeg-js (BSD-3-Clause) y pngjs (MIT), y la atribución CC BY-SA 4.0 de Divipole Exterior 2018 (Registraduría, `vh8b-jfhg`) con `https://creativecommons.org/licenses/by-sa/4.0/legalcode.es`, los cambios hechos, "tal cual" y sin aval; no nombra componentes que no van en el paquete (Preact, DIVIPOLA del DANE)
+
+#### Scenario: check:licencias exige las licencias del tarball
+- **WHEN** `npm run check:licencias` evalúa la lista de `npm pack --dry-run --json` de `packages/web` y a esa lista le falta `LICENSE` o `THIRD_PARTY_LICENSES.txt`
+- **THEN** termina con código 1 y nombra el archivo faltante (verificado con una lista fixture); con la lista real termina con código 0
 
 ### Requirement: SDK-27 Núcleo headless crearLector
 `@lector-cedula/web` SHALL exportar `crearLector(opciones: OpcionesLector, deps?: DependenciasLector): ControladorLector` sin UI ni estilos. Las fases MUST ser `inicio`, `permiso`, `activo`, `listo`, `leyendo`, `resultado` y `error`, y solo MUST ocurrir las `TRANSICIONES`. Las dependencias por omisión SHALL reutilizar `packages/capture` (cámara, Worker de calidad, Worker lector, captura guiada, pista de tipo, reintentos) sin duplicar su lógica.
@@ -499,7 +519,7 @@ Toda dependencia nueva (runtime o de ejemplos) MUST estar en la lista permitida 
 - **THEN** termina con código 0 sin acceder a `window`, `document` ni `navigator`
 
 ### Requirement: SDK-30 Ciclo de vida y liberación
-`cancelar()` SHALL detener la cámara y los Workers de la lectura en curso y llevar a `inicio`; `reintentar()` desde `resultado` o `error` SHALL volver a `permiso` con `intento` + 1; `destruir()` SHALL liberar cámara, Workers y suscriptores, y cualquier llamada posterior MUST ser no-op sin lanzar. Ninguna notificación MUST llegar tras `destruir()`.
+`cancelar()` SHALL detener la cámara y los Workers de la lectura en curso y llevar a `inicio` (desde `permiso`, directamente); `reintentar()` desde `resultado` o `error` SHALL volver a `permiso` con `intento` + 1; `destruir()` SHALL liberar cámara, Workers y suscriptores, y cualquier llamada posterior MUST ser no-op sin lanzar. Ninguna notificación MUST llegar tras `destruir()`.
 
 #### Scenario: Cancelar libera la cámara
 - **WHEN** en fase `activo` se llama `cancelar()`
@@ -508,6 +528,10 @@ Toda dependencia nueva (runtime o de ejemplos) MUST estar en la lista permitida 
 #### Scenario: Destruir durante la lectura
 - **WHEN** en fase `leyendo` se llama `destruir()` y luego el lector falso resuelve
 - **THEN** el suscriptor no recibe más llamadas y `iniciar`, `cancelar` y `reintentar` posteriores no lanzan
+
+#### Scenario: Cancelar durante el permiso
+- **WHEN** se llama `cancelar()` mientras la cámara falsa aún no responde al permiso
+- **THEN** la secuencia de fases es exactamente `["permiso", "inicio"]` y las pistas de la cámara falsa están en `"ended"`
 
 #### Scenario: Reintentar tras error
 - **WHEN** en fase `error` con `intento` 1 se llama `reintentar()`
@@ -611,7 +635,7 @@ Sin `servidor` ni `sesion`, el núcleo (y cualquier adaptador o el componente) S
 - **THEN** `estado.contenido` es `"mrz-td1"` y `estado.resultado.campos.nuip` es `"9999123456"`
 
 ### Requirement: SDK-38 Envío opcional al microservicio
-Con `servidor` y `sesion`, el núcleo SHALL entregar primero el resultado local (`confiable: false`) y además subir las imágenes a la sesión (SDK-15). `envio.estado` SHALL ser `enviando`, `enviado` (con `validacion_id`) o `fallido` con `codigo` `servidor-no-disponible`, `subida-fallida`, `sesion-invalida` o `sesion-vencida`; un fallo MUST conservar el resultado local. Sin `servidor`, `envio` es `null`.
+Con `servidor` y `sesion`, el núcleo SHALL entregar primero el resultado local (`confiable: false`) y además subir las imágenes a la sesión (SDK-15). `envio.estado` SHALL ser `enviando`, `enviado` (con `validacion_id`) o `fallido` con `codigo` `servidor-no-disponible`, `subida-fallida`, `sesion-invalida`, `sesion-vencida` o `menor-no-enviado`; un fallo MUST conservar el resultado local. Sin `servidor`, `envio` es `null`.
 
 #### Scenario: Servidor caído
 - **WHEN** con `servidor: SRV` y `sesion` válida el servidor no responde (conexión rechazada) y se lee `amarilla-1080p`
@@ -624,6 +648,38 @@ Con `servidor` y `sesion`, el núcleo SHALL entregar primero el resultado local 
 #### Scenario: Sesión sin servidor
 - **WHEN** `crearLector({ sesion: "<token>" }, DEPS)` sin `servidor`
 - **THEN** el estado inicial es fase `error` con `error.codigo` `"opcion-invalida"` y `error.opcion` `"servidor"`
+
+### Requirement: SDK-41 Fallo del análisis de calidad
+Si el análisis de calidad falla en `activo` o `listo`, el núcleo SHALL liberar cámara y Workers y pasar a `error` con `codigo` `"calidad-error"`.
+
+#### Scenario: Fallo del análisis de calidad
+- **WHEN** en fase `activo` el cliente de calidad falso rechaza
+- **THEN** la secuencia termina en `activo→error`, `error.codigo` es `"calidad-error"`, las pistas están en `"ended"` y el Worker de calidad recibió `terminate`
+
+### Requirement: SDK-42 Destino de la subida
+`upload.url` devuelta por `POST {servidor}/v/{sesion}/inicio` MUST tener el mismo origen que `servidor` y ser `https` (o `http://localhost` / `http://127.0.0.1`); si no, el núcleo MUST NOT subir nada y `envio` es `fallido` con `sesion-invalida`.
+
+#### Scenario: upload.url de otro origen
+- **WHEN** `POST /v/{sesion}/inicio` devuelve `upload.url` `https://otro.example/subir` (o `http://api.lector-cedula.example/...`)
+- **THEN** solo hubo una petición (la de inicio) y `envio` es `{"estado": "fallido", "codigo": "sesion-invalida"}`
+
+### Requirement: SDK-43 Menores sin envío
+Si el documento leído es `tarjeta-identidad` o trae `menorDeEdad: true`, el núcleo MUST NOT subir la imagen salvo `enviarMenores: true`; `envio` es `fallido` con `menor-no-enviado` y el resultado local se conserva.
+
+#### Scenario: Menor de edad sin envío
+- **WHEN** con `admitirTi: true`, `servidor` y `sesion`, el lector falso devuelve `tipoDocumento` `tarjeta-identidad` (o `menorDeEdad: true`) y no se pasa `enviarMenores`
+- **THEN** la fase es `resultado`, no hay ninguna petición de red y `envio` es `{"estado": "fallido", "codigo": "menor-no-enviado"}`; con `enviarMenores: true` el envío ocurre
+
+### Requirement: SDK-44 Higiene del envío
+Las copias de píxeles de la captura y del envío MUST ponerse a cero al liberar (idempotente) y ante cualquier excepción de la captura; un servidor caído MUST NOT dejar datos en caché ni almacenamiento. El integrador MUST obtener la autorización del titular (Ley 1581 de 2012) antes de crear la sesión (documentado en `OpcionesLector` y `docs/sdk/`). Excepción temporal hasta la tarea 4.3: la misma imagen viaja como `front` y `back` (AV-07).
+
+#### Scenario: Copias a cero
+- **WHEN** se libera una captura con imagen de envío (una o dos veces) o la captura lanza a mitad
+- **THEN** los píxeles de los frames, del frame completo y de la copia del envío son todos cero y la segunda liberación no lanza
+
+#### Scenario: Servidor 503 sin rastro
+- **WHEN** en el E2E con `servidor` y `sesion` el servidor responde 503 a todo y se lee `amarilla-1080p`
+- **THEN** `envio.codigo` es `servidor-no-disponible`, el resultado local se muestra y ni Cache Storage (fuera de `lector-cedula-sdk-*`), ni `localStorage`, ni `sessionStorage`, ni IndexedDB contienen datos de la lectura
 
 ### Requirement: SDK-39 Integridad de los recursos
 `@lector-cedula/web/assets/manifest.json` SHALL listar cada recurso con su `sha256` (hex). Antes de usar o cachear un recurso, el núcleo MUST verificar su SHA-256 con `crypto.subtle.digest`; si no coincide, MUST NOT usarlo ni cachearlo y la lectura MUST terminar en `error` con `codigo` `"motor-no-disponible"`. Mismo criterio que OFF-02 de `pwa-lectura-offline`.

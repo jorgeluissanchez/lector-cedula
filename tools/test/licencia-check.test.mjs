@@ -7,7 +7,9 @@ import {
   evaluarLicencia,
   evaluarManifiestoModelos,
   evaluarNombre,
+  evaluarTarballLicencias,
   revisarAvisosCcBySa,
+  revisarTarballWeb,
 } from "../licencia-check.mjs";
 
 const RAIZ_REPO = fileURLToPath(new URL("../..", import.meta.url));
@@ -99,5 +101,27 @@ describe("DC-12, DC-15 y DC-16 puerta de avisos CC BY-SA", () => {
 
   it("DC-12 Repositorio actual", () => {
     expect(revisarAvisosCcBySa(RAIZ_REPO)).toStrictEqual([]);
+  });
+});
+
+describe("SDK-26 check:licencias exige las licencias del tarball de @lector-cedula/web", { timeout: 60_000 }, () => {
+  const COMPLETA = ["LICENSE", "THIRD_PARTY_LICENSES.txt", "dist/index.js", "package.json"];
+
+  it("SDK-26 lista completa: sin infracciones", () => {
+    expect(evaluarTarballLicencias("@lector-cedula/web", COMPLETA)).toStrictEqual([]);
+  });
+
+  it.each([["LICENSE"], ["THIRD_PARTY_LICENSES.txt"]])("SDK-26 lista sin %s: infracción que lo nombra", (falta) => {
+    const errores = evaluarTarballLicencias("@lector-cedula/web", COMPLETA.filter((f) => f !== falta));
+    expect(errores).toHaveLength(1);
+    expect(errores[0]).toContain(falta);
+  });
+
+  it("SDK-26 un archivo homónimo en un subdirectorio no cuenta", () => {
+    expect(evaluarTarballLicencias("@lector-cedula/web", ["dist/LICENSE", "dist/assets/THIRD_PARTY_LICENSES.txt"])).toHaveLength(2);
+  });
+
+  it("SDK-26 tarball real de packages/web (npm pack --dry-run --json)", () => {
+    expect(revisarTarballWeb(RAIZ_REPO)).toStrictEqual([]);
   });
 });
