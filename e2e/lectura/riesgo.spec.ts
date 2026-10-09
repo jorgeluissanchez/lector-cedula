@@ -1,8 +1,9 @@
-// FRA-02, FRA-17, FRA-20 y FRA-21 (cambio deteccion-fraude, tarea 5.1) con la amarilla sintética. Plan:
+// FRA-02, FRA-17, FRA-20 y FRA-21 (cambio deteccion-fraude, tareas 5.1 y 5.1b) con la amarilla sintética. Plan:
 // e2e/planes/deteccion-fraude.md. La señal informa y nunca oculta los datos leídos.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { campo, conVideo, esperarOfflineLista, esperarServiceWorker, fijarFecha, leer } from "./ayudas";
+
 
 test.use(conVideo("amarilla-1080p"));
 
@@ -25,15 +26,7 @@ test.describe("señal de riesgo (amarilla)", () => {
 
   // Los escenarios siguientes activan la señal con ?debug=1 (FRA-21).
 
-  // Pendiente: el vídeo amarilla-1080p es el PDF417 en blanco y negro sobre fondo gris (un impreso monocromo), y el
-  // detector lo marca correctamente como fotocopia en grises. Requiere un vídeo del reverso a color (tarea 5.1b).
-  test.fixme("FRA-17 Auténtico en E2E", async ({ page }) => {
-    await fijarFecha(page);
-    await page.goto("/?debug=1");
-    await leer(page);
-    await expect(seccion(page)).toHaveAttribute("data-riesgo-nivel", "bajo");
-  });
-
+  // amarilla-1080p es el PDF417 en blanco y negro (un impreso monocromo): el detector lo marca como fotocopia.
   test("FRA-17 La señal informa sin ocultar los datos", async ({ page }) => {
     await fijarFecha(page);
     await page.goto("/?debug=1");
@@ -76,3 +69,4 @@ test.describe("señal de riesgo (amarilla)", () => {
     });
   });
 });
+

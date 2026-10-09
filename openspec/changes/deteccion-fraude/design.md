@@ -52,6 +52,14 @@ Umbrales en `packages/fraud/src/detectores/puntajes.ts`, fijados con semillas 1 
 - `edicion`: componente conexa de bloques 8x8 cuya luminancia es múltiplo de una tabla JPEG de calidad 50 a 85 (doble cuantización); `superposicion` queda sin implementar en la Fase A.
 - `inconsistencia`: los motivos fuertes valen 1 y los débiles 0,6 como puntaje del motivo (equivale a los pesos de la decisión 4).
 
+## Recalibración con el reverso (tarea 5.1b, 2026-10-09)
+
+- El generador dibuja también el reverso (`cara: "reverso"`): fondo de color con guilloche, recuadro de huella (amarilla) o chip (digital) y la zona del código clara con tinta negra; acepta un PDF417 real en esa zona y un lienzo propio para los vídeos E2E (`e2e/videos/fraude.mjs`).
+- La saturación pasa de media a percentil 75 del interior de la tarjeta, para no depender de la cara (el código es tinta negra sobre fondo claro). Umbrales de `baja-saturacion`: amarilla 0,40 -> 0,28; digital 0,09 -> 0,065.
+- El reverso no tiene holograma: con `cara: "reverso"` se omite `holograma`.
+- La tríada de subpíxeles de la pantalla simulada mide ~0,45 mm de la tarjeta mostrada, de modo que sobrevive al croma 4:2:0 de los vídeos de la cámara.
+- Eval sintética del reverso (30 muestras por clase y tipo, semillas desde 2001): APCER 0 en todas las especies, BPCER 0, AUC 1 en ambos tipos.
+
 ## Riesgos
 
 - Heurísticas de moiré sensibles a la resolución de la cámara: se mide con escenas metamórficas (FRA-07) y con el set de campo.

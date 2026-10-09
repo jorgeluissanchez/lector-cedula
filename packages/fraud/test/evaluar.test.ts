@@ -218,3 +218,41 @@ describe("FRA-10 edición digital", { timeout: 60_000 }, () => {
     expect(CONFIG_FRAUDE_POR_DEFECTO.pesos.edicion).toBe(0.5);
   });
 });
+
+describe("5.1b reverso de la cédula", { timeout: 120_000 }, () => {
+  it("reverso auténtico de ambos tipos: nivel bajo y sin holograma medido", () => {
+    for (const tipo of ["amarilla", "digital"] as const)
+      for (const semilla of [1, 2]) {
+        const s = evaluarFraude(generarEscena({ tipo, clase: "autentica", semilla, cara: "reverso" }).entrada);
+        expect(s.nivel, `${tipo} ${semilla}`).toBe("bajo");
+        if (tipo === "amarilla") expect(s.senalesOmitidas).toContain("holograma");
+      }
+  });
+
+  it("reverso con ataques: pantalla, fotocopia en grises y en color, recortada", () => {
+    const casos: [string, string, string][] = [
+      ["amarilla-reverso-pantalla-semilla-1", "pantalla", "moire"],
+      ["digital-reverso-fotocopia-gris-semilla-1", "fotocopia", "gris"],
+      ["amarilla-reverso-fotocopia-color-semilla-1", "fotocopia", "baja-saturacion"],
+      ["digital-reverso-recortada-semilla-1", "recorte", "esquinas-rectas"],
+    ];
+    for (const [nombre, codigo, detalle] of casos) {
+      const s = evaluarFraude(escenaPorNombre(nombre).entrada);
+      expect(s.nivel, nombre).not.toBe("bajo");
+      expect(motivo(s, codigo)?.detalle, nombre).toBe(detalle);
+    }
+  });
+
+  it("lienzo propio con código: la tarjeta llena el lienzo y el código se dibuja en su zona", () => {
+    const codigo = { data: new Uint8ClampedArray(4 * 4 * 4), width: 4, height: 4 };
+    const e = generarEscena({ tipo: "amarilla", clase: "autentica", semilla: 1, cara: "reverso", frames: 1, lienzo: { ancho: 428, alto: 270 }, codigo });
+    expect(e.id).toBe("amarilla-reverso-autentica-semilla-1");
+    const f = e.entrada.frames[0] as { data: Uint8ClampedArray; width: number };
+    expect(f.width).toBe(428);
+    expect(e.entrada.cuadrilatero[0].x).toBeCloseTo(0, 6);
+    // Centro de la zona del código (código negro): tinta oscura.
+    const x = Math.round(((6 + 80) / 2 / 85.6) * 428);
+    const y = Math.round(((22 + 48) / 2 / 53.98) * 270);
+    expect(f.data[(y * 428 + x) * 4]).toBeLessThan(60);
+  });
+});

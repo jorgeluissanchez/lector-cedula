@@ -74,11 +74,12 @@ export function evaluarFraude(entrada: unknown, config?: unknown): SenalRiesgo {
   const q = fs !== null && cuadrilateroValido(e.cuadrilatero, fs[0] as FrameRGBA) ? e.cuadrilatero : null;
 
   const aproximado = e.cuadrilateroAproximado === true;
+  const reverso = e.cara === "reverso";
   if (fs === null || q === null || tipo === null) omitidas.add("imagen");
   else {
     let m: MedidasImagen | null = null;
     try {
-      m = medirImagen(fs, q, tipo === "amarilla" && !aproximado);
+      m = medirImagen(fs, q, tipo === "amarilla" && !aproximado && !reverso);
       if (aproximado) {
         // FRA-20: con la guía como cuadrilátero no hay bordes, esquinas, marco ni región de holograma fiables.
         m = { ...m, aspecto: 85.6 / 53.98, esquinasRectas: 0, esquinasDecidibles: 0, luzExterior: 255 };

@@ -31,6 +31,12 @@ export interface OpcionesEscena {
   /** Solo con `editada`: el parche se pega sin ruido de sensor y sin recompresión (superposición, FRA-10). */
   superposicion?: boolean;
   distorsion?: Distorsion;
+  /** Cara de la tarjeta; por defecto `anverso`. El reverso no tiene holograma (5.1b). */
+  cara?: "anverso" | "reverso";
+  /** Imagen en grises que se dibuja en la zona del código del reverso (p. ej. un PDF417 decodificable). */
+  codigo?: FrameRGBA;
+  /** Lienzo propio: la tarjeta lo llena, sin giro ni desplazamiento aleatorio (fuente de los vídeos E2E). */
+  lienzo?: { ancho: number; alto: number };
 }
 
 export interface EscenaSintetica {
@@ -50,8 +56,8 @@ const DATOS: Record<TipoDocumento, DatosDocumento> = {
 };
 const RELOJ = () => new Date("2026-10-08T12:00:00Z");
 
-const ANCHO = 800;
-const ALTO = 520;
+const ANCHO_POR_DEFECTO = 800;
+const ALTO_POR_DEFECTO = 520;
 const MM_W = 85.6;
 const MM_H = 53.98;
 const RADIO_MM = 3.18;
@@ -102,7 +108,50 @@ function ruidoSuave(r: () => number, w: number, h: number, paso: number): Float3
 }
 
 /** Color de la tarjeta en (u, v) mm. `fase` mueve el holograma. */
-function colorTarjeta(tipo: TipoDocumento, u: number, v: number, fase: number, variante: number): [number, number, number] {
+/** Zona del código del reverso en mm: PDF417 de la amarilla y franja MRZ de la digital. */
+export const ZONA_CODIGO = { amarilla: { u0: 6, u1: 80, v0: 22, v1: 48 }, digital: { u0: 4, u1: 82, v0: 34, v1: 51 } } as const;
+
+type Muestreador = ((u: number, v: number) => number) | null;
+
+/** Reverso: fondo de color con guilloche, recuadro de huella o chip y la zona del código clara con tinta negra. */
+function colorReverso(tipo: TipoDocumento, u: number, v: number, variante: number, codigo: Muestreador): [number, number, number] {
+  let r: number, g: number, b: number;
+  if (tipo === "amarilla") {
+    r = 240 - v * 0.2;
+    g = 214 - u * 0.12;
+    b = 118 + v * 0.3;
+  } else {
+    const t = u / MM_W;
+    r = 205 + 30 * t;
+    g = 214 - 4 * t;
+    b = 240 - 14 * t;
+  }
+  const gl = Math.abs(Math.sin(u * 0.8 + 2.2 * Math.sin(v * 0.4 + variante) + v * 0.25));
+  if (gl < 0.06) {
+    r -= 26;
+    g -= 26;
+    b -= 18;
+  }
+  if (tipo === "amarilla" && u > 62 && u < 80 && v > 3 && v < 19) {
+    const anillo = Math.sin(Math.hypot(u - 71, v - 11) * 4 + variante) > 0.2;
+    return anillo ? [150, 130, 110] : [215, 200, 170];
+  }
+  if (tipo === "digital" && u > 6 && u < 18 && v > 6 && v < 16) return [200, 170, 90];
+  const z = ZONA_CODIGO[tipo];
+  if (u > z.u0 && u < z.u1 && v > z.v0 && v < z.v1) {
+    const fu = (u - z.u0) / (z.u1 - z.u0);
+    const fv = (v - z.v0) / (z.v1 - z.v0);
+    let tinta: boolean;
+    if (codigo !== null) tinta = codigo(fu, fv) < 128;
+    else if (tipo === "amarilla") tinta = fu > 0.04 && fu < 0.96 && fv > 0.06 && fv < 0.94 && Math.sin(fu * 431 + Math.floor(fv * 18) * 2.7 + variante) > 0.1;
+    else tinta = (fv * 3) % 1 > 0.25 && (fv * 3) % 1 < 0.75 && Math.sin(fu * 190 + Math.floor(fv * 3)) > -0.3;
+    return tinta ? [30, 30, 34] : [236, 234, 226];
+  }
+  return [r, g, b];
+}
+
+function colorTarjeta(tipo: TipoDocumento, u: number, v: number, fase: number, variante: number, cara: "anverso" | "reverso" = "anverso", codigo: Muestreador = null): [number, number, number] {
+  if (cara === "reverso") return colorReverso(tipo, u, v, variante, codigo);
   let r: number, g: number, b: number;
   if (tipo === "amarilla") {
     r = 236 - v * 0.2;
@@ -220,13 +269,29 @@ function desenfocar(f: FrameRGBA, sigma: number): void {
 export function generarEscena(o: OpcionesEscena): EscenaSintetica {
   const { tipo, clase, semilla } = o;
   const nFrames = Math.min(5, Math.max(1, Math.floor(o.frames ?? (o.banding === true ? 5 : 3))));
-  const r = prng(hash(`${tipo}|${clase}|${semilla}|${o.banding === true ? "b" : ""}${o.superposicion === true ? "s" : ""}`));
+  const cara = o.cara ?? "anverso";
+  const r = prng(hash(`${tipo}|${clase}|${semilla}|${o.banding === true ? "b" : ""}${o.superposicion === true ? "s" : ""}${cara === "reverso" ? "r" : ""}`));
+  const ANCHO = o.lienzo?.ancho ?? ANCHO_POR_DEFECTO;
+  const ALTO = o.lienzo?.alto ?? ALTO_POR_DEFECTO;
+  const cod = o.codigo;
+  const codigo: Muestreador =
+    cod === undefined
+      ? null
+      : (fu, fv) => {
+          const x = Math.min(cod.width - 1, Math.max(0, Math.floor(fu * cod.width)));
+          const y = Math.min(cod.height - 1, Math.max(0, Math.floor(fv * cod.height)));
+          return cod.data[(y * cod.width + x) * 4] as number;
+        };
   const dist = o.distorsion ?? {};
   const escalaPx = 560 + r() * 80; // ancho de la tarjeta en px
-  const pxmm = escalaPx / MM_W;
-  const ang = (((r() - 0.5) * 4 + (dist.rotacion ?? 0)) * Math.PI) / 180;
-  const cx = ANCHO / 2 + (r() - 0.5) * 40;
-  const cy = ALTO / 2 + (r() - 0.5) * 30;
+  const giro = (r() - 0.5) * 4;
+  const dx0 = (r() - 0.5) * 40;
+  const dy0 = (r() - 0.5) * 30;
+  const lleno = o.lienzo !== undefined;
+  const pxmm = (lleno ? ANCHO : escalaPx) / MM_W;
+  const ang = (((lleno ? 0 : giro) + (dist.rotacion ?? 0)) * Math.PI) / 180;
+  const cx = ANCHO / 2 + (lleno ? 0 : dx0);
+  const cy = ALTO / 2 + (lleno ? 0 : dy0);
   const cos = Math.cos(ang);
   const sin = Math.sin(ang);
   const aFrame = (u: number, v: number): Punto => {
@@ -238,13 +303,14 @@ export function generarEscena(o: OpcionesEscena): EscenaSintetica {
   const variante = r() * 6;
   const radio = clase === "recortada" ? 0 : RADIO_MM;
   const pantalla = clase === "pantalla";
-  const holoVaria = clase === "autentica" || clase === "editada" || pantalla;
+  const holoVaria = cara === "anverso" && (clase === "autentica" || clase === "editada" || pantalla);
   const fase0 = r() * 6.28;
   const fondoRuido = ruidoSuave(r, ANCHO, ALTO, 24);
   const papel = clase.startsWith("fotocopia") || clase === "impresion" || clase === "recortada" ? ruidoSuave(r, ANCHO, ALTO, 2.5) : null;
   const angMoire = 0.5 + r() * 0.6;
   const periodoMoire = 13 + r() * 4;
   const periodoTrama = 4 + r() * 0.6;
+  const periodoSub = Math.max(3, Math.round(0.45 * pxmm));
   const frames: FrameRGBA[] = [];
   for (let f = 0; f < nFrames; f++) {
     const data = new Uint8ClampedArray(ANCHO * ALTO * 4);
@@ -267,7 +333,7 @@ export function generarEscena(o: OpcionesEscena): EscenaSintetica {
           }
         }
         if (enTarjeta) {
-          [rr, gg, bb] = colorTarjeta(tipo, u, v, fase, variante);
+          [rr, gg, bb] = colorTarjeta(tipo, u, v, fase, variante, cara, codigo);
           if (clase === "fotocopia-gris") {
             const l = luma(rr, gg, bb);
             const c = Math.min(255, 1.15 * l + 10);
@@ -298,7 +364,8 @@ export function generarEscena(o: OpcionesEscena): EscenaSintetica {
         }
         if (pantalla && u > -6 && v > -6 && u < MM_W + 6 && v < MM_H + 6) {
           // Rejilla de subpíxeles RGB alineada con la pantalla, moiré por remuestreo y gamma.
-          const sub = Math.floor(((u + 6) * pxmm) % 3);
+          // Tríada de subpíxeles de ~0,45 mm de la tarjeta mostrada (3 px en las escenas de 800x520; más en lienzos grandes).
+          const sub = Math.floor(((u + 6) * pxmm * 3) / periodoSub) % 3;
           const m = [0.55, 0.55, 0.55];
           m[sub] = 1.35;
           const pm = (x * Math.cos(angMoire) + y * Math.sin(angMoire)) / periodoMoire;
@@ -327,7 +394,7 @@ export function generarEscena(o: OpcionesEscena): EscenaSintetica {
         for (let x = rect.x0; x < rect.x1; x++) {
           const i = (y * ANCHO + x) * 4;
           const tinta = (y - rect.y0) % 20 < 11 && Math.sin((x - rect.x0) * 0.45) > -0.4;
-          const base = colorTarjeta(tipo, 31, 30, fase0, variante);
+          const base = colorTarjeta(tipo, 31, cara === "reverso" ? 12 : 30, fase0, variante, cara);
           const c = tinta ? [35, 35, 45] : base;
           for (let k = 0; k < 3; k++) data[i + k] = (c[k] as number) + (o.superposicion === true ? 0 : 2 * gauss(r));
         }
@@ -341,12 +408,12 @@ export function generarEscena(o: OpcionesEscena): EscenaSintetica {
   }
   const nombreClase = o.banding === true ? `${clase}-banding` : o.superposicion === true && clase === "editada" ? `${clase}-superposicion` : clase;
   return {
-    id: `${tipo}-${nombreClase}-semilla-${semilla}`,
+    id: `${tipo}-${cara === "reverso" ? "reverso-" : ""}${nombreClase}-semilla-${semilla}`,
     sintetico: true,
     tipo,
     clase,
     semilla,
-    entrada: { frames, cuadrilatero, tipo, datos: structuredClone(DATOS[tipo]), reloj: RELOJ },
+    entrada: { frames, cuadrilatero, tipo, ...(cara === "reverso" ? { cara } : {}), datos: structuredClone(DATOS[tipo]), reloj: RELOJ },
   };
 }
 
@@ -355,9 +422,9 @@ export function generarEscena(o: OpcionesEscena): EscenaSintetica {
  * `impresion`) como en los escenarios de la spec.
  */
 export function escenaPorNombre(nombre: string, extra?: Omit<OpcionesEscena, "tipo" | "clase" | "semilla">): EscenaSintetica {
-  const m = /^(amarilla|digital)-([a-z-]+)-semilla-([0-9]+)$/.exec(nombre);
+  const m = /^(amarilla|digital)-(reverso-)?([a-z-]+)-semilla-([0-9]+)$/.exec(nombre);
   if (m === null) throw new Error(`escena-desconocida: ${nombre}`);
-  let clase = m[2] as string;
+  let clase = m[3] as string;
   let banding = false;
   if (clase === "pantalla-banding") {
     clase = "pantalla";
@@ -370,5 +437,5 @@ export function escenaPorNombre(nombre: string, extra?: Omit<OpcionesEscena, "ti
     superposicion = true;
   }
   if (!(CLASES_SINTETICAS as readonly string[]).includes(clase)) throw new Error(`escena-desconocida: ${nombre}`);
-  return generarEscena({ ...extra, tipo: m[1] as TipoDocumento, clase: clase as ClaseSintetica, semilla: Number(m[3]), banding, superposicion });
+  return generarEscena({ ...extra, tipo: m[1] as TipoDocumento, clase: clase as ClaseSintetica, semilla: Number(m[4]), banding, superposicion, ...(m[2] === undefined ? {} : { cara: "reverso" as const }) });
 }

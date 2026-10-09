@@ -21,7 +21,7 @@ export interface MedidasImagen {
   luzExterior: number;
   /** Pico periódico de la diferencia de perfiles de filas entre frames (null con un frame). */
   banding: number | null;
-  /** Saturación media de la tarjeta. */
+  /** Percentil 75 de la saturación de la tarjeta. */
   saturacion: number;
   /** Percentil 20 de la desviación de bloques 8x8 (textura en zonas planas). */
   texturaPlana: number;
@@ -89,9 +89,12 @@ function tesela(img: ImagenRgb, canal: (r: number, g: number, b: number) => numb
   return t;
 }
 
-/** Saturación media y fracción saturada sobre el interior de la tarjeta (margen del 6 %). */
+/**
+ * Saturación (percentil 75, para no depender de la cara: el código del reverso es tinta negra sobre fondo claro) y
+ * fracción saturada sobre el interior de la tarjeta (margen del 6 %).
+ */
 function color(img: ImagenRgb): { saturacion: number; reflejo: number } {
-  let s = 0;
+  const sats: number[] = [];
   let n = 0;
   let brillo = 0;
   const mx = Math.floor(img.ancho * 0.06);
@@ -102,11 +105,12 @@ function color(img: ImagenRgb): { saturacion: number; reflejo: number } {
       const r = img.r[i] as number;
       const g = img.g[i] as number;
       const b = img.b[i] as number;
-      s += rgbAHsv(r, g, b)[1];
+      sats.push(rgbAHsv(r, g, b)[1]);
       if (r > 245 && g > 245 && b > 245) brillo++;
       n++;
     }
-  return { saturacion: n > 0 ? s / n : 0, reflejo: n > 0 ? brillo / n : 0 };
+  sats.sort((a, b) => a - b);
+  return { saturacion: sats[Math.floor(sats.length * 0.75)] ?? 0, reflejo: n > 0 ? brillo / n : 0 };
 }
 
 function texturaPlana(img: ImagenRgb): number {

@@ -5,6 +5,7 @@ export {
   type EscenaSintetica,
   type OpcionesEscena,
   REGION_HOLOGRAMA,
+  ZONA_CODIGO,
   type TipoDocumento,
   escenaPorNombre,
   generarEscena,

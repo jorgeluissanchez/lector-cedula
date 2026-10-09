@@ -40,7 +40,7 @@ export function puntajePantalla(m: MedidasImagen): Motivo | null {
 }
 
 export function puntajeFotocopia(m: MedidasImagen, tipo: "amarilla" | "digital", pantalla: number): Motivo | null {
-  const baja = tipo === "amarilla" ? rampa(m.saturacion, 0.38, 0.23) : rampa(m.saturacion, 0.1, 0.06);
+  const baja = tipo === "amarilla" ? rampa(m.saturacion, 0.4, 0.28) : rampa(m.saturacion, 0.09, 0.065);
   // Con rejilla de pantalla la textura alta se explica por los subpíxeles, no por tramado de impresión.
   const sinPantalla = 1 - rampa(pantalla, 0.3, 0.6);
   return combinar("fotocopia", [

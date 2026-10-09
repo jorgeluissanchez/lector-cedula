@@ -118,6 +118,10 @@ El detector `fotocopia` MUST combinar saturación baja, tramado de semitono, tex
 - **WHEN** se evalúa `digital-impresion-color-semilla-3` (tramado CMYK a 150 lpi)
 - **THEN** `motivos` contiene `fotocopia` con `detalle` `"tramado"`
 
+#### Scenario: Reverso sin holograma
+- **WHEN** se evalúa `amarilla-reverso-autentica-semilla-1` (entrada con `cara: "reverso"`)
+- **THEN** `nivel` es `"bajo"`, no se emite `sin-holograma` y `senalesOmitidas` contiene `"holograma"`
+
 #### Scenario: Holograma estático con un solo frame
 - **WHEN** se evalúa la amarilla con un único frame
 - **THEN** no se emite `sin-holograma` y `senalesOmitidas` contiene `"holograma"`

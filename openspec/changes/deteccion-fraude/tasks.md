@@ -37,7 +37,7 @@ Reglas para todas las tareas: TDD (principio II): la prueba se escribe y se ve f
 ### 5. Integración PWA
 
 - [ ] 5.1 Vídeos `amarilla-pantalla-1080p` y `amarilla-fotocopia-1080p` desde el generador; invocación en el Worker tras la lectura; atributos `data-riesgo-*` en `resultado`. Plan E2E con `playwright-test-planner` en `e2e/planes/deteccion-fraude.md`. Cubre FRA-02, FRA-17. Tipos de prueba: **E2E**, **accesibilidad**. Verificación: `E(offline)`, `E(resultado-riesgo)`, `E(accesibilidad)`.
-- [ ] 5.1b Vídeos sintéticos del reverso a color de la amarilla (auténtico) y de ataques (`amarilla-pantalla-1080p`, `amarilla-fotocopia-1080p`) desde `@lector-cedula/fraud/sintetico`; quitar el `fixme` de "FRA-17 Auténtico en E2E" y cubrir "Pantalla simulada en E2E". Los detectores se calibraron con el anverso; recalibrar con el reverso. Cubre FRA-17. Tipos de prueba: **E2E**. Verificación: `E(lectura/riesgo)` en Chromium y Pixel 7.
+- [x] 5.1b Vídeos sintéticos del reverso a color de la amarilla (auténtico) y de ataques (`amarilla-pantalla-1080p`, `amarilla-fotocopia-1080p`) desde `@lector-cedula/fraud/sintetico`; quitar el `fixme` de "FRA-17 Auténtico en E2E" y cubrir "Pantalla simulada en E2E". Los detectores se calibraron con el anverso; recalibrar con el reverso. Cubre FRA-17. Tipos de prueba: **E2E**. Verificación: `E(lectura/riesgo)` en Chromium y Pixel 7.
 
 ## Fase B. Modelo ligero opcional
 
