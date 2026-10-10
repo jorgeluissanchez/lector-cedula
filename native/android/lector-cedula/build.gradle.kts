@@ -34,6 +34,8 @@ dependencies {
     // KI: instrumentadas en el emulador (AndroidX Test, Apache-2.0; JUnit 4 transitiva, EPL-1.0, solo prueba).
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    // `:nucleo` la usa como `implementation`; las instrumentadas leen el JSON del bundle y del oráculo.
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }
 
 // NAT-16: informe de lo que se distribuye en el AAR para check:licencias (`build/dependencias-resueltas.txt`).
