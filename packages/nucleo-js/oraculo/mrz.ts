@@ -10,7 +10,7 @@ import { intentosMrz, intentosTd3, ordenVistasPorEvidencia, recortarYAmpliar } f
 import { evidenciaTd3, GIROS, girar, localizarConEvidencia, type CajaMrz, type Giro, type PixelesRgba } from "../../capture/src/mrz/localizar.js";
 import { decodificarBase64 } from "../src/base64.js";
 
-function rgba(b64: string, width: number, height: number): PixelesRgba {
+function rgba(b64: string, width: number, height: number): PixelesRgba & { readonly data: Uint8ClampedArray } {
   const b = decodificarBase64(b64);
   if (b === null) throw new Error("base64-invalido");
   return { data: new Uint8ClampedArray(b), width, height };
