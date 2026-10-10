@@ -58,9 +58,33 @@ export async function construirOraculo({ salida = resolve(dirPaquete, "dist", "o
   return salida;
 }
 
+/** Sustituye `mrz/entorno.ts` (Tesseract.js y PNG, solo E/S) por un módulo vacío: el oráculo MRZ no hace OCR. */
+const sinEntornoMrz = {
+  name: "sin-entorno-mrz",
+  setup(b) {
+    b.onResolve({ filter: /^\.\/entorno\.js$/ }, (a) => (/[\\/]mrz[\\/]lector\.ts$/u.test(a.importer) ? { path: "entorno-vacio", namespace: "sin-entorno" } : undefined));
+    b.onLoad({ filter: /.*/, namespace: "sin-entorno" }, () => ({
+      contents: "export const codificarPng = () => { throw new Error(\"sin-ocr\"); }; export const crearWorkerTesseract = codificarPng; export const opcionesWorker = codificarPng;",
+      loader: "js",
+    }));
+  },
+};
+
+/**
+ * Oráculo MRZ de las pruebas Kotlin (tarea 1.5, NAT-06): `oraculo/mrz.ts` en `dist/oraculo-mrz.js`, con el plan de vistas
+ * de `packages/capture/src/mrz` y sin OCR. Solo pruebas: no entra en el bundle ni en el AAR.
+ */
+export async function construirOraculoMrz({ salida = resolve(dirPaquete, "dist", "oraculo-mrz.js") } = {}) {
+  const { build } = await import("esbuild");
+  const base = opcionesNucleo(salida);
+  await build({ ...base, entryPoints: [resolve(dirPaquete, "oraculo", "mrz.ts")], minify: false, plugins: [...base.plugins, sinEntornoMrz] });
+  return salida;
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const i = process.argv.indexOf("--salida");
   const ruta = await construirNucleo(i >= 0 ? { salida: resolve(process.argv[i + 1]) } : {});
   process.stdout.write(`nucleo-js: ${ruta}\n`);
   if (i < 0) process.stdout.write(`oráculo de calidad (solo pruebas): ${await construirOraculo()}\n`);
+  if (i < 0) process.stdout.write(`oráculo MRZ (solo pruebas): ${await construirOraculoMrz()}\n`);
 }
