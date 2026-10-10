@@ -78,7 +78,7 @@ jobs:
         with:
           node-version: 24
       # KI de NAT-05 (tarea 1.4): bundle para el núcleo, vídeos sintéticos y fixtures de las instrumentadas (frames RGBA
-      # y bytes de decodificarPdf417Imagen de la web sobre el mismo frame) en build/generated, fuera de git.
+      # y bytes de decodificarPdf417Imagen de la web sobre el mismo frame) en src/androidTest/assets/sinteticos, ignorado por git.
       - name: Bundle, vídeos sintéticos y fixtures de NAT-05
         run: |
           npm ci --ignore-scripts
