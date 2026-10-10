@@ -5,7 +5,7 @@
  * sobre frames generados (diferencial con propiedades). Solo pruebas: nunca se empaqueta en el AAR. Entrada y salida
  * JSON; los píxeles viajan en base64.
  */
-import { detectarPresencia, evaluarConPresencia, buscarTarjeta, hayMrz, hayMrzTd3, hayPdf417, hayPdf417Suave, LAPLACIANO_MINIMO_GUIADO, type Rect } from "../../capture/src/calidad/presencia.js";
+import { detectarPresencia, evaluarConPresencia, buscarTarjeta, hayMrz, hayMrzTd3, hayPdf417, hayPdf417Suave, type Rect } from "../../capture/src/calidad/presencia.js";
 import { rampa } from "../../capture/src/calidad/rampa.js";
 import { dimensionesAnalisis } from "../../capture/src/calidad/reduccion.js";
 import { calcularRegion } from "../../capture/src/calidad/region.js";
@@ -26,15 +26,16 @@ function bytes(b64: string): Uint8Array {
 const rgba = (b64: string, width: number, height: number) => ({ data: new Uint8ClampedArray(bytes(b64)), width, height });
 
 /**
- * CAL-07 sobre la guía de CAM-08 (o `guia`, SDK-61), presencia de OFF-22 y evaluación guiada de OFF-25, como el Worker
- * web. Con `fuente` `"modelo"` el cuadrilátero cuenta como detectado y entra el tamaño de CAL-06.
+ * CAL-07 sobre la guía de CAM-08 (o `guia`, SDK-61), presencia de OFF-22 y evaluación con presencia de OFF-25, como el
+ * Worker web. La clave `guiado` conserva su nombre por compatibilidad con los volcados; desde la recalibración del
+ * 2026-10-10 la presencia nunca eleva el score. Con `fuente` `"modelo"` el cuadrilátero cuenta como detectado y entra el tamaño de CAL-06.
  */
 function analizar(b64: string, ancho: number, alto: number, anchoOriginal: number, altoOriginal: number, guia: Caja | null, fuente: "guia" | "modelo" = "guia"): string {
   const frame = { ancho, alto, pixeles: new Uint8ClampedArray(bytes(b64)), anchoOriginal, altoOriginal };
   const cuad = guiaEnAnalisis(ancho, alto, anchoOriginal, altoOriginal, guia ?? undefined);
   const cal07 = analizarFrame(frame, { cuadrilatero: cuad, confianza: null, fuente }, UMBRALES_POR_DEFECTO);
   const presencia = detectarPresencia(frame, cuad);
-  const guiado = cal07.ok ? evaluarConPresencia(cal07.resultado, () => presencia.presente, UMBRALES_POR_DEFECTO.umbralListo, LAPLACIANO_MINIMO_GUIADO) : null;
+  const guiado = cal07.ok ? evaluarConPresencia(cal07.resultado, () => presencia.presente, UMBRALES_POR_DEFECTO.umbralListo) : null;
   return JSON.stringify({ cal07, presencia, guiado: guiado === null ? null : { score: guiado.score, motivo: guiado.motivo } });
 }
 

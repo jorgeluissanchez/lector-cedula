@@ -22,7 +22,6 @@ class AnalizadorCalidad(private val umbrales: Umbrales = Umbrales.POR_DEFECTO) {
                 p.presente
             },
             umbrales.umbralListo,
-            umbrales.laplacianoMinimoGuiado,
         )
         return Evaluacion(resultado, contenido, guia)
     }

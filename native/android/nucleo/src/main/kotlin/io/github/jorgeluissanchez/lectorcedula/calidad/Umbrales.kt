@@ -22,7 +22,6 @@ data class Umbrales(
     val umbralListo: Int,
     val framesConsecutivos: Int,
     val intervaloMinimoMs: Double,
-    val laplacianoMinimoGuiado: Double,
 ) {
     companion object {
         private const val RECURSO = "/lectorcedula/umbrales-calidad.json"
@@ -57,7 +56,6 @@ data class Umbrales(
                 umbralListo = v("umbralListo").toInt(),
                 framesConsecutivos = v("framesConsecutivos").toInt(),
                 intervaloMinimoMs = v("intervaloMinimoMs"),
-                laplacianoMinimoGuiado = v("laplacianoMinimoGuiado"),
             )
         }
     }

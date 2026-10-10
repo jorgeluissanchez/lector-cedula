@@ -29,7 +29,7 @@ class CalidadDiferencialNat03Test : StringSpec({
     afterSpec { oraculo.close() }
     val casos = System.getProperty("nat.iteraciones")?.toIntOrNull()?.coerceAtMost(40) ?: 300
 
-    "NAT-03 Diferencial en proceso: CAL-07, presencia y evaluación guiada iguales a packages/capture en escenas generadas" {
+    "NAT-03 Diferencial en proceso: CAL-07, presencia y evaluación con presencia iguales a packages/capture en escenas generadas" {
         var conTarjeta = 0
         var conContenido = 0
         checkAll(casos, Arb.long()) { semilla ->

@@ -13,8 +13,8 @@ import java.io.File
  * NAT-03 Calidad nativa con paridad web (fixture-sintetico: vídeos de e2e/videos/sinteticos). Los escenarios con vídeo
  * necesitan `npm run e2e:videos`; sin ellos se omiten (y `CT` falla en modo estricto).
  *
- * `evaluar` es la evaluación del Lector (CAL-07 con la presencia guiada de OFF-22/OFF-25, como el Worker web);
- * `cal07` es solo el score de CAL-07 (sin la relajación guiada), que es lo que fijan los escenarios de la spec.
+ * `evaluar` es la evaluación del Lector (CAL-07 con la presencia de OFF-22/OFF-25, como el Worker web: la presencia solo
+ * se evalúa con score >= umbralListo y nunca lo eleva); `cal07` es solo el score de CAL-07.
  */
 class CalidadNat03Test : StringSpec({
     val analizador = AnalizadorCalidad()
@@ -53,11 +53,11 @@ class CalidadNat03Test : StringSpec({
         val r = cal07(f)
         r.motivo shouldBe Motivo.DESENFOCADO
         r.score shouldBeLessThan 70
-        // Con la presencia guiada (OFF-25) la web admite el documento presente con varianza >= laplacianoMinimoGuiado
-        // en el umbral exacto: el Lector hace lo mismo (paridad en el volcado de CT) y nunca supera el umbral.
-        val guiado = evaluar(f).resultado
-        guiado.score shouldBe Umbrales.POR_DEFECTO.umbralListo
-        (r.metricas!!.nitidez.varianza >= Umbrales.POR_DEFECTO.laplacianoMinimoGuiado) shouldBe true
+        // Con el documento presente el Lector da lo mismo que CAL-07: la presencia no eleva el score (OFF-25 tras la
+        // recalibración del 2026-10-10; paridad en el volcado de CT). La varianza (unos 19) queda bajo la de score 70 (27).
+        val conPresencia = evaluar(f)
+        conPresencia.resultado shouldBe r
+        conPresencia.contenido shouldBe null
         evaluar(Fixtures.desenfoque(amarilla, 10.0)).resultado.motivo shouldBe Motivo.DESENFOCADO
     }
 
