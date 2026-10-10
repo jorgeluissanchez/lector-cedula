@@ -1,0 +1,44 @@
+# TEMPORAL (rama ci/mot-07): repite MOT-07 "Copias a cero" 20 veces bajo carga de CPU. Se quita antes del PR.
+name: mot07-temporal
+
+on:
+  push:
+    branches: [ci/mot-07]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repetir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Entorno de pruebas
+        uses: ./.github/actions/preparar-node
+      - name: MOT-07 x20 con carga (4 procesos de CPU y 2 corridas en paralelo)
+        shell: bash
+        run: |
+          carga=()
+          for i in 1 2 3 4; do (while :; do :; done) & carga+=($!); done
+          fallos=0
+          correr() {
+            NODE_ENV=test npx vitest run packages/motor/test/motor.test.ts -t "MOT-07 Copias a cero" --maxWorkers=1 > "salida-$1.txt" 2>&1
+            echo $? > "codigo-$1.txt"
+          }
+          for ronda in $(seq 1 10); do
+            correr "$ronda-a" & pa=$!
+            correr "$ronda-b" & pb=$!
+            wait $pa $pb || true
+          done
+          for f in codigo-*.txt; do
+            n=${f#codigo-}; n=${n%.txt}
+            c=$(cat "$f")
+            echo "corrida $n: codigo $c"
+            grep -h "DIAG-MOT07" "salida-$n.txt" || true
+            if [ "$c" != "0" ]; then fallos=$((fallos+1)); grep -hE "FAIL|Error|×" "salida-$n.txt" | head -5; fi
+          done
+          echo "fallos: $fallos de $(ls codigo-*.txt | wc -l)"
+          kill "${carga[@]}" 2>/dev/null || true
+          test "$fallos" = "0"

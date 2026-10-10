@@ -181,7 +181,12 @@ describe("motor real", { timeout: 180_000 }, () => {
       expect(await codigo(m.leerDocumento(D, { ...FECHA, tiempoMaximoMs: 1 }))).toBe("tiempo-agotado");
       expect(registro.length).toBeGreaterThanOrEqual(1);
       // La lectura abortada termina en segundo plano en el hilo principal y pone a cero sus píxeles al acabar.
-      await expect.poll(() => registro.length >= 2 && registro.every((b) => b.every((x) => x === 0)), { timeout: 120_000, interval: 200 }).toBe(true);
+      try {
+        await expect.poll(() => registro.length >= 2 && registro.every((b) => b.every((x) => x === 0)), { timeout: 30_000, interval: 200 }).toBe(true);
+      } catch (e) {
+        console.log(`DIAG-MOT07 longitud=${registro.length} tipos=${registro.map((b) => b.constructor.name).join(",")} ceros=${registro.map((b) => b.every((x) => x === 0)).join(",")}`);
+        throw e;
+      }
     } finally {
       Reflect.deleteProperty(globalThis, clave);
     }
