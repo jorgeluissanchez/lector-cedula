@@ -2,13 +2,10 @@
 # Mismo comando de build que vercel.json (despliegue-produccion).
 FROM node:24-bookworm-slim AS build
 WORKDIR /repo
-COPY package.json package-lock.json ./
-COPY apps/pwa/package.json apps/pwa/
-COPY packages/parsers/package.json packages/parsers/
-COPY packages/capture/package.json packages/capture/
-COPY packages/fixtures/package.json packages/fixtures/
-RUN npm ci --ignore-scripts
+# Todo el repositorio antes de npm ci: la PWA depende de varios workspaces (capture, fraud, web, protocolo…)
+# y una lista a mano se desactualiza (la demo dejó de desplegar al añadir @lector-cedula/web).
 COPY . .
+RUN npm ci --ignore-scripts
 # mitigacion-autor (MA-04): esta imagen es la demo pública; aviso de demostración y CSP connect-src 'self'.
 # Para una instancia propia: --build-arg VITE_DEMO=false.
 ARG VITE_DEMO=true
