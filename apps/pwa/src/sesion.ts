@@ -18,15 +18,18 @@ import {
   tomarFoto,
   tomarFrameCaptura,
   UMBRALES_POR_DEFECTO,
+  type Caja,
   type Camara,
   type CapturaAceptada,
   type ClienteCalidad,
   type ContenidoPresenciaTd,
   type Cuadrilatero,
   type EntornoFoto,
+  type FrameAnalisis,
   type FrameLectura,
 } from "@lector-cedula/capture";
 import type { Diagnostico } from "./diagnostico";
+import { guiaDeForma, type FormaCamara } from "./forma";
 import type { Evento } from "./estado";
 import { conLienzoTemporal } from "./lienzo";
 import {
@@ -92,16 +95,29 @@ function entornoFoto(): EntornoFoto {
   return { ...(ImageCapture === undefined ? {} : { ImageCapture }), aPixeles: fotoAPixeles };
 }
 
-/** FRA-21: señal de fraude; OD-30a: `admitirTarjetaIdentidad` (VITE_ADMITIR_TI) pasa a `leerDocumento`. */
+/**
+ * FRA-21: señal de fraude; OD-30a: `admitirTarjetaIdentidad` (VITE_ADMITIR_TI) pasa a `leerDocumento`. demo-opciones
+ * (DOP-03, DOP-04, DOP-05): `forma` de la cámara y los valores efectivos del panel de la demo.
+ */
 export interface OpcionesSesion {
   readonly fraude?: boolean;
   readonly admitirTarjetaIdentidad?: boolean;
+  readonly forma?: FormaCamara;
 }
 
 /** OD-20: la presencia vio una MRZ (TD1 o TD3): sin foto de alta resolución ni frames extra (OFF-27, OFF-28). */
 const esMrz = (c: ContenidoPresenciaTd): boolean => c === "mrz-td1" || c === "mrz-td3";
 
-export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Sesion {
+/**
+ * `opciones` puede ser una función: se lee en cada uso (decisión 4 de demo-opciones), así el panel de la demo cambia
+ * TI, fraude y forma sin recrear la sesión.
+ */
+export function crearSesion(obs: Observador, opciones: OpcionesSesion | (() => OpcionesSesion) = {}): Sesion {
+  const leerOpciones = typeof opciones === "function" ? opciones : () => opciones;
+  /** DOP-03a: guía de la forma en píxeles del frame (`undefined` a pantalla completa: la de CAM-08 del Worker). */
+  const guiaFrame = (v: HTMLVideoElement, ancho: number, alto: number): Caja | undefined =>
+    guiaDeForma(leerOpciones().forma ?? "pantalla-completa", { anchoVideo: ancho, altoVideo: alto, anchoElemento: v.clientWidth, altoElemento: v.clientHeight });
+  const conGuia = (f: FrameAnalisis, g: Caja | undefined): FrameAnalisis => (g === undefined ? f : { ...f, guia: g });
   let cliente: ClienteCalidad<ContenidoPresenciaTd> | null = null;
   let lector: ClienteLector | null = null;
   // deteccion-fraude (FRA-17): Worker propio, creado en la primera señal y reutilizado.
@@ -158,6 +174,7 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
   async function leerCaptura(): Promise<void> {
     const c = captura;
     if (c === null) return;
+    const actuales = leerOpciones();
     const control = new AbortController();
     lectura = control;
     performance.clearMarks(MARCA_LECTURA);
@@ -174,7 +191,7 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
     const p = pista;
     // FRA-17 y FRA-03: copias de los frames de vídeo para la señal (la secuencia pone a cero los originales); se ponen
     // a cero en cuanto se envían al Worker de fraude o si la lectura no termina en resultado.
-    const copiasFraude = opciones.fraude !== true ? [] : framesParaFraude(frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }], c.ancho, c.alto).map((f) => ({
+    const copiasFraude = actuales.fraude !== true ? [] : framesParaFraude(frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }], c.ancho, c.alto).map((f) => ({
       ancho: f.ancho,
       alto: f.alto,
       pixeles: new Uint8ClampedArray(f.pixeles),
@@ -187,7 +204,7 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
     const { resultado: r, pasos } = await leerSecuencia(
       frames.length > 0 ? frames : [{ ancho: c.ancho, alto: c.alto, pixeles: c.pixeles, origen: "video" }],
       p,
-      (f, lector) => obtenerLector().leer(f, hoyEnBogota(), control.signal, opcionesLecturaFrame(p, lector, opciones.admitirTarjetaIdentidad === true)),
+      (f, lector) => obtenerLector().leer(f, hoyEnBogota(), control.signal, opcionesLecturaFrame(p, lector, actuales.admitirTarjetaIdentidad === true)),
       { ahora: () => performance.now() },
     );
     if (control.signal.aborted) return limpiarCopias();
@@ -212,7 +229,7 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
       return;
     }
     // FRA-21: con la señal apagada no se crea el Worker de fraude ni el evento lleva riesgo.
-    if (opciones.fraude !== true) {
+    if (actuales.fraude !== true) {
       obs.evento({ tipo: "leida", resultado: r });
       return;
     }
@@ -250,9 +267,11 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
     gen: number,
   ): Promise<void> {
     const completo = tomarFrameCaptura(v);
+    // DOP-03a: la guía del recuadro en píxeles del frame de captura (resolución de la pista).
+    const guia = guiaFrame(v, completo.ancho, completo.alto);
     // El lienzo se vacía en todas las ramas (hallazgo del revisor de privacidad).
     const r = await conLienzoTemporal(completo, (lienzo) =>
-      c.analizar(tomarFrameAnalisis(lienzo, completo.ancho, completo.alto)),
+      c.analizar(conGuia(tomarFrameAnalisis(lienzo, completo.ancho, completo.alto), guia)),
     );
     if (gen !== generacion) return (completo.pixeles.fill(0), undefined);
     if (!r.ok) return (completo.pixeles.fill(0), fallar());
@@ -289,7 +308,7 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
     frames = nuevos;
     pista = contenido;
     diagnostico = { resolucionPista: { ancho: completo.ancho, alto: completo.alto }, pista: contenido, fotoMs };
-    const g = calcularGuia(completo.ancho, completo.alto);
+    const g = guia ?? calcularGuia(completo.ancho, completo.alto);
     const cuadrilatero: Cuadrilatero = [
       [g.x, g.y],
       [g.x + g.ancho, g.y],
@@ -320,7 +339,7 @@ export function crearSesion(obs: Observador, opciones: OpcionesSesion = {}): Ses
   ): Promise<void> {
     const inicio = performance.now();
     const r = await c.analizar(
-      tomarFrameAnalisis(v, v.videoWidth, v.videoHeight),
+      conGuia(tomarFrameAnalisis(v, v.videoWidth, v.videoHeight), guiaFrame(v, v.videoWidth, v.videoHeight)),
     );
     if (gen !== generacion) return;
     performance.measure("calidad:frame", {

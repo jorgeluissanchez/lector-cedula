@@ -25,6 +25,41 @@ jobs:
           path: evals/reports/latest.json
           if-no-files-found: ignore
 
+  # demo-opciones: E2E acotadas a la PWA (build normal en 4173 y demo en 4175, E2E_SERVIDORES=pwa) con 1 worker: el
+  # panel de opciones de la demo en Chromium escritorio y Pixel 7, y la regresión de la lectura, la guía, el fraude y
+  # la TI del build normal (la sesión de captura cambió). Los vídeos sintéticos se generan con ffmpeg en Docker.
+  e2e-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Entorno de pruebas (dependencias, Chromium, modelo MRZ, tsc -b, assets web)
+        uses: ./.github/actions/preparar-node
+      - name: Vídeos sintéticos de la cámara simulada
+        run: npm run e2e:videos
+      - name: E2E del panel de opciones de la demo
+        env:
+          E2E_SERVIDORES: pwa
+        run: npx playwright test e2e/demo --project=demo-chromium --project=demo-pixel7 --workers=1
+      - name: Regresión de la PWA (lectura, guía, fraude y TI)
+        if: always()
+        env:
+          E2E_SERVIDORES: pwa
+        run: >-
+          npx playwright test e2e/lectura/lectura.spec.ts e2e/lectura/lectura-digital.spec.ts e2e/lectura/riesgo.spec.ts
+          e2e/lectura/tarjeta-identidad.spec.ts e2e/captura/guia.spec.ts
+          --project=lectura-chromium --project=lectura-pixel7
+          --project=captura-desenfocada-1080p-escritorio --project=captura-desenfocada-1080p-pixel --workers=1
+      - name: Reporte de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-demo-${{ github.sha }}
+          path: |
+            reports/playwright
+            test-results
+          if-no-files-found: ignore
+
   # La mutación (Stryker) va en .github/workflows/mutacion.yml: matriz por área, en push a main y cada noche.
 
   # Las pruebas del servidor corren en la misma imagen que en local (`docker compose -f server/compose.yaml run --rm

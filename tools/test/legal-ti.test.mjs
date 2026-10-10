@@ -37,6 +37,19 @@ describe("OD-35 Textos legales de la TI", () => {
     expect(leer("politica-tratamiento-datos.md")).toContain("**Menores de edad.**");
   });
 
+  // demo-opciones, DOP-08: la casilla del panel de la demo activa la TI como VITE_ADMITIR_TI (misma revisión jurídica).
+  it("DOP-08 Checklist y política", () => {
+    const fila = leer("CHECKLIST-CUMPLIMIENTO.md").split("\n").find((l) => l.includes("LECTOR_ADMITIR_TI"));
+    expect(fila).toBeDefined();
+    expect(fila).toContain("VITE_DEMO");
+    expect(fila).toContain("abogado");
+    const politica = leer("politica-tratamiento-datos.md");
+    const inicio = politica.indexOf("### Tarjeta de identidad (opcional, desactivada por defecto)");
+    expect(inicio).toBeGreaterThan(-1);
+    const fin = politica.indexOf("\n## ", inicio);
+    expect(politica.slice(inicio, fin === -1 ? undefined : fin)).toContain("VITE_DEMO");
+  });
+
   it("OD-35 PARA-EL-ABOGADO.md pregunta por la autorización sin identificar al representante", () => {
     const md = leer("PARA-EL-ABOGADO.md");
     const pregunta = md.split("\n").find((l) => /^\d+\. Tarjeta de identidad/u.test(l));
