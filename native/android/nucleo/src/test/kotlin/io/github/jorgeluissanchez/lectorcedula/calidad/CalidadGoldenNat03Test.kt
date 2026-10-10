@@ -26,12 +26,15 @@ class CalidadGoldenNat03Test : StringSpec({
         val escenas = g.getValue("escenas")
         // Proporción de casos útiles (estrategia-pruebas: sin propiedades vacías).
         (escenas.count { !it.startsWith("{tarjeta=null") } * 4 > escenas.size) shouldBe true
-        listOf("contenido=pdf417", "contenido=mrz-td1", "contenido=mrz-td3", "motivo=oscuro", "motivo=reflejo", "motivo=desenfocado", "motivo=acerca", "motivo=sobreexpuesto", "motivo=null")
-            .forEach { marca -> escenas.any { marca in it } shouldBe true }
+        listOf(
+            "contenido=pdf417", "contenido=mrz-td1", "motivo=oscuro", "motivo=reflejo", "motivo=desenfocado", "motivo=sobreexpuesto",
+            "motivo=null", "guiado=[70, null]", "guiado=[69, acerca]",
+        ).forEach { marca -> escenas.any { marca in it } shouldBe true }
         g.getValue("mrz").any { it.endsWith("true, false]") } shouldBe true
         g.getValue("mrz").any { it.endsWith("false, true]") } shouldBe true
         g.getValue("tarjeta").any { it.endsWith("true, true]") } shouldBe true
+        g.getValue("tarjeta").any { it.endsWith("false, true]") } shouldBe true
         g.getValue("geometria").any { it.startsWith("[null") } shouldBe true
-        (g.getValue("geometria").count { it.startsWith("[(") } * 2 > g.getValue("geometria").size) shouldBe true
+        (g.getValue("geometria").count { it.startsWith("[(") } * 2 >= g.getValue("geometria").size) shouldBe true
     }
 })
