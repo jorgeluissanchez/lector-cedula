@@ -1,0 +1,51 @@
+# Pruebas de mutación (Stryker) repartidas por área en jobs paralelos, cada uno con su umbral de break
+# (AREAS de stryker.config.mjs). La corrida completa en un solo job superaba el límite de 6 h de GitHub.
+# No corre en cada PR: en push a main, cada noche y a mano; en PR solo si cambia la propia configuración de mutación.
+name: mutacion
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *" # 01:00 en Colombia
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "stryker.config.mjs"
+      - "vitest.stryker.config.ts"
+      - ".github/workflows/mutacion.yml"
+      - ".github/actions/preparar-node/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutacion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stryker:
+    name: mutacion (${{ matrix.area }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        # Mismas claves que AREAS en stryker.config.mjs (lo comprueba tools/test/mutacion-areas.test.mjs).
+        area: [parsers, fixtures-evals, capture-pdf417, capture-calidad, capture-mrz, capture-lectura, servidor-web, fraude]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Entorno de pruebas (dependencias, Chromium, modelo MRZ, tsc -b, assets web)
+        uses: ./.github/actions/preparar-node
+      # La corrida inicial con cobertura perTest de toda la suite supera los 5 min por defecto de Stryker en el runner.
+      - name: Stryker (${{ matrix.area }})
+        env:
+          STRYKER_AREA: ${{ matrix.area }}
+        run: npm run test:mutacion -- --dryRunTimeoutMinutes 45
+      - name: Reporte de mutación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutacion-${{ matrix.area }}-${{ github.sha }}
+          path: reports/mutation/${{ matrix.area }}/
+          if-no-files-found: ignore

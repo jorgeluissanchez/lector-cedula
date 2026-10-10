@@ -25,23 +25,7 @@ jobs:
           path: evals/reports/latest.json
           if-no-files-found: ignore
 
-  mutacion:
-    runs-on: ubuntu-latest
-    timeout-minutes: 350
-    steps:
-      - uses: actions/checkout@v4
-      - name: Entorno de pruebas (dependencias, Chromium, modelo MRZ, tsc -b, assets web)
-        uses: ./.github/actions/preparar-node
-      # La corrida inicial con cobertura perTest de toda la suite supera los 5 min por defecto de Stryker en el runner.
-      - name: Pruebas de mutación (Stryker, break 85)
-        run: npm run test:mutacion -- --dryRunTimeoutMinutes 45
-      - name: Reporte de mutación
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mutacion-${{ github.sha }}
-          path: reports/mutation/
-          if-no-files-found: ignore
+  # La mutación (Stryker) va en .github/workflows/mutacion.yml: matriz por área, en push a main y cada noche.
 
   # Las pruebas del servidor corren en la misma imagen que en local (`docker compose -f server/compose.yaml run --rm
   # pruebas`): necesitan Node, los parsers compilados, el lector y los montajes /srv/fixtures_sinteticos y
