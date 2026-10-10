@@ -31,10 +31,7 @@
       "default": "./dist/fastify.js"
     }
   },
-  "files": [
-    "dist",
-    "edge.js"
-  ],
+  "files": ["dist", "edge.js", "LICENSE", "THIRD_PARTY_NOTICES"],
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"

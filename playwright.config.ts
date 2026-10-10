@@ -81,6 +81,22 @@ export default defineConfig({
       timeout: 600_000,
       env: { PORT: "4195" },
     },
+    // sdk-integracion (B.7, SDK-51): ejemplo Next con route handler `.next()` y página React (e2e/backend/ejemplos-backend).
+    {
+      command: "npm run build -w @lector-cedula/web && npx tsc -b packages/react packages/servidor packages/motor && npm run build -w examples/backend-next && npm run start -w examples/backend-next",
+      url: "http://localhost:4197/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 600_000,
+      env: { NEXT_TELEMETRY_DISABLED: "1" },
+    },
+    // motor-backend-embebido (tarea 1.3) y sdk-integracion (B.7, SDK-51): ejemplo NestJS con `.nest()` y el mismo front React.
+    {
+      command: "npm run build -w @lector-cedula/web && npx tsc -b packages/react packages/servidor packages/motor && npm run build -w examples/backend-nest && npm run start -w examples/backend-nest",
+      url: "http://localhost:4198/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 600_000,
+      env: { PORT: "4198" },
+    },
     // sdk-integracion (SDK-64): ejemplo de login con la cámara en un recuadro embebido.
     {
       command: "npm run build -w @lector-cedula/web && npx tsc -b packages/react && npm run build -w examples/login && npm run preview -w examples/login",
@@ -120,7 +136,8 @@ export default defineConfig({
       testDir: "e2e/login",
       use: { ...dispositivo, video: "retain-on-failure" as const, launchOptions: { args: CAMARA } },
     })),
-    // motor-backend-embebido (tarea 1.5): front React + backend Express real con la amarilla sintética.
+    // motor-backend-embebido (tarea 1.5) y sdk-integracion (B.7): ejemplos Express (4195), Next (4197) y Nest (4198) con el backend
+    // real y la amarilla sintética; comandos EB(modos) y EB(ejemplos-backend).
     ...[
       { name: "backend-chromium", dispositivo: DISPOSITIVOS.escritorio },
       { name: "backend-pixel7", dispositivo: DISPOSITIVOS.pixel },

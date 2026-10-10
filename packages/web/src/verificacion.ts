@@ -93,13 +93,10 @@ export function crearLectorNdjson(): LectorNdjson {
 
 const fallo = (codigo: CodigoTransporte): SalidaVerificacion => ({ tipo: "fallo", codigo });
 
-function documentoValido(d: unknown): d is DocumentoBackend {
-  return typeof d === "object" && d !== null && typeof (d as { campos?: unknown }).campos === "object" && (d as { campos?: unknown }).campos !== null;
-}
-
+/** `e` ya pasó `validarEvento` (protocolo): con `ok: true` trae `documento` y `documento.campos` como objetos. */
 function desenlace(e: EventoResultado): SalidaVerificacion {
   if (!e.ok) return { tipo: "rechazo", rechazo: e.rechazo };
-  return documentoValido(e.documento) ? { tipo: "ok", documento: e.documento } : fallo("protocolo-invalido");
+  return { tipo: "ok", documento: e.documento as DocumentoBackend };
 }
 
 const tipoDe = (r: Response): string => (r.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";

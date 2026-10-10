@@ -11,6 +11,8 @@ export interface EntradaRecurso {
   readonly tipo: string;
   /** SDK-56: parte del motor pesado (no se descarga en el modo back ligero). */
   readonly pesado?: boolean;
+  /** SDK-56: aviso legal (`THIRD_PARTY_LICENSES.txt`): se publica, pero el cargador nunca lo pide por red. */
+  readonly aviso?: boolean;
 }
 
 export interface ManifiestoRecursos {
@@ -48,6 +50,7 @@ export function leerManifiesto(v: unknown): ManifiestoRecursos | null {
     if (typeof e.bytes !== "number" || !Number.isInteger(e.bytes) || e.bytes < 0) return null;
     if (typeof e.tipo !== "string") return null;
     if (e.pesado !== undefined && typeof e.pesado !== "boolean") return null;
+    if (e.aviso !== undefined && typeof e.aviso !== "boolean") return null;
   }
   return { version, recursos: recursos as EntradaRecurso[] };
 }

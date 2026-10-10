@@ -75,6 +75,32 @@ const CONSULADOS_2018 = [
   "El código de @lector-cedula/web es MIT y no queda sujeto a CC BY-SA 4.0.",
 ].join("\n");
 
+/**
+ * THIRD_PARTY_NOTICES de los paquetes npm del backend (motor-backend-embebido, MOT-18): @lector-cedula/motor ejecuta en
+ * el servidor tesseract.js (Tesseract y Leptonica en su WASM), zxing-wasm (zxing-cpp), jpeg-js y pngjs con
+ * mrz.traineddata, y la tabla DIVIPOL va dentro de @lector-cedula/parsers; @lector-cedula/servidor los carga con el motor.
+ */
+export function textoAvisosTercerosMotor(paquete) {
+  const consulados = CONSULADOS_2018.split("\n")
+    .slice(0, 5)
+    .concat([
+      "SINGAPUR) y se añadieron los códigos alternos 88195 y 88480. La tabla adaptada va dentro de @lector-cedula/parsers,",
+      "que el motor usa en el servidor, y se redistribuye bajo la misma licencia CC BY-SA 4.0.",
+      "El material adaptado se ofrece tal cual, sin garantías de ningún tipo, y se usa sin aval de la Registraduría.",
+      `El código de ${paquete} es MIT y no queda sujeto a CC BY-SA 4.0.`,
+    ])
+    .join("\n");
+  return [
+    `Avisos de terceros de ${paquete}. El código propio se distribuye bajo licencia MIT (archivo LICENSE).\n`,
+    ...seccionesMotor(),
+    seccion(`jpeg-js ${versionPaquete("jpeg-js")} (BSD-3-Clause)`, licenciaPaquete("jpeg-js", "LICENSE")),
+    seccion(`pngjs ${versionPaquete("pngjs")} (MIT)`, licenciaPaquete("pngjs", "LICENSE")),
+    DIVIPOL(),
+    seccion("Consulados DIVIPOL 2018: Registraduría Nacional del Estado Civil (CC BY-SA 4.0)", consulados),
+    seccionModelo(),
+  ].join("\n");
+}
+
 /** THIRD_PARTY_LICENSES.txt del paquete npm @lector-cedula/web (SDK-26): solo lo que va en su tarball. */
 export function textoAvisosTercerosWeb() {
   return [

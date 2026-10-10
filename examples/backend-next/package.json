@@ -16,6 +16,6 @@
   },
   "scripts": {
     "build": "node ../copiar-recursos.mjs public/lector-cedula && next build --webpack",
-    "start": "next start --port 4196"
+    "start": "next start --port 4197"
   }
 }

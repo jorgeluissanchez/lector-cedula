@@ -49,8 +49,10 @@ describe("MOT-10 compararConCliente", { timeout: 60_000 }, () => {
     });
   });
 
-  it("MOT-10 campos no comparados no cuentan y null equivale a ausente", () => {
-    const cliente = { ...CLIENTE, campos: { ...CLIENTE.campos, lugarNacimiento: { x: 1 }, paisEmisor: "XXX" } };
+  it("MOT-10 Campos fuera de la lista no se comparan; null equivale a ausente", () => {
+    const servidorCampos: Record<string, unknown> = AMARILLA.ok ? { ...AMARILLA.campos } : {};
+    expect(servidorCampos).not.toHaveProperty("fechaExpedicion");
+    const cliente = { ...CLIENTE, campos: { ...CLIENTE.campos, fechaExpedicion: "2020-01-01", lugarNacimiento: { x: 1 }, paisEmisor: "XXX" } };
     expect(compararConCliente(AMARILLA, cliente)).toStrictEqual({ coincide: true, diferencias: [] });
     const servidor = { ...AMARILLA, campos: { ...CLIENTE.campos, rh: undefined } } as typeof AMARILLA;
     expect(compararConCliente(servidor, { ...CLIENTE, campos: { ...CLIENTE.campos, rh: null } })).toStrictEqual({ coincide: true, diferencias: [] });

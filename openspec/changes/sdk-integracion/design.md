@@ -142,12 +142,14 @@ Evals: este cambio no toca parsers; `npm run eval:quick` MUST seguir sin regresi
 Comandos nuevos:
 
 - `UB` = `npx vitest run packages/web/test/backend packages/react packages/vue` (unitarias y propiedades de SDK-45 a SDK-59 con `DEPS`, `fetch` falso y `ReadableStream` falso; reloj falso, nunca esperas fijas)
-- `EB(x)` = `npx playwright test e2e/sdk/<x>.spec.ts --project=sdk-chromium --project=sdk-pixel7` contra el ejemplo Express de MOT-13 (backend real en proceso, cámara simulada); `x` en `backend`, `modos`, `modo-back-red`, `ejemplos-backend`
+- `EB(x)` = `E2E_SIN_SERVIDORES=1 npx playwright test e2e/backend/<x>.spec.ts --project=backend-chromium --project=backend-pixel7 --workers=1` contra los ejemplos de MOT-13 (Express en 4195, Next en 4197 y Nest en 4198, backend real en proceso, cámara simulada con `amarilla-1080p.y4m`; sin `E2E_SIN_SERVIDORES` los levanta `playwright.config.ts`); `x` en `modos` y `ejemplos-backend`. `EB(backend)` y `EB(modo-back-red)` son `EB(modos)`: la secuencia de SDK-46 y la ausencia de recursos `pesado` de SDK-56 están en `e2e/backend/modos.spec.ts` (B.7, 2026-10-10: la carpeta pasó de `e2e/sdk/` a `e2e/backend/` porque los proyectos `sdk-*` sirven `examples/vanilla` con otra cámara).
 - `TB` = `npm run check:tamano-sdk -- --modo back` (grafo del modo back <= `PRESUPUESTO_BACK`, fixture de `PRESUPUESTO_BACK + 1` que falla)
 
 `PRESUPUESTO_BACK`: meta 300 KiB gzip; la tarea B.6 mide el valor real con el ejemplo y lo fija aquí (valor medido + 10 %, nunca por encima de 300 KiB sin decisión humana).
 
 **`PRESUPUESTO_BACK` = 23 732 B gzip** (B.6, 2026-10-09): medido 21 574 B (JS del núcleo, dependencias por omisión y cliente del protocolo empaquetados con esbuild 14 011 B; Worker de calidad 6 894 B; `manifest.json` 669 B) + 10 %. Constante en `packages/web/scripts/tamano-back.mjs`, que mide con `--fixture <archivo>` y sale con 1 por encima; `TB` delega en ese script.
+
+**SDK-56 en E2E** (B.7, decisión del orquestador 2026-10-10: solo los chunks del SDK, sin React ni código de la app): los ejemplos con backend propio empaquetan todo el SDK en un único chunk `assets/sdk-*.js` y React en `assets/react-*.js` (`examples/vite-chunks-sdk.mjs`). `EB(modos)`, en los casos sin front activo, suma el gzip nivel 9 de TODO lo que la página pidió del SDK, sin excluir nada: ese chunk y todo lo pedido bajo `/lector-cedula/`, que debe ser exactamente `calidad.js` y `manifest.json`; medido 22 998 B (chunk 15 166, Worker 7 153, manifiesto 679) <= `PRESUPUESTO_BACK`. **Avisos legales** (decisión del orquestador por delegación del usuario, 2026-10-10): `THIRD_PARTY_LICENSES.txt` sigue publicado en el paquete, en `dist/assets` y en el manifiesto (SDK-26), ahora con `aviso: true`; el cargador no pide por red ninguna entrada `aviso` en ningún modo, y `TB` cuenta todo lo que pide la carga ligera (sin `pesado` ni `aviso`): 22 850 B.
 
 | Requisito | Tipo de prueba | Herramienta | Comando | Umbral |
 |---|---|---|---|---|
@@ -156,7 +158,7 @@ Comandos nuevos:
 | SDK-45 | Unitaria (validación de `backend`, cabeceras) | Vitest | `UB` | 4/4 escenarios |
 | SDK-45 | Propiedad (URL arbitrarias nunca lanzan; inválidas nunca hacen red) | fast-check | `UB` | numRuns >= 1000 |
 | SDK-46 | Unitaria (secuencias de fase y etapa) | Vitest | `UB` | 4/4 escenarios, `toStrictEqual` sobre secuencias |
-| SDK-46 | E2E con backend real | Playwright | `EB(backend)` | Chromium y Pixel 7 verdes |
+| SDK-46 | E2E con backend real | Playwright | `EB(modos)` | Chromium y Pixel 7 verdes |
 | SDK-46, SDK-47, SDK-48 | Propiedad de la máquina con `verificando` | fast-check | `UB` | numRuns >= 1000; todo par de fases en `TRANSICIONES` |
 | SDK-47 | Unitaria (tabla de motivos, tope) | Vitest | `UB` | 4/4 escenarios, 9 motivos |
 | SDK-48 | Unitaria (stream falso, abort) | Vitest | `UB` | 7/7 escenarios |
@@ -174,7 +176,7 @@ Comandos nuevos:
 | SDK-54 | Privacidad (copias a cero en cada fallo) | Vitest | `UB`, `P` | 100 % de copias a cero; 0 hallazgos |
 | SDK-55 | Unitaria | Vitest | `UB` | 3/3 escenarios |
 | SDK-56 | Unitaria (sin `leyendo`, lector no invocado) | Vitest | `UB` | 1/1 |
-| SDK-56 | E2E de red (sin recursos pesados) | Playwright | `EB(modo-back-red)` | 0 recursos `pesado`; bytes <= `PRESUPUESTO_BACK` |
+| SDK-56 | E2E de red (sin recursos pesados) | Playwright | `EB(modos)` | 0 recursos `pesado`; bytes <= `PRESUPUESTO_BACK` |
 | SDK-56 | Presupuesto con fixture que falla | script | `TB` | árbol real pasa; fixture sale con 1 |
 | SDK-57 | Unitaria (tabla de 8 casos literal de `decidirFront` y 4 escenarios del núcleo) | Vitest | `UB` | 8/8 filas con `toStrictEqual` |
 | SDK-57 | Propiedad (totalidad, `usarFront` si y solo si `potente`) | fast-check | `UB` | numRuns >= 1000, casos débiles y potentes > 10 % cada uno medidos con `fc.statistics` |

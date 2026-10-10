@@ -111,7 +111,7 @@ async function obtenerRecurso(entorno: EntornoCargador, cache: CacheMinima | nul
   return { datos, nuevo: true };
 }
 
-/** SDK-56: `soloLigeros` omite los recursos marcados `pesado` (modo back ligero). */
+/** SDK-56: `soloLigeros` omite los recursos marcados `pesado` (modo back ligero). Los avisos legales (`aviso`) no se piden nunca. */
 export interface OpcionesCarga {
   readonly soloLigeros?: boolean;
 }
@@ -123,6 +123,7 @@ export async function cargarMotor(recursos: string, entorno: EntornoCargador, o:
   const { m, datos: datosManifiesto } = await obtenerManifiesto(entorno, cache, urlManifiesto);
   const verificados: { e: EntradaRecurso; url: string; datos: ArrayBuffer; nuevo: boolean }[] = [];
   for (const e of m.recursos) {
+    if (e.aviso === true) continue;
     if (o.soloLigeros === true && e.pesado === true) continue;
     const url = `${base}${e.archivo}`;
     verificados.push({ e, url, ...(await obtenerRecurso(entorno, cache, url, e)) });

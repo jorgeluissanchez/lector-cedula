@@ -863,11 +863,19 @@ Con `autoIniciar: true`, los adaptadores y el componente opcional SHALL llamar a
 - **THEN** ninguno da `opcion-invalida` y en cada uno `estado.modo`, `estado.validacion`, `estado.frontActivo`, `estado.verificacion`, `estado.rechazo` y `estado.intentosVerificacion` son iguales (`toStrictEqual`) a los de `crearLector` con las mismas opciones y dependencias
 
 ### Requirement: SDK-51 Ejemplos front React con backend propio
-`examples/backend-express`, `examples/backend-nest` y `examples/backend-next` SHALL incluir un front React con `useLectorCedula({ backend: "/api/cedula", autoIniciar: true })` y UI propia que muestre la etapa, el rechazo y el resultado confiable, servido desde el mismo origen que el backend del ejemplo (MOT-13). Ningún ejemplo MUST contactar un servidor del autor ni un origen distinto del suyo.
+`examples/backend-express`, `examples/backend-nest` y `examples/backend-next` SHALL incluir un front React con `useLectorCedula({ backend: "/api/cedula", autoIniciar })` y UI propia que muestre la etapa, el rechazo y el resultado confiable, servido desde el mismo origen que el backend del ejemplo (MOT-13). Ningún ejemplo MUST contactar un servidor del autor ni un origen distinto del suyo. Cada front MUST pedir antes la autorización del titular (Ley 1581, art. 9) con una casilla sin marcar.
+
+#### Scenario: Sin autorización no se abre la cámara
+- **WHEN** en Playwright se abre la página de cada ejemplo y no se marca la casilla de autorización
+- **THEN** la fase sigue en `inicio`, la casilla está sin marcar, "Empezar" está deshabilitado y no se pidió `/api/cedula`
+
+#### Scenario: Autorizar arranca la cámara
+- **WHEN** se marca la casilla `[data-prueba="autorizacion"]` (texto de plantilla, revisor-privacidad 2026-10-10) sin `?autoIniciar=0`
+- **THEN** `autoIniciar` pasa a `true` y la cámara se abre sin otro gesto; con `?autoIniciar=0` solo se habilita "Empezar"; al desmarcarla el lector vuelve a `inicio`
 
 #### Scenario: Flujo de punta a punta en cada ejemplo
-- **WHEN** en Playwright (Chromium y Pixel 7, cámara simulada con `amarilla-1080p.y4m`) se abre la página de cada ejemplo sin pulsar nada
-- **THEN** la UI muestra las etapas `recibido`, `leyendo` y `comparando`, termina con `confiable` `true` y NUIP `9999123456`, y el registro de red solo tiene peticiones al origen del ejemplo
+- **WHEN** en Playwright (Chromium y Pixel 7, cámara simulada con `amarilla-1080p.y4m`) se abre la página de cada ejemplo y solo se marca la casilla de autorización
+- **THEN** la UI muestra las etapas `recibido`, `leyendo` y `comparando`, termina con `confiable` `true` y NUIP `9999123456`, el registro de red solo tiene peticiones al origen del ejemplo y `localStorage`, `sessionStorage` e IndexedDB están vacíos y no hay caches ajenas al SDK (`lector-cedula-sdk-*`)
 
 #### Scenario: Accesibilidad de los ejemplos
 - **WHEN** se ejecuta axe en las fases `inicio`, `activo`, `verificando`, `resultado` y con un rechazo visible
@@ -965,12 +973,16 @@ Cuando el motor local no lee (`estado.modo` `"back"`, o `"front-back"` con `vali
 - **THEN** el Worker lector, el WASM de zxing, tesseract, `mrz.traineddata` y los modelos de fraude tienen `pesado: true`
 
 #### Scenario: Carga solo de recursos ligeros
-- **WHEN** el cargador recibe un `manifest.json` con recursos `pesado: true` y `pesado: false` y se pide la carga ligera
-- **THEN** solo se descargan y verifican `manifest.json` y los recursos sin `pesado`
+- **WHEN** el cargador recibe un `manifest.json` con recursos `pesado: true`, `pesado: false` y `aviso: true` y se pide la carga ligera
+- **THEN** solo se descargan y verifican `manifest.json` y los recursos sin `pesado` ni `aviso`
+
+#### Scenario: Avisos legales sin descarga en tiempo de ejecución
+- **WHEN** el `manifest.json` publicado se lee y el cargador hace la carga ligera o la completa
+- **THEN** `THIRD_PARTY_LICENSES.txt` sigue en el manifiesto con `aviso: true` (y en los recursos que copia el integrador), pero el cargador no lo pide por red en ningún modo (decisión del orquestador por delegación del usuario, 2026-10-10)
 
 #### Scenario: Sin descarga del motor pesado
 - **WHEN** en Playwright se completa una lectura en modo back con el ejemplo Express
-- **THEN** el registro de red no contiene ningún recurso de `manifest.json` marcado `pesado` y la suma de bytes transferidos de JS y WASM es <= `PRESUPUESTO_BACK`
+- **THEN** el registro de red no contiene ningún recurso de `manifest.json` marcado `pesado` ni avisos legales, y la suma gzip (nivel 9) de todo lo que la página descargó del SDK (el chunk `assets/sdk-*.js` del ejemplo, sin React ni código de la app, y todo lo pedido bajo `/lector-cedula/`, sin excluir nada) es <= `PRESUPUESTO_BACK`
 
 #### Scenario: Presupuesto con fixture que falla
 - **WHEN** `npm run check:tamano-sdk -- --modo back` mide el grafo de importación del modo back y un fixture de `PRESUPUESTO_BACK + 1` bytes
@@ -1061,7 +1073,7 @@ En modos con backend, `streaming` (por omisión `true`) SHALL elegir el protocol
 Los modos `front`, `back`, `front-back` estricta y `front-back` auto (dispositivo potente y débil), con `streaming` activado y desactivado donde haya backend, SHALL tener E2E en Chromium y Pixel 7 sobre el ejemplo Express (SDK-51), con la cámara simulada y el backend real del ejemplo.
 
 #### Scenario: Matriz de modos
-- **WHEN** se ejecuta `e2e/sdk/modos.spec.ts` con `front`, `back`, `front-back` estricta, `front-back` auto sin limitar y `front-back` auto con `deviceMemory` 2 inyectado, cada uno con backend con `streaming` `true` y `false`
+- **WHEN** se ejecuta `e2e/backend/modos.spec.ts` con `front`, `back`, `front-back` estricta, `front-back` auto sin limitar y `front-back` auto con `deviceMemory` 2 inyectado, cada uno con backend con `streaming` `true` y `false`
 - **THEN** `estado.modo` final es respectivamente `front`, `back`, `front-back`, `front-back` y `front-back`; `frontActivo` es `true`, `false`, `true`, `true` y `false`; el NUIP mostrado es `9999123456`; `confiable` es `false` solo en `front`; y en los modos con `frontActivo` `false` no se descargó ningún recurso `pesado`
 
 #### Scenario: Front-back sin red

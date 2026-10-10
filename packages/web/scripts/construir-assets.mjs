@@ -56,12 +56,14 @@ if (!soloAvisos) {
 await mkdir(salida, { recursive: true });
 await writeFile(join(salida, "THIRD_PARTY_LICENSES.txt"), avisos);
 
-// SDK-56: el motor pesado (Worker lector, zxing, tesseract y modelo MRZ) no se descarga en el modo back ligero.
+// SDK-56: el motor pesado (Worker lector, zxing, tesseract y modelo MRZ) no se descarga en el modo back ligero, y los
+// avisos legales (`aviso: true`) se publican en el manifiesto pero el cargador no los pide por red en ningún modo.
 const LIGEROS = new Set(["calidad.js", "THIRD_PARTY_LICENSES.txt"]);
+const AVISOS = new Set(["THIRD_PARTY_LICENSES.txt"]);
 const recursos = [];
 for (const archivo of (await readdir(salida)).filter((n) => n !== "manifest.json").sort()) {
   const datos = await readFile(join(salida, archivo));
-  recursos.push({ archivo, bytes: datos.byteLength, sha256: createHash("sha256").update(datos).digest("hex"), tipo: tipo(archivo), pesado: !LIGEROS.has(archivo) });
+  recursos.push({ archivo, bytes: datos.byteLength, sha256: createHash("sha256").update(datos).digest("hex"), tipo: tipo(archivo), pesado: !LIGEROS.has(archivo), ...(AVISOS.has(archivo) ? { aviso: true } : {}) });
 }
 await writeFile(join(salida, "manifest.json"), `${JSON.stringify({ version: paquete.version, recursos }, null, 2)}\n`);
 const total = recursos.reduce((s, r) => s + r.bytes, 0);

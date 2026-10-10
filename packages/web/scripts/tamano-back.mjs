@@ -1,6 +1,7 @@
 // SDK-56 (tarea B.6): presupuesto de descarga del modo back ligero. Empaqueta con esbuild el grafo que el modo back
 // carga en el navegador (núcleo, dependencias por omisión y cliente del protocolo, con todo lo que importan) y suma el
-// gzip nivel 9 de ese JS más los recursos no `pesado` de `manifest.json` (Worker de calidad) y el propio manifiesto.
+// gzip nivel 9 de ese JS más todo lo que el cargador pide en la carga ligera (recursos sin `pesado` ni `aviso` de
+// `manifest.json`: el Worker de calidad) y el propio manifiesto. Los avisos legales no se piden por red (SDK-56).
 // Uso: node packages/web/scripts/tamano-back.mjs [--fixture <archivo>]  (con --fixture mide solo ese archivo)
 // Sale con 1 si supera PRESUPUESTO_BACK (design.md de sdk-integracion).
 import { readFile } from "node:fs/promises";
@@ -47,7 +48,7 @@ export async function medirBack() {
   const manifiestoBytes = await readFile(join(dist, "assets", "manifest.json"));
   const manifiesto = JSON.parse(manifiestoBytes.toString("utf8"));
   let ligeros = 0;
-  for (const e of manifiesto.recursos) if (e.pesado !== true && e.archivo.endsWith(".js")) ligeros += gz(await readFile(join(dist, "assets", e.archivo)));
+  for (const e of manifiesto.recursos) if (e.pesado !== true && e.aviso !== true) ligeros += gz(await readFile(join(dist, "assets", e.archivo)));
   return { js, ligeros, manifiesto: gz(manifiestoBytes), total: js + ligeros + gz(manifiestoBytes) };
 }
 

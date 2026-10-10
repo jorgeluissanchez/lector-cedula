@@ -1,29 +1,106 @@
 # Backend NestJS (plataforma Express)
 
-`lector.nest()` devuelve un manejador `(req, res)` para un controlador con `@Req()` y `@Res()`. Nest no debe parsear el cuerpo de esa ruta.
+`lector.nest()` devuelve un manejador `(req, res)` para un controlador con `@Req()` y `@Res()`. Ejemplo completo y probado (Nest 12 sobre `@nestjs/platform-express`, que trae express 5): `examples/backend-nest`, con el mismo front React que `examples/backend-express`.
 
+```sh
+npm install @lector-cedula/servidor @lector-cedula/motor @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs
+```
+
+<!-- ejemplo: examples/backend-nest/servidor/app.ts -->
 ```ts
-import { Controller, All, Req, Res, OnModuleDestroy } from "@nestjs/common";
-import { crearLectorServidor, type DocumentoConfirmado } from "@lector-cedula/servidor";
+// Ejemplo de backend propio con NestJS (motor-backend-embebido, tarea 1.3; MOT-13 y SDK-51). El motor (zxing, tesseract
+// y fraude) corre en este proceso, en el servidor de la empresa: nunca en un servidor del autor ni en otra red.
+//
+// Ley 1581 de 2012: antes de abrir la cámara, la empresa debe obtener y conservar la autorización previa, expresa e
+// informada del titular para tratar sus datos (y la del representante si es menor). El front de este ejemplo muestra
+// una casilla de plantilla; en producción la autorización la gestiona y conserva la empresa con su propio texto.
+// Privacidad: no se registra el cuerpo, la imagen ni los campos; `alConfirmar` solo guarda en memoria el NUIP de la
+// última confirmación para las pruebas. Una aplicación real lo guardaría en su propia base con su política de retención.
+//
+// `rawBody: true` es lo habitual en Nest (webhooks firmados): el parser JSON de Nest guarda `req.rawBody`, pero no toca
+// multipart ni `image/*`, así que `lector.nest()` lee el flujo tal cual llega (Nest 12 trae express 5).
+import "reflect-metadata";
+import { fileURLToPath } from "node:url";
+import { All, Controller, Inject, Module, Req, Res, type DynamicModule, type LogLevel, type OnApplicationShutdown } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import { crearLectorServidor, type LectorServidor, type ManejadorNode, type MotorLector } from "@lector-cedula/servidor";
 
-const lector = crearLectorServidor({
-  async alConfirmar(documento: DocumentoConfirmado) {
-    // Guarda en tu base lo que tu política permita.
-  },
-});
-const manejar = lector.nest();
+/** Token de inyección del lector (sin metadatos de tipos: el ejemplo no depende de `emitDecoratorMetadata`). */
+export const LECTOR = Symbol("lector-cedula");
 
-@Controller("api/cedula")
-export class CedulaController implements OnModuleDestroy {
-  @All()
-  leer(@Req() req: unknown, @Res() res: unknown) {
-    return manejar(req as never, res as never);
+type PeticionNest = Parameters<ManejadorNode>[0];
+type RespuestaNest = Parameters<ManejadorNode>[1];
+
+@Controller("api")
+class CedulaController {
+  private readonly manejador: ManejadorNode;
+
+  constructor(@Inject(LECTOR) lector: LectorServidor) {
+    this.manejador = lector.nest();
   }
 
-  async onModuleDestroy() {
-    await lector.cerrar();
+  /** `POST /api/cedula`: con `@Res()` Nest no serializa nada; el manejador escribe el NDJSON (o el JSON) en la respuesta. */
+  @All("cedula")
+  async cedula(@Req() peticion: PeticionNest, @Res() respuesta: RespuestaNest): Promise<void> {
+    await this.manejador(peticion, respuesta);
   }
+}
+
+/** Registra el controlador con el lector y, al cerrar la app (`app.close()`), termina el pool del motor. */
+@Module({})
+class LectorModule implements OnApplicationShutdown {
+  constructor(@Inject(LECTOR) private readonly lector: LectorServidor) {}
+
+  async onApplicationShutdown(): Promise<void> {
+    await this.lector.cerrar();
+  }
+
+  static registrar(lector: LectorServidor): DynamicModule {
+    return { module: LectorModule, controllers: [CedulaController], providers: [{ provide: LECTOR, useValue: lector }] };
+  }
+}
+
+export interface Confirmaciones {
+  total: number;
+  ultimoNuip: string | null;
+}
+
+export interface OpcionesApp {
+  /** Motor inyectado (pruebas); sin él, `@lector-cedula/servidor` carga `@lector-cedula/motor` en proceso. */
+  readonly motor?: MotorLector;
+  /** Carpeta del front compilado (por omisión `dist/publico`). */
+  readonly publico?: string;
+  /** `false` silencia el registro de Nest (pruebas); por omisión solo errores y avisos, nunca cuerpos ni campos. */
+  readonly registro?: false;
+}
+
+const PUBLICO = fileURLToPath(new URL("../publico", import.meta.url));
+const NIVELES: LogLevel[] = ["error", "warn"];
+
+/** Crea la app: `POST /api/cedula` con el lector y el front React compilado (mismo origen). */
+export async function crearApp(opciones: OpcionesApp = {}): Promise<{ app: NestExpressApplication; lector: LectorServidor; confirmaciones: Confirmaciones }> {
+  const confirmaciones: Confirmaciones = { total: 0, ultimoNuip: null };
+  const lector = crearLectorServidor({
+    ...(opciones.motor ? { motor: opciones.motor } : {}),
+    alConfirmar(documento) {
+      confirmaciones.total++;
+      confirmaciones.ultimoNuip = (documento.campos as { nuip?: string }).nuip ?? null;
+    },
+  });
+  const app = await NestFactory.create<NestExpressApplication>(LectorModule.registrar(lector), {
+    rawBody: true,
+    logger: opciones.registro === false ? false : NIVELES,
+  });
+  app.disable("x-powered-by");
+  app.useStaticAssets(opciones.publico ?? PUBLICO);
+  return { app, lector, confirmaciones };
 }
 ```
 
-Con `NestFactory.create(App, { bodyParser: false })` o excluyendo la ruta del parser JSON, el lector lee el cuerpo crudo. Opciones: [backend-express.md](backend-express.md#opciones). Webhooks del modo microservicio: [nest.md](nest.md).
+- Activa `experimentalDecorators` y `emitDecoratorMetadata` en el `tsconfig` del servidor (`examples/backend-nest/tsconfig.servidor.json`).
+- El parser de cuerpo por omisión de Nest (JSON y urlencoded, también con `rawBody: true`) no toca `multipart/form-data` ni `image/*`: el lector lee el flujo tal cual llega. No añadas un middleware que consuma esos tipos en la ruta del lector (por ejemplo, Multer).
+- Usa `@Res()`: el manejador escribe el NDJSON evento a evento (o el JSON con `?streaming=0`) y Nest no serializa nada.
+- `app.close()` llama a `onApplicationShutdown`, que termina el pool del motor con `lector.cerrar()`.
+
+Opciones: [backend-express.md](backend-express.md#opciones). Webhooks del modo microservicio: [nest.md](nest.md).

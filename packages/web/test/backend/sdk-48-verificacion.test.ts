@@ -3,7 +3,7 @@ import fc from "fast-check";
 import { validarEvento } from "@lector-cedula/protocolo";
 import { describe, expect, it } from "vitest";
 import { crearLectorNdjson, verificar, type DatosVerificacion, type SalidaVerificacion } from "../../src/verificacion.js";
-import { crearBack, crearReloj, DOCUMENTO_BASE, drenar, type Guion } from "./back-falso.js";
+import { crearBack, crearReloj, DOCUMENTO_BASE, drenar, guionOk, type Guion } from "./back-falso.js";
 
 const IMAGEN = new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: "image/jpeg" });
 
@@ -220,6 +220,56 @@ describe("SDK-48 verificar", () => {
     await drenar();
     reloj.avanzar(101);
     expect(await p).toStrictEqual({ tipo: "fallo", codigo: "backend-tiempo-agotado" });
+  });
+
+  it("SDK-48 Content-Type incorrecto aunque el cuerpo sea NDJSON válido", async () => {
+    expect(await verificar(datos({ ...guionOk(), tipo: "application/json" }).d)).toStrictEqual({ tipo: "fallo", codigo: "protocolo-invalido" });
+  });
+
+  it("SDK-59 streaming desactivado con Content-Type NDJSON y un JSON final válido: protocolo-invalido", async () => {
+    const final = JSON.stringify({ etapa: "resultado", ok: true, documento: DOCUMENTO_BASE });
+    expect(await verificar(datos({ tipo: "application/x-ndjson", fragmentos: [final] }, { streaming: false }).d)).toStrictEqual({ tipo: "fallo", codigo: "protocolo-invalido" });
+  });
+
+  it("Content-Type con mayúsculas, espacios y parámetros; líneas solo de espacios se ignoran", async () => {
+    const final = JSON.stringify({ etapa: "resultado", ok: true, documento: DOCUMENTO_BASE });
+    const { d } = datos({ tipo: " Application/X-NDJSON ; charset=utf-8", fragmentos: ['{"etapa":"recibido"}\n', "   \n\t\n", `${final}\n`] });
+    expect(await verificar(d)).toStrictEqual({ tipo: "ok", documento: DOCUMENTO_BASE });
+  });
+
+  it("respuesta 200 NDJSON sin cuerpo: protocolo-invalido", async () => {
+    const d = datos("ok", { fetch: async () => new Response(null, { status: 200, headers: { "content-type": "application/x-ndjson" } }) }).d;
+    expect(await verificar(d)).toStrictEqual({ tipo: "fallo", codigo: "protocolo-invalido" });
+  });
+
+  it("la imagen viaja como imagen.jpg y al terminar no quedan temporizadores", async () => {
+    const { back, reloj, d } = datos("ok");
+    expect((await verificar(d)).tipo).toBe("ok");
+    expect(((primera(back).init.body as FormData).get("imagen") as File).name).toBe("imagen.jpg");
+    expect(reloj.pendientes).toBe(0);
+  });
+
+  it("SDK-48 cancelar tras recibir el evento final pero antes de cerrar el stream: cancelado, no ok", async () => {
+    const externa = new AbortController();
+    const final = new TextEncoder().encode(`${JSON.stringify({ etapa: "resultado", ok: true, documento: DOCUMENTO_BASE })}\n`);
+    let leido = false;
+    const fetchFalso = async (_u: unknown, init?: RequestInit): Promise<Response> => {
+      const cuerpo = new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(final);
+          init?.signal?.addEventListener("abort", () => c.error(new DOMException("abortado", "AbortError")));
+        },
+        pull() {
+          leido = true;
+        },
+      });
+      return new Response(cuerpo, { status: 200, headers: { "content-type": "application/x-ndjson" } });
+    };
+    const p = verificar(datos("ok", { fetch: fetchFalso as DatosVerificacion["fetch"], senal: externa.signal }).d);
+    await drenar();
+    expect(leido).toBe(true);
+    externa.abort();
+    expect(await p).toStrictEqual({ tipo: "cancelado" });
   });
 
   it("documento sin campos es protocolo-invalido", async () => {

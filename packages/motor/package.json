@@ -15,11 +15,7 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist",
-    "!dist/.tsbuildinfo",
-    "edge.js"
-  ],
+  "files": ["dist", "!dist/.tsbuildinfo", "edge.js", "LICENSE", "THIRD_PARTY_NOTICES"],
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run"

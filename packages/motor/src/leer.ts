@@ -25,8 +25,9 @@ const ILEGIBLE = new Set(["imagen-ilegible", "entrada-invalida"]);
 
 type LecturaOk = Extract<ResultadoLectura, { ok: true }>;
 
-/** Entrada de @lector-cedula/fraud para la cédula (amarilla por PDF417, digital por MRZ TD1); otros documentos, ninguna. */
-function entradaFraude(lectura: LecturaOk, pixeles: { data: Uint8ClampedArray; width: number; height: number }): EntradaFraude | null {
+/** Entrada de @lector-cedula/fraud para la cédula y la tarjeta de identidad (amarilla por PDF417, digital por MRZ TD1); otros documentos, ninguna (MOT-09).
+ * Interna: no se reexporta en index.ts; se exporta solo para las pruebas. */
+export function entradaFraude(lectura: LecturaOk, pixeles: { data: Uint8ClampedArray; width: number; height: number }): EntradaFraude | null {
   const esCedula = lectura.tipoDocumento === "cedula-ciudadania" || lectura.tipoDocumento === "tarjeta-identidad";
   if (!esCedula || (lectura.fuente !== "pdf417" && lectura.fuente !== "mrz-td1")) return null;
   const { width: w, height: h } = pixeles;

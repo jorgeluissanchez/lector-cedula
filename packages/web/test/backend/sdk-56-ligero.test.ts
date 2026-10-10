@@ -8,13 +8,14 @@ import { VERSION } from "../../src/version.js";
 
 const REC = "https://app-a.example/lector-cedula/";
 const sha = (b: Uint8Array): string => createHash("sha256").update(b).digest("hex");
-const ARCHIVOS: Record<string, { datos: Uint8Array; pesado: boolean }> = {
+const ARCHIVOS: Record<string, { datos: Uint8Array; pesado: boolean; aviso?: boolean }> = {
+  "THIRD_PARTY_LICENSES.txt": { datos: new TextEncoder().encode("Avisos de terceros (sintético)"), pesado: false, aviso: true },
   "calidad.js": { datos: new TextEncoder().encode("self.onmessage=null;"), pesado: false },
   "lector.js": { datos: new TextEncoder().encode("self.x=1;"), pesado: true },
   "zxing_reader.wasm": { datos: new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]), pesado: true },
 };
 const MANIFIESTO = new TextEncoder().encode(
-  JSON.stringify({ version: VERSION, recursos: Object.entries(ARCHIVOS).map(([archivo, a]) => ({ archivo, bytes: a.datos.byteLength, sha256: sha(a.datos), tipo: "text/javascript", pesado: a.pesado })) }),
+  JSON.stringify({ version: VERSION, recursos: Object.entries(ARCHIVOS).map(([archivo, a]) => ({ archivo, bytes: a.datos.byteLength, sha256: sha(a.datos), tipo: "text/javascript", pesado: a.pesado, ...(a.aviso === true ? { aviso: true } : {}) })) }),
 );
 
 function entorno() {
@@ -39,10 +40,20 @@ describe("SDK-56 Carga solo de recursos ligeros", () => {
     expect(Object.keys(m.urls)).toStrictEqual(["calidad.js"]);
   });
 
-  it("sin la opción se descarga todo", async () => {
+  it("sin la opción se descarga todo salvo los avisos legales", async () => {
     const e = entorno();
-    await cargarMotor(REC, e);
+    const m = await cargarMotor(REC, e);
     expect(e.pedidas.sort()).toStrictEqual(["calidad.js", "lector.js", "manifest.json", "zxing_reader.wasm"]);
+    expect(Object.keys(m.urls).sort()).toStrictEqual(["calidad.js", "lector.js", "zxing_reader.wasm"]);
+  });
+
+  it("SDK-56 Avisos legales sin descarga en tiempo de ejecución: ni en la carga ligera ni en la completa", async () => {
+    for (const o of [{ soloLigeros: true }, {}]) {
+      const e = entorno();
+      const m = await cargarMotor(REC, e, o);
+      expect(e.pedidas, JSON.stringify(o)).not.toContain("THIRD_PARTY_LICENSES.txt");
+      expect(Object.keys(m.urls), JSON.stringify(o)).not.toContain("THIRD_PARTY_LICENSES.txt");
+    }
   });
 
   it("la memoria distingue la carga ligera de la completa", async () => {
@@ -56,6 +67,8 @@ describe("SDK-56 Carga solo de recursos ligeros", () => {
     const base = { archivo: "a.js", bytes: 1, sha256: "a".repeat(64), tipo: "text/javascript" };
     expect(leerManifiesto({ version: "1", recursos: [{ ...base, pesado: true }] })?.recursos[0]?.pesado).toBe(true);
     expect(leerManifiesto({ version: "1", recursos: [{ ...base, pesado: "si" }] })).toBeNull();
+    expect(leerManifiesto({ version: "1", recursos: [{ ...base, aviso: true }] })?.recursos[0]?.aviso).toBe(true);
+    expect(leerManifiesto({ version: "1", recursos: [{ ...base, aviso: "si" }] })).toBeNull();
   });
 
   it("el manifest.json construido marca como pesados el motor y no la calidad", () => {
@@ -65,5 +78,8 @@ describe("SDK-56 Carga solo de recursos ligeros", () => {
     const pesados = m.recursos.filter((r) => r.pesado === true).map((r) => r.archivo).sort();
     expect(pesados).toStrictEqual(["lector.js", "mrz.traineddata", "tesseract-core-lstm.wasm.js", "tesseract-core-simd-lstm.wasm.js", "tesseract-worker.min.js", "zxing_reader.wasm"]);
     expect(m.recursos.find((r) => r.archivo === "calidad.js")?.pesado).toBe(false);
+    // Avisos legales: publicados en el manifiesto, nunca pedidos por red en tiempo de ejecución.
+    const avisos = (m.recursos as { archivo: string; aviso?: boolean }[]).filter((r) => r.aviso === true).map((r) => r.archivo);
+    expect(avisos).toStrictEqual(["THIRD_PARTY_LICENSES.txt"]);
   });
 });

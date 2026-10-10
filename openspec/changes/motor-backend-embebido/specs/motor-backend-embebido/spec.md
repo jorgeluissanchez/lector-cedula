@@ -145,18 +145,46 @@ El motor MUST NOT escribir en consola ni en el logger inyectado ningún campo de
 - **THEN** ninguna salida contiene `9999123456`, `PRUEBA`, `FICTICIA` ni `<<`
 
 ### Requirement: MOT-09 Señal de riesgo
-El resultado SHALL incluir `riesgo` de `packages/fraud` igual al de la CLI (`--resultado`). `opciones.fraude: false` MUST omitir el análisis y devolver `riesgo: null`. Entrada del fraude en el servidor (aceptada por el orquestador el 2026-10-10): la imagen completa como único frame, el cuadrilátero de la imagen entera con `cuadrilateroAproximado: true` (FRA-20 omite las señales geométricas), `cara: "reverso"`, `tipo` `amarilla` (fuente `pdf417`, con `nuip`, `fechaNacimiento` y `codigoLugar` del PDF417) o `digital` (fuente `mrz-td1`, con `lineasCorregidas`); otros documentos dan `riesgo: null`.
+El resultado SHALL incluir `riesgo` de `packages/fraud` igual al de la CLI (`--resultado`). `opciones.fraude: false` MUST omitir el análisis y devolver `riesgo: null`. En el servidor el análisis SHALL recibir la imagen completa como único frame (entrada aceptada por el orquestador el 2026-10-10) y solo la cédula y la tarjeta de identidad leídas por PDF417 (`tipo: "amarilla"`) o MRZ TD1 (`tipo: "digital"`) producen señal; otros documentos MUST dar `riesgo: null`.
 
 #### Scenario: Con y sin fraude
 - **WHEN** se lee `amarilla-1080p.png` con opciones por omisión y luego con `fraude: false`
 - **THEN** el primero trae `riesgo` igual a `CLI(...).riesgo` y el segundo `riesgo` `null` con los demás campos iguales
 
+#### Scenario: Entrada del fraude para la amarilla
+- **WHEN** se lee `amarilla-1080p.png` (fuente `pdf417`) con opciones por omisión
+- **THEN** `packages/fraud` recibe `frames` con un único elemento (la imagen completa decodificada), `cuadrilatero` `[{x:0,y:0},{x:w-1,y:0},{x:w-1,y:h-1},{x:0,y:h-1}]` con `w` y `h` de la imagen, `cuadrilateroAproximado: true` (FRA-20 omite las señales geométricas), `cara: "reverso"`, `tipo: "amarilla"` y `datos.pdf417` con `nuip` `"9999123456"`, `fechaNacimiento` y `codigoLugar` (departamento más municipio) del PDF417
+
+#### Scenario: Entrada del fraude para la digital
+- **WHEN** se lee `digital-1080p.png` (fuente `mrz-td1`) con opciones por omisión
+- **THEN** `packages/fraud` recibe el mismo `frames`, `cuadrilatero`, `cuadrilateroAproximado: true` y `cara: "reverso"` que con la amarilla, `tipo: "digital"` y `datos.mrz.lineas` igual a `lineasCorregidas` de la lectura MRZ
+
+#### Scenario: Tarjeta de identidad con señal
+- **WHEN** se lee con `admitirTarjetaIdentidad: true` la imagen sintética de un PDF417 con fecha de nacimiento `2014-05-10` (`tipoDocumento` `"tarjeta-identidad"`, fuente `pdf417`), o una lectura de tarjeta de identidad con fuente `mrz-td1`
+- **THEN** `packages/fraud` recibe la misma entrada que la amarilla (con `tipo: "amarilla"` y `datos.pdf417`) o que la digital (con `tipo: "digital"` y `datos.mrz.lineas`), respectivamente, y el resultado trae `riesgo` distinto de `null`
+
+#### Scenario: Otros documentos sin señal
+- **WHEN** se lee `pasaporte-1080p.png` con opciones por omisión
+- **THEN** `packages/fraud` no se invoca y el resultado trae `riesgo: null`
+
 ### Requirement: MOT-10 Comparación con el cliente
-`@lector-cedula/servidor` SHALL exportar `compararConCliente(servidor: RESULTADO, cliente: unknown)` que devuelve `{ coincide: boolean, diferencias: string[] }` donde `diferencias` lista solo rutas de campo (sin valores). Campos comparados (nombres de `CamposDocumento`, OD-22a, la salida común del front y del motor): `tipo` (el `tipo` de `ResultadoPresentacion` del SDK web o el `tipoDocumento` de `ResultadoLectura`, contra el `tipoDocumento` del servidor), `campos.nuip`, `campos.apellidos`, `campos.nombres`, `campos.fechaNacimiento`, `campos.sexo` y `campos.rh`. `null` y ausente son iguales; un valor no primitivo nunca coincide. (Ningún lector produce fecha de expedición, así que no se compara.) Un `cliente` que no valida el esquema MUST dar `coincide: false` y `diferencias: ["cliente-invalido"]`.
+`@lector-cedula/servidor` SHALL exportar `compararConCliente(servidor: RESULTADO, cliente: unknown)` que devuelve `{ coincide: boolean, diferencias: string[] }`; `diferencias` MUST listar solo rutas de campo, sin valores. Compara exactamente `tipo`, `campos.nuip`, `campos.apellidos`, `campos.nombres`, `campos.fechaNacimiento`, `campos.sexo` y `campos.rh` (`CamposDocumento`, OD-22a). Un `cliente` que no valida el esquema MUST dar `coincide: false` y `diferencias: ["cliente-invalido"]`.
 
 #### Scenario: Coinciden
 - **WHEN** se compara el resultado del servidor de `amarilla-1080p.png` con el resultado del SDK web del mismo fixture
 - **THEN** devuelve `{ coincide: true, diferencias: [] }`
+
+#### Scenario: Origen del tipo
+- **WHEN** el servidor trae `tipoDocumento` `"cedula-ciudadania"` y el cliente trae `tipo` `"cedula-ciudadania"` (`ResultadoPresentacion` del SDK web) o, sin `tipo`, `tipoDocumento` `"cedula-ciudadania"` (`ResultadoLectura`), con los mismos campos
+- **THEN** ambos casos devuelven `{ coincide: true, diferencias: [] }`, y con `tipo` `"pasaporte"` en el cliente `diferencias` contiene `"tipo"`
+
+#### Scenario: Nulo, ausente y no primitivo
+- **WHEN** el servidor trae `campos.rh` ausente y el cliente `campos.rh` `null`; y en otra llamada el cliente trae `campos.nuip` `["9999123456"]` con el servidor en `"9999123456"`
+- **THEN** la primera devuelve `{ coincide: true, diferencias: [] }` (`null` y ausente son iguales) y la segunda `{ coincide: false, diferencias: ["campos.nuip"] }` (un valor no primitivo nunca coincide)
+
+#### Scenario: Campos fuera de la lista no se comparan
+- **WHEN** el cliente añade a campos coincidentes `campos.fechaExpedicion` `"2020-01-01"`, `campos.lugarNacimiento` `{ "x": 1 }` y `campos.paisEmisor` `"XXX"` que el servidor no trae
+- **THEN** devuelve `{ coincide: true, diferencias: [] }` (ningún lector produce fecha de expedición, así que no se compara)
 
 #### Scenario: NUIP manipulado en el cliente
 - **WHEN** el cliente trae `campos.nuip` `"9999123457"` y `campos.rh` `"B+"` (servidor `"AB+"`)
@@ -172,6 +200,10 @@ En `REF_SRV`, con motor caliente y `hilos: 2`, el p95 por lectura MUST ser <= 1 
 #### Scenario: Benchmark Node
 - **WHEN** `npm run motor:bench` corre 200 lecturas de cada fixture en `REF_SRV`
 - **THEN** el informe JSON trae `p95_amarilla_ms <= 1500`, `p95_digital_ms <= 2500` y `frio_ms <= 4000`, y sale con código 1 si alguno falla
+
+#### Scenario: Informe evaluable
+- **WHEN** `npm run motor:bench -- --evaluar <informe.json>` recibe un informe con `p95_digital_ms` 2600, o con un valor ausente, o con `lecturas_fallidas` mayor que 0 (lecturas que no dan el NUIP `9999123456`)
+- **THEN** sale con código 1 e imprime `umbral superado: <clave>` por cada clave; un informe en los umbrales exactos sale con 0. Fuera de `REF_SRV` (`maquina` del informe) el resultado es orientativo
 
 ### Requirement: MOT-12 Compatibilidad de runtimes Node
 El paquete SHALL funcionar en Node 20, 22 y 24, en ESM y CommonJS, y en route handlers de Next con `export const runtime = "nodejs"`. En runtime `edge`, la importación MUST fallar con un error que diga `"@lector-cedula/servidor requiere runtime nodejs"`.
@@ -238,11 +270,11 @@ El envío del front al backend propio SHALL hacerse solo con la opción `backend
 - **THEN** el estado final tiene `resultado.confiable` `true` y hubo exactamente 1 petición a `/api/cedula`
 
 ### Requirement: MOT-16 Webhooks opcionales
-(Modo opcional; ver MOT-21.) `crearMotor({ webhook: { url, secreto } })` SHALL, tras cada lectura, enviar `POST url` con `{ evento: "lectura", tipo, coincide?, riesgo_nivel, codigo? }` (sin campos personales) y cabecera `X-Lector-Firma: sha256=<hex HMAC-SHA256(secreto, cuerpo)>`. Es la única excepción a MOT-06 y solo con `webhook` configurado; `url` MUST ser `https` (o localhost). Un fallo del webhook MUST NOT afectar al resultado.
+(Opcional; ver MOT-21.) `crearMotor({ webhook: { url, secreto } })` SHALL, tras cada lectura, enviar un único `POST url` (mejor esfuerzo, sin reintentos) con `{ evento: "lectura", tipo, riesgo_nivel, codigo? }`, sin campos personales, firmado según MOT-26. Única excepción a MOT-06; `url` MUST ser `https` (o `http` de `localhost`, `127.0.0.1` o `[::1]`) y `secreto` no vacío. Un fallo del webhook MUST NOT afectar al resultado.
 
 #### Scenario: Firma verificable
 - **WHEN** con `secreto` `"secreto-de-prueba"` se lee `amarilla-1080p.png` y un servidor local recibe el webhook
-- **THEN** la firma recibida es igual a `HMAC-SHA256("secreto-de-prueba", cuerpo)` y el cuerpo no contiene `9999123456` ni `PRUEBA`
+- **THEN** la cabecera `X-Lector-Signature` recibida cumple `^t=[0-9]+,v1=[0-9a-f]{64}$`, su `v1` es igual a `HMAC-SHA256("secreto-de-prueba", t + "." + cuerpo)`, `t` está a 300 s o menos del reloj, `verificarFirmaWebhook(cuerpo, cabecera, "secreto-de-prueba")` devuelve `true` y el cuerpo no contiene `9999123456` ni `PRUEBA`
 
 #### Scenario: Webhook caído
 - **WHEN** el webhook responde 500
@@ -251,6 +283,33 @@ El envío del front al backend propio SHALL hacerse solo con la opción `backend
 #### Scenario: URL insegura
 - **WHEN** `webhook.url` es `"http://ejemplo.test/hook"`
 - **THEN** `crearMotor` lanza con `"opciones-invalidas"`
+
+#### Scenario: Lectura fallida o que lanza
+- **WHEN** con webhook se lee `sin-documento-1080p.png`, y con `bytesMaximos: 10` se lee `amarilla-1080p.png`
+- **THEN** el primer cuerpo es `{ evento: "lectura", tipo: null, riesgo_nivel: null, codigo }` con el `error.codigo` del resultado, y el segundo lleva `codigo` `"imagen-demasiado-grande"` mientras `leerDocumento` rechaza con ese código
+
+#### Scenario: Decisiones de envío
+- **WHEN** se configura `webhook` y se lee un documento
+- **THEN** el envío no se espera (no retrasa `leerDocumento`), se aborta a los 5 000 ms, no sigue redirecciones y no se reintenta; `coincide` no aplica al motor (lo calcula el manejador) y se omite
+
+### Requirement: MOT-26 Firma antirrepetición del webhook
+El webhook SHALL llevar `X-Lector-Signature: t=<unix>,v1=<hex>` (formato AV-26): `<hex>` es el HMAC-SHA256 hexadecimal minúscula, con `secreto`, de `<unix>` + `.` + cuerpo exacto; no se envía `X-Lector-Firma`. `@lector-cedula/motor` SHALL exportar `verificarFirmaWebhook(cuerpo, cabecera, secreto, ahora?)`: `true` solo si algún `v1` coincide (con `timingSafeEqual`) y `|ahora - t| <= 300` (`TOLERANCIA_WEBHOOK_S`); MUST NOT lanzar. Decisión de revisor-privacidad (2026-10-10).
+
+#### Scenario: Vector de firma
+- **WHEN** se firma el cuerpo de AV-25 (232 bytes) con secreto `"whsec_sintetico_0123456789abcdef"` y `t` `1791300000`
+- **THEN** la cabecera es `t=1791300000,v1=1b3358c314ebcad6047166133405e2be0692e92e52d17606840183a58d5711df` y `verificarFirmaWebhook` con `ahora` `1791300000` devuelve `true`
+
+#### Scenario: Cuerpo alterado o secreto distinto
+- **WHEN** se verifica esa cabecera con el cuerpo cambiado en un byte, o con otro secreto
+- **THEN** `verificarFirmaWebhook` devuelve `false`
+
+#### Scenario: Repetición fuera de ventana
+- **WHEN** se verifica la cabecera válida con `ahora` `1791300000 + 300` y `1791300000 - 300`, y luego con `1791300000 + 301` y `1791300000 - 301`
+- **THEN** los dos primeros devuelven `true` y los dos últimos `false`
+
+#### Scenario: Cabecera mal formada
+- **WHEN** la cabecera es `undefined`, `""`, `"v1=<hex>"`, `"t=1791300000"`, `"t=abc,v1=<hex>"`, `"t=1791300000,v1=<hex en mayúsculas>"`, `"t=1791300000,v1=<63 hex>"`, `"sha256=<hex>"`, `"t=1,t=1791300000,v1=<hex>"` o un valor que no es cadena
+- **THEN** `verificarFirmaWebhook` devuelve `false` sin lanzar
 
 ### Requirement: MOT-17 Sidecar de respaldo
 `examples/sidecar/compose.yaml` SHALL ejecutar el microservicio de `server/` junto al backend del integrador en una red interna de compose, sin `ports:` publicados (o solo `127.0.0.1:`), con sistema de archivos de solo lectura y tmpfs sin ejecución.
@@ -275,7 +334,7 @@ Las dependencias de producción del motor en Node, Java y Go MUST estar en la li
 - **THEN** cada uno contiene `THIRD_PARTY_NOTICES` con las entradas `tesseract`, `leptonica`, `zxing` y `mrz.traineddata`
 
 ### Requirement: MOT-19 crearLectorServidor
-`@lector-cedula/servidor` SHALL exportar `crearLectorServidor({ alConfirmar, limites?, fraude?, comparar? })` que devuelve `{ manejar(req: Request): Promise<Response>, express(), nest(), next(), fastify(), cerrar() }`. Corre el motor en proceso (`crearMotor` de `@lector-cedula/motor`, peerDependency opcional, o un `motor` inyectado en las opciones; pool de `worker_threads`, MOT-04) en el servidor de la empresa que integra la librería; MUST NOT contactar ningún servidor del autor ni otra red (MOT-06).
+`@lector-cedula/servidor` SHALL exportar `crearLectorServidor({ alConfirmar, limites?, fraude?, comparar? })` que devuelve `{ manejar(req: Request): Promise<Response>, express(), nest(), next(), fastify(), cerrar() }`. SHALL correr el motor en proceso (pool de `worker_threads`, MOT-04) en el servidor de la empresa que integra la librería y MUST NOT contactar ningún servidor del autor ni otra red (MOT-06).
 
 #### Scenario: Manejador estándar
 - **WHEN** se llama `manejar(new Request("http://localhost/api/cedula", { method: "POST", body: <multipart con imagen amarilla-1080p.png y cliente> }))`
@@ -305,8 +364,16 @@ Las dependencias de producción del motor en Node, Java y Go MUST estar en la li
 - **WHEN** `crearLectorServidor` se llama sin `motor` y `@lector-cedula/motor` no está instalado
 - **THEN** lanza `ErrorServidor` con `codigo` `"motor-no-instalado"` y un mensaje que incluye `npm install @lector-cedula/motor`
 
+#### Scenario: Origen del motor
+- **WHEN** se llama `crearLectorServidor({ alConfirmar, motor })` con un motor falso inyectado, y en otra prueba sin `motor` con `@lector-cedula/motor` instalado
+- **THEN** con el inyectado no se resuelve ni importa `@lector-cedula/motor`; sin él se importa `@lector-cedula/motor` una sola vez, en la primera lectura, y se usa su `crearMotor`; `cerrar()` cierra el motor en ambos casos
+
+#### Scenario: Motor como peerDependency opcional
+- **WHEN** se lee `packages/servidor/package.json`
+- **THEN** `peerDependencies` incluye `@lector-cedula/motor` y `peerDependenciesMeta["@lector-cedula/motor"].optional` es `true`
+
 ### Requirement: MOT-20 Protocolo NDJSON en vivo
-La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, terminado en salto de línea) con eventos `{ etapa: "recibido"|"leyendo"|"fraude"|"comparando", progreso? }` en ese orden (`fraude` se omite con `fraude: false`, `comparando` sin cliente) y exactamente un evento final `{ etapa: "resultado", ok, documento?, riesgo?, rechazo? }`. `comparando` se omite cuando el front no envía su lectura local (modo `front-back` con dispositivo débil) o con `comparar: false`. El final `ok: true` lleva `documento` (la lectura del servidor en camelCase, con `tipoDocumento`, `campos` obligatorio, `warnings` y `confiable: true`) y `riesgo` (`null` con `fraude: false`); el final `ok: false` lleva solo `rechazo`. Los tipos y el esquema viven en `@lector-cedula/protocolo` (sin dependencias), que importan el front y el back. Cada evento SHALL enviarse en cuanto ocurre (sin búfer). Java y Go (MOT-24) MUST emitir el mismo protocolo.
+La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, terminado en salto de línea) con eventos `{ etapa: "recibido"|"leyendo"|"fraude"|"comparando", progreso? }` en ese orden, omitiendo las etapas que no aplican, y exactamente un evento final `{ etapa: "resultado", ok, documento?, riesgo?, rechazo? }`. Cada evento SHALL enviarse en cuanto ocurre (sin búfer). Los tipos y el esquema viven en `@lector-cedula/protocolo`. Java y Go (MOT-24) MUST emitir el mismo protocolo.
 
 #### Scenario: Orden de eventos
 - **WHEN** se procesa `amarilla-1080p.png` con `cliente` y opciones por omisión
@@ -323,6 +390,22 @@ La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, termi
 #### Scenario: Esquema de los eventos
 - **WHEN** cada línea de 200 respuestas generadas con fixtures y rechazos se valida contra `protocolo-ndjson.schema.json`
 - **THEN** el 100 % valida y hay exactamente un evento `resultado` por respuesta, siempre el último
+
+#### Scenario: Sin comparación
+- **WHEN** el multipart trae solo `imagen` (el front no envía su lectura local, modo `front-back` con dispositivo débil), o trae `cliente` pero el lector se creó con `comparar: false`
+- **THEN** en ambos casos la lista de `etapa` es `["recibido", "leyendo", "fraude", "resultado"]` (sin `comparando`)
+
+#### Scenario: Contenido del evento final
+- **WHEN** se procesa `amarilla-1080p.png` con `cliente` coincidente, luego con `fraude: false`, y luego con un `cliente` de `campos.nuip` `"9999123457"`
+- **THEN** el primer final es `ok: true` con `riesgo` igual al del motor y `documento` igual a la lectura del servidor en camelCase sin `ok` ni `riesgo` (con `tipoDocumento`, `campos` obligatorio, `warnings`) y `confiable: true`; el segundo es `ok: true` con `riesgo: null`; el tercero es `ok: false` con solo las claves `etapa`, `ok` y `rechazo`
+
+#### Scenario: Eventos intermedios sin datos
+- **WHEN** se procesa `amarilla-1080p.png` con `cliente`
+- **THEN** todo evento salvo el último tiene solo las claves `etapa` y, opcionalmente, `progreso`
+
+#### Scenario: Protocolo compartido sin dependencias
+- **WHEN** se leen `packages/protocolo/package.json` y las importaciones de `packages/web/src` y `packages/servidor/src`
+- **THEN** `@lector-cedula/protocolo` no declara `dependencies` y tanto el front (`packages/web`) como el back (`packages/servidor`) importan de él los tipos del protocolo
 
 ### Requirement: MOT-21 Confirmación solo si ok
 `alConfirmar(documento, contexto)` SHALL llamarse exactamente una vez y antes de emitir el evento final cuando el resultado es `ok: true`, y MUST NOT llamarse en ningún rechazo, error ni cancelación. `contexto` lleva `{ riesgo, comparacion, peticion: Request }`. Si `alConfirmar` lanza, el evento final SHALL ser `ok: false` con `rechazo.motivo` `"error-interno"` y el mensaje MUST NOT viajar al cliente.
@@ -344,7 +427,23 @@ La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, termi
 - **THEN** la tarea del pool se cancela, `alConfirmar` no se llama y los búferes de la imagen están a cero
 
 ### Requirement: MOT-22 Motivos de rechazo
-El evento final `ok: false` SHALL llevar `rechazo.motivo` de esta lista: `no-coincide` (MOT-10, con `diferencias`), `fraude` (solo si la empresa configura `fraude: { bloquearSi }`: un nivel `"medio"` o `"alto"`, o una función sobre la señal; por omisión el riesgo se calcula y se devuelve en el evento final y en `contexto.riesgo` pero no rechaza, coherente con FRA-04), `ilegible`, `menor-de-edad` (salvo `limites.admitirMenores: true`), `documento-no-admitido` (tipo fuera de `limites.documentos`), `demasiado-grande`, `tiempo-agotado`, `ocupado` (cola llena) o `error-interno` (MOT-21).
+El evento final `ok: false` SHALL llevar `rechazo.motivo` de esta lista cerrada: `no-coincide` (MOT-10), `fraude`, `ilegible`, `menor-de-edad`, `documento-no-admitido`, `demasiado-grande`, `tiempo-agotado`, `ocupado` o `error-interno` (MOT-21). El riesgo MUST NOT rechazar salvo que la empresa configure `fraude: { bloquearSi }` (coherente con FRA-04).
+
+#### Scenario: Lista cerrada de motivos
+- **WHEN** se lee `MOTIVOS_RECHAZO` de `@lector-cedula/protocolo`
+- **THEN** es exactamente `["no-coincide", "fraude", "ilegible", "menor-de-edad", "documento-no-admitido", "demasiado-grande", "tiempo-agotado", "ocupado", "error-interno"]` en cualquier orden
+
+#### Scenario: No coincide con diferencias
+- **WHEN** el `cliente` trae `campos.nuip` `"9999123457"` y el servidor lee `"9999123456"`
+- **THEN** el evento final es `{"etapa":"resultado","ok":false,"rechazo":{"motivo":"no-coincide","diferencias":["campos.nuip"]}}`
+
+#### Scenario: Menores admitidos
+- **WHEN** el motor devuelve la lectura de un menor de edad sin `limites.admitirMenores` y luego con `limites.admitirMenores: true`
+- **THEN** el primero termina con `rechazo.motivo` `"menor-de-edad"` y el segundo con `ok: true` y `alConfirmar` llamado 1 vez
+
+#### Scenario: Errores del motor a motivos
+- **WHEN** el motor falla con `ErrorMotor` de código `imagen-demasiado-grande`, `tiempo-agotado`, `motor-ocupado` (cola llena) o `formato-no-soportado`
+- **THEN** los motivos son, respectivamente, `"demasiado-grande"`, `"tiempo-agotado"`, `"ocupado"` e `"ilegible"`
 
 #### Scenario: Tabla de motivos
 - **WHEN** se procesan `sin-documento-1080p.png`, `ti-1080p.png`, `pasaporte-1080p.png` con `limites.documentos: ["cedula"]`, `amarilla-1080p.png` con riesgo falso `alto` y `fraude: { bloquearSi: "alto" }`, y `amarilla-1080p.png` con la cola llena

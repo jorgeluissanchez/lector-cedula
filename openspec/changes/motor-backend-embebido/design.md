@@ -42,7 +42,7 @@ Ancho y alto se leen de la cabecera (PNG IHDR, JPEG SOF, WebP VP8/VP8L) con un l
 Reutiliza `enviarCaptura` y las funciones puras de `envio.ts`; el destino se valida con la misma regla de origen que SDK-42 (mismo origen de la página en vez de `servidor`). Código nuevo `destino-invalido` para no confundir con `sesion-invalida`. Excluyente con `servidor`/`sesion` para que no haya dos rutas de subida.
 
 ### D8. Webhooks
-Solo metadatos (tipo, coincide, nivel de riesgo, código); firma HMAC-SHA256 con `node:crypto`; reintento ninguno (el integrador ya tiene el resultado síncrono). Es la única red permitida y solo si se configura.
+Solo metadatos (tipo, coincide, nivel de riesgo, código); firma HMAC-SHA256 con `node:crypto` en el formato AV-26 (`X-Lector-Signature: t=<unix>,v1=<hex>` sobre `<t>.<cuerpo>`, tolerancia 300 s, MOT-26) para que el receptor rechace repeticiones, con `verificarFirmaWebhook` exportado (`timingSafeEqual`); reintento ninguno (el integrador ya tiene el resultado síncrono). Es la única red permitida y solo si se configura.
 
 ### D9. Sidecar
 Plan B para lenguajes sin motor (PHP, .NET, Ruby) o para aislar memoria: el contenedor de `server/` en red `internal: true`, sin puertos públicos, `read_only: true`, `tmpfs` con `noexec`.
@@ -104,6 +104,7 @@ Comandos:
 | MOT-07, MOT-08 | Privacidad estática | `privacidad-check` | `P` | 0 hallazgos |
 | MOT-08 | Unitaria (logs) | Vitest | `UN`, `JV`, `GO` | 0 apariciones de datos sintéticos |
 | MOT-09 | Golden | Vitest | `UN`, `CT` | `riesgo` igual a la CLI |
+| MOT-09 | Unitaria e integración (entrada del fraude: amarilla, digital, tarjeta de identidad, otros documentos) | Vitest (`packages/motor/test/fraude-entrada.test.ts`) | `UN` | 5/5 escenarios |
 | MOT-10 | Unitaria (tabla literal) | Vitest | `UN` | 3 escenarios |
 | MOT-10 | Propiedad | fast-check | `UN` | numRuns >= 1000, 0 excepciones |
 | MOT-10 | Mutación | Stryker | `MU` | >= 85 % |
@@ -117,7 +118,8 @@ Comandos:
 | MOT-14 | Contrato | `CT --lenguaje java|go` | `CT`, `JV`, `GO` | 100 % igual a la CLI |
 | MOT-14 | Unitaria y concurrencia | JUnit 5, `go test -race` | `JV`, `GO` | 0 fallos, 0 carreras |
 | MOT-14 | Mutación | PIT (Java), go-mutesting si su licencia pasa | `JV`, `GO` | >= 80 % en código no generado |
-| MOT-16 | Unitaria (HMAC, sin datos) | Vitest + servidor local | `UN` | 3 escenarios |
+| MOT-16 | Unitaria (HMAC, sin datos) | Vitest + servidor local | `UN` | 5 escenarios (`packages/motor/test/webhook*.test.ts`) |
+| MOT-26 | Unitaria (vectores AV-26 literales, ventana, cabecera mal formada) y propiedad | Vitest + fast-check | `npx vitest run packages/motor/test/webhook-unidad.test.ts` | 4 escenarios; numRuns 1000; mutación del webhook >= 85 % |
 | MOT-17 | Estática y humo | Vitest + Docker compose | `SC` | escenarios verdes |
 | MOT-18 | Licencias | `licencia-check` ampliado a Maven y Go | `L` | fixtures GraalJS y GPL fallan; árbol real pasa |
 | MOT-18 | Avisos | Vitest sobre artefactos | `UN`, `JV`, `GO` | 4 entradas presentes |

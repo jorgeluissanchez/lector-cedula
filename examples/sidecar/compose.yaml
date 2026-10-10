@@ -1,0 +1,36 @@
+# Sidecar de respaldo (motor-backend-embebido, MOT-17; opcional). Para backends que no son Node, Java ni Go: el
+# microservicio de server/ corre junto al backend del integrador en una red interna de compose, sin puertos publicados,
+# con la raíz de solo lectura y /tmp en memoria sin ejecución. Ninguna imagen ni dato se escribe en disco (principio III).
+#
+# Uso (desde la raíz del repositorio, con CLAVES_API_JSON de tu despliegue, nunca en este archivo):
+#   CLAVES_API_JSON='[...]' SECRETO_SUBIDA='...' docker compose -f examples/sidecar/compose.yaml up -d
+# Tu backend se une a la red `interna` (añade su servicio aquí o con un compose propio) y llama a http://lector:8000.
+# Ley 1581 de 2012: la empresa obtiene antes la autorización del titular; el sidecar no registra cuerpos ni campos.
+services:
+  lector:
+    build:
+      context: ../../server
+      target: produccion
+      additional_contexts:
+        repo_git: ../../.git
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    mem_limit: 1536m
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # Sin `ports:`: solo lo alcanza un servicio de la red interna.
+    expose: ["8000"]
+    networks: [interna]
+    environment:
+      LECTOR_LIVE: node
+      CLAVES_API_JSON: ${CLAVES_API_JSON:?falta CLAVES_API_JSON (lista JSON de sha256 y secreto_webhook)}
+      SECRETO_SUBIDA: ${SECRETO_SUBIDA:?falta SECRETO_SUBIDA (32 bytes aleatorios o más)}
+      URL_PUBLICA: ${URL_PUBLICA:-http://lector:8000}
+
+networks:
+  # Sin salida a Internet ni entrada desde el host.
+  interna:
+    internal: true

@@ -9,6 +9,7 @@ import { leerCabecera } from "./cabeceras.js";
 import { hoyEnBogota, leerImagen } from "./leer.js";
 import { crearPool, type EstadisticasPool, type Pool } from "./pool.js";
 import { registrarBufer, rutaModeloPorDefecto, verificarModelo } from "./recursos.js";
+import { cuerpoWebhook, enviarWebhook, validarWebhook, type OpcionesWebhook } from "./webhook.js";
 
 export const LIMITES_POR_DEFECTO = {
   bytesMaximos: 10_485_760,
@@ -38,6 +39,11 @@ export interface OpcionesMotor {
   readonly rutaModelo?: string;
   /** Solo eventos sin datos del documento (MOT-08). */
   readonly registro?: (evento: EventoRegistro) => void;
+  /**
+   * MOT-16 (opcional): tras cada lectura, `POST url` firmado con HMAC-SHA256 y sin datos personales. `url` es `https`
+   * o `http` de localhost. Es la única red que hace el motor y solo con esta opción.
+   */
+  readonly webhook?: OpcionesWebhook;
 }
 
 export interface Motor extends MotorLector {
@@ -65,6 +71,7 @@ export async function crearMotor(opciones: OpcionesMotor = {}): Promise<Motor> {
   const llamadasOcrMaximas = entero(opciones.llamadasOcrMaximas, 1, LIMITES_POR_DEFECTO.llamadasOcrMaximas);
   const fraudePorDefecto = opciones.fraude !== false;
   const rutaModelo = opciones.rutaModelo ?? rutaModeloPorDefecto();
+  const webhook = opciones.webhook === undefined ? null : validarWebhook(opciones.webhook);
   // MOT-06: antes de cualquier OCR.
   verificarModelo(rutaModelo);
 
@@ -138,10 +145,12 @@ export async function crearMotor(opciones: OpcionesMotor = {}): Promise<Motor> {
       try {
         const r = await leer(imagen, op);
         opciones.registro?.({ evento: "lectura", duracionMs: performance.now() - inicio, ...(r.ok ? {} : { codigo: r.error.codigo }) });
+        if (webhook !== null) enviarWebhook(webhook, cuerpoWebhook({ resultado: r }));
         return r;
       } catch (error) {
         const codigo = codigoErrorMotor(error);
         opciones.registro?.({ evento: "lectura", duracionMs: performance.now() - inicio, codigo: codigo ?? "motor-error-interno" });
+        if (webhook !== null) enviarWebhook(webhook, cuerpoWebhook({ codigo: codigo ?? "motor-error-interno" }));
         throw codigo === null ? new ErrorMotor("motor-error-interno") : error;
       }
     },
