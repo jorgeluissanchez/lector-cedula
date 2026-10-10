@@ -15,5 +15,5 @@ Reglas: TDD (principio II), cada prueba se ve fallar antes de implementar. Datos
 
 ## 3. E2E y CI
 
-- [ ] 3.1 E2E en `e2e/demo/opciones-*.spec.ts` (panel, persistencia, 3 formas con `amarilla-1080p`, `amarilla-de-pie-vertical` y `digital-de-pie-vertical`, TI con `ti-amarilla-1080p`, fraude), proyecto `demo-pixel7` y job `e2e-demo` en `.github/workflows/ci.yml`. Plan en `e2e/planes/demo-opciones.md`. Tipos: **E2E** (Chromium y Pixel 7), **accesibilidad**, **privacidad**. Verificación: `E` en CI.
+- [x] 3.1 E2E en `e2e/demo/opciones-*.spec.ts` (panel, persistencia, 3 formas con `amarilla-1080p`, `amarilla-de-pie-vertical` y `digital-de-pie-vertical`, TI con `ti-amarilla-1080p`, fraude), proyecto `demo-pixel7` y job `e2e-demo` en `.github/workflows/ci.yml`. Plan en `e2e/planes/demo-opciones.md`. Tipos: **E2E** (Chromium y Pixel 7), **accesibilidad**, **privacidad**. Verificación: `E` en CI.
 - [x] 3.2 Nota de estado en la tarea 3.6 de `sdk-integracion` (migración parcial, DOP-07).
