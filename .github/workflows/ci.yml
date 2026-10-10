@@ -77,3 +77,17 @@ jobs:
           node-version: 24
       - name: Licencias Python (lista negra)
         run: node tools/licencia-check.mjs --pip $(sed -n '/^dependencies/,/]/p' server/pyproject.toml | grep -oE '"[a-zA-Z0-9_.-]+' | tr -d '"')
+
+  # La imagen de la demo (Dokploy construye apps/pwa/Dockerfile): falló sin que CI lo viera al añadir un workspace.
+  imagen-pwa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir la imagen de la demo
+        run: docker build -f apps/pwa/Dockerfile -t lector-pwa-ci .
+      - name: Arranca y sirve la página
+        run: |
+          docker run -d --name pwa -p 8080:80 lector-pwa-ci
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:8080/ >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8080/ | grep -q "<div id=\"app\"\|<script"

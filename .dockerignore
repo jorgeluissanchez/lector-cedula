@@ -17,3 +17,6 @@ models/tesseract
 *.webp
 !apps/pwa/public/**
 !e2e/visual/**
+.claude
+native/**/build
+native/**/.gradle

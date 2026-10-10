@@ -2,19 +2,16 @@
 # Mismo comando de build que vercel.json (despliegue-produccion).
 FROM node:24-bookworm-slim AS build
 WORKDIR /repo
-COPY package.json package-lock.json ./
-COPY apps/pwa/package.json apps/pwa/
-COPY packages/parsers/package.json packages/parsers/
-COPY packages/capture/package.json packages/capture/
-COPY packages/fixtures/package.json packages/fixtures/
-RUN npm ci --ignore-scripts
+# Todo el repositorio antes de npm ci: la PWA depende de varios workspaces (capture, fraud, web, protocolo…)
+# y una lista a mano se desactualiza (la demo dejó de desplegar al añadir @lector-cedula/web).
 COPY . .
+RUN npm ci --ignore-scripts
 # mitigacion-autor (MA-04): esta imagen es la demo pública; aviso de demostración y CSP connect-src 'self'.
 # Para una instancia propia: --build-arg VITE_DEMO=false.
 ARG VITE_DEMO=true
 ENV VITE_DEMO=${VITE_DEMO}
-# El modelo MRZ se descarga con verificación SHA-256 (models/manifest.json); compilar parsers antes que la PWA.
-RUN npm run modelos:mrz && npx tsc -b packages/parsers && npm run build -w @lector-cedula/pwa
+# El modelo MRZ se descarga con verificación SHA-256 (models/manifest.json); compilar parsers y protocolo (sus exports apuntan a dist) antes que la PWA.
+RUN npm run modelos:mrz && npx tsc -b packages/parsers packages/protocolo && npm run build -w @lector-cedula/pwa
 
 FROM nginx:1.29-alpine
 COPY apps/pwa/nginx.conf /etc/nginx/conf.d/default.conf
