@@ -13,6 +13,7 @@ import type { OpcionesLectura, ResultadoLectura } from "../../capture/src/lectur
 import { urlSubidaValida } from "../../web/src/envio.js";
 import { congelar, ESTADO_INICIAL } from "../../web/src/estado.js";
 import { transicion as transicionWeb, type EventoLector } from "../../web/src/maquina.js";
+import { esMenor, retenerMenor } from "../../web/src/menores.js";
 import { mensaje } from "../../web/src/mensajes.js";
 import { opcionInvalida } from "../../web/src/opciones.js";
 import { aPresentacion } from "../../web/src/presentacion.js";
@@ -70,7 +71,7 @@ function salida(paso: Paso, documentos: readonly unknown[] | null): SalidaProces
   const r: ResultadoLectura = "final" in paso ? paso.final : "soloCe" in paso ? paso.soloCe : paso.noEncontrado;
   if (!r.ok) return fallo(codigoDeLectura(r.error), r.error);
   if (documentos !== null && !documentos.includes(r.tipoDocumento)) return fallo("documento-no-admitido", "documento-no-admitido");
-  const menorDeEdad = r.tipoDocumento === "tarjeta-identidad" || r.menorDeEdad === true;
+  const menorDeEdad = esMenor(r);
   return { ok: true, resultado: aPresentacion(r), contenido: r.fuente, menorDeEdad };
 }
 
@@ -157,9 +158,21 @@ export const decidirEnvio = protegido(
   (salidaProceso: unknown, opciones: unknown): DecisionEnvio => {
     if (!esObjeto(opciones) || opcionInvalida(opciones) !== null || opciones["servidor"] === undefined || opciones["sesion"] === undefined) return NINGUNO;
     if (!esObjeto(salidaProceso) || salidaProceso["ok"] !== true || !esObjeto(salidaProceso["resultado"])) return NINGUNO;
-    const menor = salidaProceso["menorDeEdad"] === true || salidaProceso["resultado"]["tipo"] === "tarjeta-identidad";
-    if (menor && opciones["enviarMenores"] !== true) return { accion: "no-enviar", envio: { estado: "fallido", codigo: "menor-no-enviado" } };
+    if (retenerMenor({ tipoDocumento: salidaProceso["resultado"]["tipo"], menorDeEdad: salidaProceso["menorDeEdad"] }, opciones)) return { accion: "no-enviar", envio: { estado: "fallido", codigo: "menor-no-enviado" } };
     return { accion: "enviar", envio: { estado: "enviando" } };
   },
   () => NINGUNO,
+);
+
+/**
+ * NAT-01: `ErrorLector` de un código público con el texto de `packages/web/src/mensajes.ts` (`idioma` `"en"` o, por
+ * omisión, `"es"`). Los nativos no guardan textos. Código desconocido: `null`.
+ */
+export const mensajeError = protegido(
+  (codigo: unknown, idioma: unknown = "es"): { readonly codigo: CodigoError; readonly mensaje: string } | null => {
+    if (typeof codigo !== "string") return null;
+    const texto: unknown = mensaje(codigo as CodigoError, idioma === "en" ? "en" : "es");
+    return typeof texto === "string" ? { codigo: codigo as CodigoError, mensaje: texto } : null;
+  },
+  () => null,
 );

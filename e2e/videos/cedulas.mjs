@@ -34,6 +34,11 @@ export const LINEAS_PASAPORTE_COL = ["P<COLPEREZ<NUNEZ<<ANA<MARIA<<<<<<<<<<<<<<<
 const enGuia720 = `color=c=0x303030:s=1280x720:r=10[f];[0:v]scale=1028:648,${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=126:36:shortest=1`;
 const completa = "[0:v]scale=1920:1080,format=yuv420p";
 
+// sdk-integracion (SDK-64): vídeo VERTICAL 1080x1920 (celular de pie) con la cédula de pie (girada 90 grados) en la
+// guía vertical que calcula el núcleo para un recuadro de 260x400 con object-fit: cover (x 69, y 213, 942x1494).
+const GUIA_DE_PIE = { x: 69, y: 213, ancho: 942, alto: 1494 };
+const dePieEnGuia = `color=c=0x303030:s=1080x1920:r=10[f];[0:v]transpose=1,scale=${GUIA_DE_PIE.ancho}:${GUIA_DE_PIE.alto},${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=${GUIA_DE_PIE.x}:${GUIA_DE_PIE.y}:shortest=1`;
+
 export const ESCENAS_CEDULA = [
   { nombre: "amarilla-1080p", fuente: "amarilla", filtro: enGuia, ancho: 1920, alto: 1080 },
   { nombre: "digital-1080p", fuente: "digital", filtro: enGuia, ancho: 1920, alto: 1080 },
@@ -48,7 +53,18 @@ export const ESCENAS_CEDULA = [
   { nombre: "digital-suave-1080p", fuente: "digital", filtro: digitalSuave, ancho: 1920, alto: 1080 },
   // otros-documentos (OD-23): pasaporte sintético en la guía.
   { nombre: "pasaporte-col-1080p", fuente: "pasaporte", filtro: pasaporteEnGuia, ancho: 1920, alto: 1080 },
+  // otros-documentos (OD-34b, tarea 6.3): TI amarilla sintética de una persona menor (PERSONA_TI) en la guía.
+  { nombre: "ti-amarilla-1080p", fuente: "ti-amarilla", filtro: enGuia, ancho: 1920, alto: 1080 },
+  // sdk-integracion (SDK-64): cédulas de pie en vídeo vertical.
+  { nombre: "amarilla-de-pie-vertical", fuente: "amarilla", filtro: dePieEnGuia, ancho: 1080, alto: 1920 },
+  { nombre: "digital-de-pie-vertical", fuente: "digital", filtro: dePieEnGuia, ancho: 1080, alto: 1920 },
 ];
+
+/**
+ * otros-documentos (OD-34b): persona ficticia menor de edad para la TI amarilla (PDF417 con el mismo formato que la
+ * cédula amarilla; la TI se reconoce por la edad, H10). 12 años en la fecha fija de las E2E (2026-10-06).
+ */
+export const PERSONA_TI = Object.freeze({ ...PERSONA_BASE, primerNombre: "MENOR", segundoNombre: "", fechaNacimiento: "2014-03-14", fechaVencimiento: "2032-03-14" });
 
 function png(ancho, alto, valor) {
   const p = new PNG({ width: ancho, height: alto });
@@ -97,7 +113,8 @@ export async function fuentesCedula() {
   try {
     const digital = (await render.render(mrz.lineas)).bytes;
     const pasaporte = (await render.render(LINEAS_PASAPORTE_COL)).bytes;
-    return { amarilla, digital, pasaporte, sinDocumento: sinDocumento(), ilegible: tarjetaIlegible(), lineasMrz: mrz.lineas, nuip: PERSONA_BASE.nuip };
+    const tiAmarilla = await imagenSintetica(generarPdf417(PERSONA_TI, { semilla: 1 }).bytes);
+    return { amarilla, digital, pasaporte, tiAmarilla, sinDocumento: sinDocumento(), ilegible: tarjetaIlegible(), lineasMrz: mrz.lineas, nuip: PERSONA_BASE.nuip };
   } finally {
     await render.cerrar();
   }

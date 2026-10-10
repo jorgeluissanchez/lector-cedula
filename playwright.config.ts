@@ -73,6 +73,21 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 400_000,
     },
+    // motor-backend-embebido (tarea 1.5) y sdk-integracion (B.7): ejemplo React + backend Express con el motor en proceso.
+    {
+      command: "npm run build -w @lector-cedula/web && npx tsc -b packages/react packages/servidor packages/motor && npm run build -w examples/backend-express && npm run start -w examples/backend-express",
+      url: "http://localhost:4195/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 600_000,
+      env: { PORT: "4195" },
+    },
+    // sdk-integracion (SDK-64): ejemplo de login con la cámara en un recuadro embebido.
+    {
+      command: "npm run build -w @lector-cedula/web && npx tsc -b packages/react && npm run build -w examples/login && npm run preview -w examples/login",
+      url: "http://localhost:4196",
+      reuseExistingServer: !process.env.CI,
+      timeout: 600_000,
+    },
     // sdk-integracion (tarea 3b.4): ejemplos por framework compilados, sin servidor del lector.
     ...[
       { puerto: 4191, comando: "npm run build -w examples/react && npm run preview -w examples/react" },
@@ -94,8 +109,26 @@ export default defineConfig({
     launchOptions: { args: CAMARA },
   },
   projects: [
-    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/, /demo[\\/]/], use: { ...devices["Desktop Chrome"] } },
-    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/, /demo[\\/]/], use: { ...devices["Pixel 7"] } },
+    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/, /demo[\\/]/, /backend[\\/]/, /login[\\/]/], use: { ...devices["Desktop Chrome"] } },
+    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/, /demo[\\/]/, /backend[\\/]/, /login[\\/]/], use: { ...devices["Pixel 7"] } },
+    // sdk-integracion (SDK-64): ejemplo de login (recuadros 260x400 y 320x200); cada describe elige su vídeo.
+    ...[
+      { name: "login-chromium", dispositivo: DISPOSITIVOS.escritorio },
+      { name: "login-pixel7", dispositivo: DISPOSITIVOS.pixel },
+    ].map(({ name, dispositivo }) => ({
+      name,
+      testDir: "e2e/login",
+      use: { ...dispositivo, video: "retain-on-failure" as const, launchOptions: { args: CAMARA } },
+    })),
+    // motor-backend-embebido (tarea 1.5): front React + backend Express real con la amarilla sintética.
+    ...[
+      { name: "backend-chromium", dispositivo: DISPOSITIVOS.escritorio },
+      { name: "backend-pixel7", dispositivo: DISPOSITIVOS.pixel },
+    ].map(({ name, dispositivo }) => ({
+      name,
+      testDir: "e2e/backend",
+      use: { ...dispositivo, video: "retain-on-failure" as const, launchOptions: { args: [...CAMARA, "--use-file-for-fake-video-capture=e2e/videos/sinteticos/amarilla-1080p.y4m"] } },
+    })),
     // sdk-integracion (tarea 3.4): núcleo headless sobre examples/vanilla; cada spec elige su vídeo.
     ...[
       { name: "sdk-chromium", dispositivo: DISPOSITIVOS.escritorio },

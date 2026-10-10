@@ -36,7 +36,7 @@ export type { CapturaAceptada, CodigoLeido, DetectorDocumento, FormatoCodigo, Le
 export { evaluarEntorno, TEXTOS_ENTORNO, type Entorno, type EstadoEntorno } from "./flujo/entorno.js";
 export { avisoResolucion, clasificarResolucion, type ClaseResolucion } from "./flujo/resolucion.js";
 export { clasificarErrorCamara, TEXTOS_ERROR_CAMARA, type CodigoErrorCamara, type ErrorCamara } from "./flujo/errores-camara.js";
-export { calcularGuia, crearDetectorGuia, guiaEnAnalisis, guiaEnPantalla, PROPORCION_ID1, type Caja } from "./flujo/guia.js";
+export { calcularGuia, calcularGuiaEnRegion, type OpcionesGuia, crearDetectorGuia, guiaEnAnalisis, guiaEnPantalla, PROPORCION_ID1, type Caja } from "./flujo/guia.js";
 export { crearPlanificador, type Planificador } from "./flujo/planificador.js";
 export {
   crearAutocaptura,

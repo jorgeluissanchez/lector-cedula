@@ -767,7 +767,7 @@ Con `backend`, al terminar la lectura local el núcleo SHALL publicar el resulta
 - **THEN** la secuencia es `["permiso", "activo", "listo", "leyendo", "resultado"]`, `resultado.confiable` es `false` y `verificacion` es `null`
 
 ### Requirement: SDK-47 Rechazo y reintento automático
-Ante el evento final `ok: false`, el núcleo SHALL exponer `estado.rechazo = { motivo, diferencias? }` y, con intentos restantes, volver solo a `activo` con la cámara abierta. Los motivos `menor-de-edad` y `documento-no-admitido` son terminales (decisión del orquestador, 2026-10-09, modos): llevan directamente a `error` `"verificacion-rechazada"` sin reintento, cuentan como intento y liberan la cámara. Al agotar `intentosVerificacion` (por omisión 3, entero 1..10; fuera de rango da `opcion-invalida`) SHALL pasar a `error` `"verificacion-rechazada"`, conservar el último `rechazo` y liberar la cámara. `diferencias` solo lleva rutas de campo (MOT-10). Un `motivo` fuera de la lista es `protocolo-invalido`.
+Ante el evento final `ok: false`, el núcleo SHALL exponer `estado.rechazo = { motivo, diferencias? }` y, con intentos restantes, volver solo a `activo` con la cámara abierta. Los motivos `menor-de-edad` y `documento-no-admitido` son terminales (orquestador, 2026-10-09). Al agotar `intentosVerificacion` (entero 1..10, por omisión 3) SHALL pasar a `error` `"verificacion-rechazada"`, conservar el último `rechazo` y liberar la cámara. `diferencias` solo lleva rutas de campo (MOT-10).
 
 #### Scenario: No coincide y reintenta
 - **WHEN** con `intentosVerificacion: 3` el primer envío recibe `rechazo:no-coincide` con `diferencias` `["campos.nuip"]` y el segundo recibe `ok`
@@ -788,6 +788,14 @@ Ante el evento final `ok: false`, el núcleo SHALL exponer `estado.rechazo = { m
 #### Scenario: Motivo desconocido
 - **WHEN** el evento final trae `{ "etapa": "resultado", "ok": false, "rechazo": { "motivo": "otro" } }`
 - **THEN** la fase es `error` con `error.codigo` `"protocolo-invalido"` (SDK-48)
+
+#### Scenario: Tope por omisión
+- **WHEN** `crearLector({ backend: "/api/cedula" }, DEPS)` sin `intentosVerificacion` y cada envío recibe `rechazo:fraude`
+- **THEN** hubo exactamente 3 peticiones, la fase final es `error` con `error.codigo` `"verificacion-rechazada"` e `intentosVerificacion` es `{ usados: 3, maximo: 3 }`
+
+#### Scenario: Rango de intentosVerificacion
+- **WHEN** `crearLector({ backend: "/api/cedula", intentosVerificacion: v }, DEPS)` con `v` en `[0, 11, 2.5, -1, NaN]`, y por separado con `v` en `[1, 10]`
+- **THEN** con los primeros la fase es `error` con `error.codigo` `"opcion-invalida"`; con `1` y `10` no hay `error` al crear y, si cada envío recibe `rechazo:fraude`, hubo exactamente `v` peticiones antes de `error` `"verificacion-rechazada"`
 
 ### Requirement: SDK-48 Cliente del protocolo en vivo
 El núcleo SHALL leer la respuesta con `fetch` y `ReadableStream` (`getReader()` y `TextDecoder` en modo stream), dividiendo por salto de línea, tolerando líneas partidas y vacías; MUST NOT usar WebSocket, EventSource ni sondeo. La respuesta MUST ser 200 con `Content-Type` `application/x-ndjson`. `cancelar()` y `destruir()` en `verificando` MUST abortar la petición (`AbortController`) y poner a cero la copia de la imagen. Los fallos de transporte siguen SDK-54.
@@ -840,7 +848,7 @@ Con `autoIniciar: true`, los adaptadores y el componente opcional SHALL llamar a
 - **THEN** no lanza y el HTML contiene `data-fase="inicio"`
 
 ### Requirement: SDK-50 Adaptadores con verificación
-`useLectorCedula` (React y Vue) e `injectLectorCedula` (Angular) SHALL exponer `estado.verificacion`, `estado.rechazo` y `estado.intentosVerificacion` sin transformarlos y SHALL aceptar las opciones `backend`, `encabezadosBackend`, `modo`, `validacion`, `umbralesAuto`, `streaming`, `tiempoColaMs`, `intentosVerificacion`, `tiempoLimiteMs`, `inactividadMs` y `autoIniciar`, y exponer `estado.modo`, `estado.validacion` y `estado.frontActivo` sin transformarlos. Los presupuestos de SDK-29 y SDK-34 se mantienen.
+`useLectorCedula` (React y Vue) e `injectLectorCedula` (Angular) SHALL aceptar todas las opciones del modo backend propio y SHALL exponer sin transformarlos `estado.verificacion`, `estado.rechazo`, `estado.intentosVerificacion`, `estado.modo`, `estado.validacion` y `estado.frontActivo`. Los presupuestos de SDK-29 y SDK-34 se mantienen.
 
 #### Scenario: Estado de verificación en React
 - **WHEN** con dependencias falsas y `fetch` hacia `BACK` guion `ok` se monta un componente que pinta `[data-prueba="etapa"]` con `estado.verificacion?.etapa`
@@ -849,6 +857,10 @@ Con `autoIniciar: true`, los adaptadores y el componente opcional SHALL llamar a
 #### Scenario: Rechazo visible en Vue y Angular
 - **WHEN** el backend falso responde `rechazo:ilegible` al primer envío
 - **THEN** en ambos adaptadores `estado.rechazo.motivo` es `"ilegible"` y la fase siguiente es `activo`
+
+#### Scenario: Opciones aceptadas por los adaptadores
+- **WHEN** React, Vue y Angular montan el lector con dependencias falsas y las opciones `{ backend: "/api/cedula", encabezadosBackend: { "x-prueba": "1" }, modo: "front-back", validacion: "auto", umbralesAuto: { memoriaMinGb: 8 }, streaming: false, tiempoColaMs: 1000, intentosVerificacion: 2, tiempoLimiteMs: 5000, inactividadMs: 200, autoIniciar: false }`
+- **THEN** ninguno da `opcion-invalida` y en cada uno `estado.modo`, `estado.validacion`, `estado.frontActivo`, `estado.verificacion`, `estado.rechazo` y `estado.intentosVerificacion` son iguales (`toStrictEqual`) a los de `crearLector` con las mismas opciones y dependencias
 
 ### Requirement: SDK-51 Ejemplos front React con backend propio
 `examples/backend-express`, `examples/backend-nest` y `examples/backend-next` SHALL incluir un front React con `useLectorCedula({ backend: "/api/cedula", autoIniciar: true })` y UI propia que muestre la etapa, el rechazo y el resultado confiable, servido desde el mismo origen que el backend del ejemplo (MOT-13). Ningún ejemplo MUST contactar un servidor del autor ni un origen distinto del suyo.
@@ -907,7 +919,7 @@ Un fallo de transporte SHALL llevar a `error` conservando el resultado local (`c
 - **THEN** la fase pasa a `permiso` y el siguiente envío ocurre con `intentosVerificacion.usados` 1
 
 ### Requirement: SDK-55 Opción modo
-Corrección del usuario (2026-10-09): no existe un modo `auto` de nivel superior. `crearLector` SHALL aceptar `modo: "front" | "back" | "front-back"` (por omisión `"front-back"` con `backend` y `"front"` sin él) y `validacion: "estricta" | "auto"` (solo con `front-back`; por omisión `"estricta"`). `"front"`: solo lectura local, sin red, `confiable: false`. `"back"`: captura ligera (SDK-56) y validación solo en el servidor. `"front-back"` (doble validación): el back SIEMPRE valida, sin excepción; con `"estricta"` el front SIEMPRE lee localmente (SDK-46); con `"auto"` el front lee localmente solo si `decidirFront` lo permite (SDK-57) y, si no, captura como el modo back ligero. El estado SHALL exponer la decisión en `estado.modo`, `estado.validacion` (`null` fuera de `front-back`), `estado.frontActivo` (si el motor local lee) y `estado.modoMotivo` (`"modo-front"`, `"modo-back"`, `"estricta"` o el motivo de `decidirFront`). `"back"` o `"front-back"` sin `backend`, un `modo` o `validacion` fuera de la lista, o `validacion` con un modo distinto de `front-back` dan `opcion-invalida` con `opcion` `"modo"` o `"validacion"`.
+`crearLector` SHALL aceptar `modo: "front" | "back" | "front-back"` y `validacion: "estricta" | "auto"` (solo con `front-back`); no hay modo `auto` de nivel superior (corrección del usuario, 2026-10-09). `"front"` solo lee localmente; `"back"` captura ligero (SDK-56) y valida en el servidor; en `"front-back"` el back SIEMPRE valida y el front lee siempre (`"estricta"`) o según SDK-57 (`"auto"`). El estado SHALL exponer `modo`, `validacion`, `frontActivo` y `modoMotivo`.
 
 #### Scenario: Modo front ignora el backend
 - **WHEN** `crearLector({ modo: "front", backend: "/api/cedula" }, DEPS)` completa una lectura
@@ -922,19 +934,35 @@ Corrección del usuario (2026-10-09): no existe un modo `auto` de nivel superior
 - **THEN** la fase es `error` con `error.codigo` `"opcion-invalida"` y `error.opcion` `"modo"`
 
 #### Scenario: Validación fuera de front-back
-- **WHEN** `crearLector({ modo: "front", validacion: "auto" }, DEPS)` o `crearLector({ backend: "/api/cedula", validacion: "rapida" }, DEPS)`
+- **WHEN** `crearLector({ modo: "front", validacion: "auto" }, DEPS)`, `crearLector({ modo: "back", backend: "/api/cedula", validacion: "estricta" }, DEPS)` o `crearLector({ backend: "/api/cedula", validacion: "rapida" }, DEPS)`
 - **THEN** la fase es `error` con `error.codigo` `"opcion-invalida"` y `error.opcion` `"validacion"`
 
 #### Scenario: Front-back estricta por omisión
 - **WHEN** `crearLector({ backend: "/api/cedula" }, DEPS)` con `BACK` guion `ok` y señales de dispositivo débil (2 GB)
 - **THEN** la secuencia es `["permiso", "activo", "listo", "leyendo", "verificando", "resultado"]`, el lector falso recibió 1 llamada, hubo 1 petición y el estado final tiene `modo` `"front-back"`, `validacion` `"estricta"`, `frontActivo` `true` y `modoMotivo` `"estricta"`
 
+#### Scenario: Modo por omisión sin backend
+- **WHEN** `crearLector({}, DEPS)` completa una lectura
+- **THEN** el estado final tiene `modo` `"front"`, `validacion` `null`, `frontActivo` `true`, `modoMotivo` `"modo-front"` y `resultado.confiable` `false`, y el `fetch` falso no recibió llamadas
+
+#### Scenario: Estado del modo back
+- **WHEN** `crearLector({ modo: "back", backend: "/api/cedula" }, DEPS)` con `BACK` guion `ok` y señales potentes
+- **THEN** el estado final tiene `modo` `"back"`, `validacion` `null`, `frontActivo` `false` y `modoMotivo` `"modo-back"`, el lector falso no recibió llamadas y hubo 1 petición
+
 ### Requirement: SDK-56 Modo back ligero
-Cuando el motor local no lee (`estado.modo` `"back"`, o `"front-back"` con `validacion: "auto"` y `frontActivo` `false`), el núcleo SHALL capturar solo con el análisis ligero de calidad y presencia y pasar de `listo` (o de `activo` con captura guiada) a `verificando` sin fase `leyendo`, y MUST NOT descargar ni instanciar el motor pesado (recursos marcados `pesado` en `manifest.json`: Worker lector, WASM de zxing, tesseract, `mrz.traineddata`, modelos de fraude). La descarga total del modo back MUST ser <= `PRESUPUESTO_BACK` (fijado en `design.md`; meta 300 KiB gzip). En `verificando` `resultado` es `null`.
+Cuando el motor local no lee (`estado.modo` `"back"`, o `"front-back"` con `validacion: "auto"` y `frontActivo` `false`), el núcleo SHALL capturar solo con el análisis ligero de calidad y presencia y pasar a `verificando` sin fase `leyendo`, y MUST NOT descargar ni instanciar el motor pesado (recursos marcados `pesado` en `manifest.json`). La descarga total MUST ser <= `PRESUPUESTO_BACK` (fijado en `design.md`; meta 300 KiB gzip). En `verificando` `resultado` es `null`.
 
 #### Scenario: Secuencia del modo back
 - **WHEN** `crearLector({ modo: "back", backend: "/api/cedula" }, DEPS)` con `BACK` guion `ok`
-- **THEN** la secuencia es `["permiso", "activo", "listo", "verificando", "resultado"]`, el lector falso no recibió llamadas, `frontActivo` es `false` y `resultado.confiable` es `true`
+- **THEN** la secuencia es `["permiso", "activo", "listo", "verificando", "resultado"]`, el lector falso no recibió llamadas, `frontActivo` es `false`, durante `verificando` `estado.resultado` es `null` y al final `resultado.confiable` es `true`
+
+#### Scenario: Captura guiada en el modo back
+- **WHEN** en `crearLector({ modo: "back", backend: "/api/cedula" }, DEPS)` con `BACK` guion `ok` la captura guiada de las dependencias falsas captura el documento desde `activo` sin pasar por `listo`
+- **THEN** la secuencia contiene la transición `activo→verificando`, no contiene `leyendo` y el lector falso no recibió llamadas
+
+#### Scenario: Recursos pesados del manifiesto
+- **WHEN** se lee el `manifest.json` publicado del SDK
+- **THEN** el Worker lector, el WASM de zxing, tesseract, `mrz.traineddata` y los modelos de fraude tienen `pesado: true`
 
 #### Scenario: Carga solo de recursos ligeros
 - **WHEN** el cargador recibe un `manifest.json` con recursos `pesado: true` y `pesado: false` y se pide la carga ligera
@@ -949,11 +977,27 @@ Cuando el motor local no lee (`estado.modo` `"back"`, o `"front-back"` con `vali
 - **THEN** el árbol real pasa y el fixture sale con código 1
 
 ### Requirement: SDK-57 Decisión del front en front-back auto
-Con `modo: "front-back"` y `validacion: "auto"`, el núcleo SHALL decidir antes de abrir la cámara con la función pura `decidirFront(dispositivo, umbrales): { usarFront: boolean, motivo }` si el motor local lee: potente → `usarFront: true` (`"potente"`); débil → `false` con el primer motivo débil en el orden `"memoria-baja"`, `"pocos-nucleos"`, `"sin-simd"`, `"ahorro-datos"`, `"red-lenta"`, `"medicion-lenta"`. Señales: `deviceMemory`, `hardwareConcurrency`, WASM SIMD, `connection.saveData`/`effectiveType` y, si `umbrales.microMedicionMaxMs` está definido, la micro-medición `microMedicionMs`. Las señales ausentes o no numéricas no cuentan como débiles. Umbrales por omisión: `memoriaMinGb` 4, `nucleosMin` 4, `simd` requerido, `saveData` débil, `effectiveType` `"slow-2g"|"2g"` débil; configurables con `umbralesAuto`. En cualquier caso el back valida (SDK-55). En `"estricta"`, `"front"` y `"back"` no se llama a `decidirFront`.
+Con `modo: "front-back"` y `validacion: "auto"`, el núcleo SHALL decidir antes de abrir la cámara, con la función pura `decidirFront(dispositivo, umbrales): { usarFront: boolean, motivo }`, si el motor local lee: potente da `usarFront: true` con `"potente"`; débil da `false` con el primer motivo débil en un orden fijo. Las señales ausentes o no numéricas no son débiles. Umbrales configurables con `umbralesAuto`. El back valida siempre (SDK-55).
 
 #### Scenario: Tabla de decisión
 - **WHEN** `decidirFront` recibe con los umbrales por omisión los casos (memoria GB, núcleos, SIMD, red): (8, 8, SIMD, 4g), (2, 8, SIMD, 4g), (8, 2, SIMD, 4g), (8, 8, sin SIMD, 4g), (8, 8, SIMD, saveData), (8, 8, SIMD, 2g), (2, 2, sin SIMD, 2g), (sin dato, 8, SIMD, sin dato)
 - **THEN** devuelve en orden con `toStrictEqual`: `{ usarFront: true, motivo: "potente" }`, `{ usarFront: false, motivo: "memoria-baja" }`, `{ usarFront: false, motivo: "pocos-nucleos" }`, `{ usarFront: false, motivo: "sin-simd" }`, `{ usarFront: false, motivo: "ahorro-datos" }`, `{ usarFront: false, motivo: "red-lenta" }`, `{ usarFront: false, motivo: "memoria-baja" }`, `{ usarFront: true, motivo: "potente" }`
+
+#### Scenario: Orden de los motivos débiles
+- **WHEN** con los umbrales por omisión y `microMedicionMaxMs: 50`, `decidirFront` recibe un dispositivo con todas las señales débiles (`deviceMemory` 2, `hardwareConcurrency` 2, sin WASM SIMD, `connection.saveData` `true`, `connection.effectiveType` `"2g"`, `microMedicionMs` 100) y después el mismo dispositivo corrigiendo las señales una a una en ese orden (memoria 8, núcleos 8, con SIMD, `saveData` `false`, `effectiveType` `"4g"`, `microMedicionMs` 10)
+- **THEN** los motivos son, en orden, `"memoria-baja"`, `"pocos-nucleos"`, `"sin-simd"`, `"ahorro-datos"`, `"red-lenta"`, `"medicion-lenta"` y `"potente"`
+
+#### Scenario: Umbrales por omisión en el límite
+- **WHEN** `decidirFront` recibe con los umbrales por omisión, todas las demás señales potentes, los casos `deviceMemory` 4, `deviceMemory` 3, `hardwareConcurrency` 4, `hardwareConcurrency` 3, `effectiveType` `"3g"` y `effectiveType` `"slow-2g"`
+- **THEN** los motivos son, en orden, `"potente"`, `"memoria-baja"`, `"potente"`, `"pocos-nucleos"`, `"potente"` y `"red-lenta"`
+
+#### Scenario: Micro-medición solo con umbral
+- **WHEN** `decidirFront` recibe un dispositivo potente con `microMedicionMs` 100, primero sin `microMedicionMaxMs` y después con `microMedicionMaxMs: 50`
+- **THEN** los motivos son `"potente"` y `"medicion-lenta"`
+
+#### Scenario: Sin decisión fuera de validacion auto
+- **WHEN** con señales débiles (2 GB) y `BACK` guion `ok` se crean `crearLector({ modo: "front" }, DEPS)`, `crearLector({ modo: "back", backend: "/api/cedula" }, DEPS)` y `crearLector({ backend: "/api/cedula", validacion: "estricta" }, DEPS)`
+- **THEN** `estado.modoMotivo` es respectivamente `"modo-front"`, `"modo-back"` y `"estricta"`, y `frontActivo` es `true`, `false` y `true`
 
 #### Scenario: Dispositivo potente
 - **WHEN** `crearLector({ backend: "/api/cedula", validacion: "auto" }, DEPS)` con señales potentes y `BACK` guion `ok`
@@ -972,7 +1016,7 @@ Con `modo: "front-back"` y `validacion: "auto"`, el núcleo SHALL decidir antes 
 - **THEN** `decidirFront` nunca lanza, `usarFront` es booleano, `motivo` pertenece a la lista y `usarFront` es `true` si y solo si `motivo` es `"potente"`; `fc.statistics` informa la proporción de casos débiles y potentes, ambos > 10 %
 
 ### Requirement: SDK-58 Confirmación diferida sin red
-En `modo` `"front-back"` (con `"estricta"` o `"auto"`), si no hay red cuando el back debe validar, el núcleo SHALL quedarse en `verificando` con `estado.verificacion` `{ etapa: "en-espera", progreso: null }`, guardar la imagen solo en memoria (cola de una imagen) y, al evento `online`, enviarla y seguir SDK-46/SDK-47. Mientras espera, el resultado MUST NOT ser confiable: con front activo, `resultado` es el local con `confiable: false`; sin front, `resultado` es `null`. La cola MUST NOT persistir (sin Cache Storage, IndexedDB ni `localStorage`) y se pone a cero al enviar, al `cancelar()`, al `destruir()` o tras `tiempoColaMs` (por omisión 600 000 ms), en cuyo caso la fase es `error` con `error.codigo` `"cola-vencida"` conservando el resultado local. En `"front"` no hay cola (no hay red); en `"back"` la falta de red es `backend-no-disponible` (SDK-54).
+Solo en `modo` `"front-back"`, si no hay red cuando el back debe validar, el núcleo SHALL quedarse en `verificando` con `estado.verificacion` `{ etapa: "en-espera", progreso: null }`, guardar la imagen solo en memoria (cola de una imagen) y enviarla al evento `online` (SDK-46/SDK-47). Mientras espera, el resultado MUST NOT ser confiable. La cola MUST NOT persistir y se pone a cero al enviar, al `cancelar()`, al `destruir()` o al vencer `tiempoColaMs`.
 
 #### Scenario: Vuelve la red
 - **WHEN** en `front-back` estricta con `enLinea()` falso se completa una lectura y después se dispara `online` con `BACK` guion `ok`
@@ -987,8 +1031,20 @@ En `modo` `"front-back"` (con `"estricta"` o `"auto"`), si no hay red cuando el 
 - **THEN** los píxeles de la cola son cero, no hay petición al disparar `online` y ni IndexedDB ni `localStorage` ni Cache Storage (fuera de `lector-cedula-sdk-*`) contienen datos
 
 #### Scenario: Cola vencida
-- **WHEN** con `tiempoColaMs: 1000` el reloj falso avanza 1001 ms sin red
-- **THEN** la cola está a cero, la fase es `error` con `error.codigo` `"cola-vencida"`, `resultado.confiable` es `false` y no hay petición al disparar `online`
+- **WHEN** en `front-back` estricta con `tiempoColaMs: 1000` y una lectura local completada, el reloj falso avanza 1001 ms sin red
+- **THEN** la cola está a cero, la fase es `error` con `error.codigo` `"cola-vencida"`, se conserva el resultado local con `resultado.campos.nuip` `"9999123456"` y `resultado.confiable` `false`, y no hay petición al disparar `online`
+
+#### Scenario: Plazo de la cola por omisión
+- **WHEN** en `front-back` estricta sin `tiempoColaMs` y sin red el reloj falso avanza 599 999 ms y después 2 ms más
+- **THEN** tras el primer avance la fase sigue en `verificando` con `verificacion.etapa` `"en-espera"`; tras el segundo la fase es `error` con `error.codigo` `"cola-vencida"`
+
+#### Scenario: Cola a cero al enviar y al cancelar
+- **WHEN** con una imagen en la cola se dispara `online` con `BACK` guion `ok`, y en otra ejecución con una imagen en la cola se llama `cancelar()`
+- **THEN** en ambos casos los píxeles de la cola son cero; tras `cancelar()` la fase es `inicio` y al disparar `online` no hay petición
+
+#### Scenario: Sin cola en los modos front y back
+- **WHEN** con `enLinea()` falso se completa una lectura con `crearLector({ modo: "front", backend: "/api/cedula" }, DEPS)` y, por separado, se captura con `crearLector({ modo: "back", backend: "/api/cedula" }, DEPS)` y un `fetch` falso que falla por red
+- **THEN** en `front` la secuencia termina en `resultado` sin `verificando` y con `confiable` `false`; en `back` la fase es `error` con `error.codigo` `"backend-no-disponible"`, nunca hay `verificacion.etapa` `"en-espera"` y al disparar `online` no hay petición
 
 ### Requirement: SDK-59 Streaming opcional
 En modos con backend, `streaming` (por omisión `true`) SHALL elegir el protocolo: `true` envía `Accept: application/x-ndjson` y consume el stream (SDK-48); `false` envía `Accept: application/json` y espera una sola respuesta JSON igual al evento final de MOT-20, sin `estado.verificacion` intermedia salvo `{ etapa: "recibido", progreso: null }` al enviar.
@@ -1011,3 +1067,115 @@ Los modos `front`, `back`, `front-back` estricta y `front-back` auto (dispositiv
 #### Scenario: Front-back sin red
 - **WHEN** con `context.setOffline(true)` se lee la amarilla en `front-back` estricta y luego se restablece la red
 - **THEN** primero se muestra `verificacion.etapa` `"en-espera"` con el resultado local `confiable` `false` y después `confiable` `true`
+
+### Requirement: SDK-61 Guía configurable y calculada en la zona visible
+`OpcionesLector.guia` SHALL aceptar `{ orientacion?: "horizontal" | "vertical", margen?: number }` (por omisión `horizontal` y margen 0,05 por lado; `margen` en [0, 0,25]; otro valor da `opcion-invalida`). La guía ID-1 (85,60:53,98) SHALL orientar su lado largo según `orientacion`, sin importar la orientación del frame, y centrarse en la **zona visible** del vídeo en su elemento. La calidad y la presencia (OFF-22) SHALL evaluarse dentro de esa guía, que viaja al Worker con cada frame.
+
+#### Scenario: Recuadro 260x400 con guía vertical
+- **WHEN** el vídeo es 1920x1080, el elemento mide 260x400 CSS con `object-fit: cover` y `guia: { orientacion: "vertical" }`
+- **THEN** la zona visible tiene 702 px de ancho y la guía en píxeles del vídeo es `{ x: 654, y: 54, ancho: 613, alto: 972 }`
+
+#### Scenario: Recuadro 320x200 con la guía por omisión
+- **WHEN** el vídeo es 1920x1080 y el elemento mide 320x200 con `object-fit: cover`, sin `guia`
+- **THEN** la guía es `{ x: 190, y: 54, ancho: 1541, alto: 972 }` y en pantalla queda dentro del elemento
+
+#### Scenario: Guía horizontal en un recuadro vertical
+- **WHEN** el elemento mide 260x400 con `cover` y la orientación es `horizontal`
+- **THEN** la guía se encoge a la zona visible (ancho <= 702 px del vídeo) y en pantalla queda dentro del elemento
+
+#### Scenario: Zona visible sin cover
+- **WHEN** el vídeo es 1920x1080, el elemento mide 260x400 CSS con `object-fit: contain` (y, por separado, `fill`), sin `guia`
+- **THEN** la zona visible es el frame completo y la guía en píxeles del vídeo es `{ x: 190, y: 54, ancho: 1541, alto: 972 }`
+
+#### Scenario: Sin medidas del elemento
+- **WHEN** el vídeo es 1920x1080, el elemento no tiene medidas (ancho y alto CSS 0) y no hay `guia`
+- **THEN** se usa el frame completo y la guía en píxeles del vídeo es `{ x: 190, y: 54, ancho: 1541, alto: 972 }`
+
+#### Scenario: Compatibilidad de calcularGuia
+- **WHEN** se ejecutan las pruebas existentes de CAM-08 sobre `calcularGuia(ancho, alto)` de `@lector-cedula/capture`, sin opciones
+- **THEN** pasan sin modificar sus aserciones
+
+#### Scenario: Cédulas de pie dentro de la guía vertical
+- **WHEN** el Worker de calidad analiza la amarilla, la digital (girada 90 y 270 grados) y el pasaporte sintéticos de pie centrados en la guía vertical de 1080p (`{ x: 654, y: 54, ancho: 613, alto: 972 }`)
+- **THEN** devuelve `contenido` `pdf417` (el PDF417 de la amarilla de pie, con barras horizontales), `mrz-td1`, `mrz-td1` y `mrz-td3` con score >= 70
+
+#### Scenario: Documento fuera de la guía
+- **WHEN** la guía enviada al Worker está a la izquierda del frame (`{ x: 0, y: 54, ancho: 420, alto: 972 }`) y la tarjeta está en el centro
+- **THEN** `contenido` es `null` y el score queda por debajo de 70
+
+#### Scenario: Guía inválida en el Worker
+- **WHEN** la guía enviada al Worker con el frame (en píxeles del frame original) sale del frame, tiene lados no positivos, contiene `NaN` o no es un objeto
+- **THEN** el Worker responde `error` con `codigo` `"frame-invalido"`
+
+#### Scenario: Opción guia inválida
+- **WHEN** `guia` es `{ orientacion: "diagonal" }`, `{ margen: 0.3 }`, `{ margen: -0.1 }`, `{ margen: NaN }` o `null`
+- **THEN** la fase es `error` con `error.codigo` `"opcion-invalida"` y `error.opcion` `"guia"`
+
+#### Scenario: Propiedad de la guía
+- **WHEN** fast-check genera frames horizontales y verticales de 320 a 4096 px por lado, orientación y margen en [0, 0,25]
+- **THEN** con independencia de la orientación del frame, la guía tiene la proporción ID-1 en la orientación pedida (ancho/alto 1,586 con `horizontal` y 1/1,586 con `vertical`, error < 1 %), está centrada (±1 px) y cabe en `(1 - 2·margen)` del frame
+
+### Requirement: SDK-62 Guía en pantalla para un recuadro embebido
+El núcleo SHALL exportar las funciones puras `guiaEnElemento(guia, medidas)` (píxeles CSS relativos al `<video>`), `regionVisible` y `guiaEnVideo`. El controlador y los adaptadores SHALL exponer `estado.guiaEnPantalla`, recalculada junto con `estado.guia` sin esperar un frame cuando cambie el tamaño del elemento o del vídeo. El recuadro puede tener cualquier tamaño y posición: el núcleo nunca asume pantalla completa ni cambia estilos o tamaño del `<video>` ni del documento.
+
+#### Scenario: guiaEnPantalla en un recuadro vertical
+- **WHEN** el elemento mide 260x400 con `cover`, el vídeo 1920x1080 y `guia: { orientacion: "vertical" }`
+- **THEN** `estado.guiaEnPantalla` es `guiaEnElemento({ x: 654, y: 54, ancho: 613, alto: 972 }, medidas)`, aproximadamente `{ x: 16,67, y: 20, ancho: 227,04, alto: 360 }`, y el análisis recibe esa guía
+
+#### Scenario: Redimensionar el recuadro
+- **WHEN** con la fase `activo` y las dependencias inyectables `medirVideo` y `observarVideo` falsas, el elemento pasa de 260x400 a 320x200 (aviso del `ResizeObserver`), y después la pista gira a 1080x1920 (evento `resize` del vídeo)
+- **THEN** en cada cambio `estado.guia` y `estado.guiaEnPantalla` se recalculan de inmediato, sin esperar un frame, con las nuevas medidas y se notifica a los suscriptores; tras `destruir()` un aviso posterior de `observarVideo` no cambia el estado ni notifica
+
+#### Scenario: Sin medidas
+- **WHEN** el vídeo no tiene tamaño (dependencias falsas sin DOM), y por separado en fase `inicio` (sin guía)
+- **THEN** `estado.guiaEnPantalla` es `null` y, en el primer caso, el análisis recibe `null` (las dependencias usan el frame completo)
+
+#### Scenario: Medidas no positivas en guiaEnElemento
+- **WHEN** se llama `guiaEnElemento({ x: 654, y: 54, ancho: 613, alto: 972 }, { anchoVideo, altoVideo, anchoElemento, altoElemento, ajuste: "cover" })` con una de las cuatro medidas igual a `0` o a `-1` y las demás 1920, 1080, 260 y 400
+- **THEN** devuelve `null`
+
+#### Scenario: Propiedades de guiaEnElemento
+- **WHEN** fast-check genera vídeos de 160 a 4096 px, elementos de 40 a 2000 px, ajuste `cover` o `contain`, orientación y margen
+- **THEN** la guía de `guiaEnVideo` cabe en el frame y su `guiaEnElemento` cabe en el elemento; con `contain` el frame completo cabe en el elemento tocando dos lados; con `cover` lo cubre; la proporción del frame se conserva
+
+#### Scenario: Medidas por omisión en el navegador
+- **WHEN** un `<video>` de 260x400 CSS con `object-fit: cover`, dentro de una página con más contenido y con scroll, muestra una pista de 1280x720, y luego se redimensiona a 320x200
+- **THEN** las medidas son `{ anchoVideo: 1280, altoVideo: 720, anchoElemento: 260, altoElemento: 400, ajuste: "cover" }`, tomadas de `clientWidth`/`clientHeight` y del `object-fit` computado (`ajuste` es `"contain"` con cualquier otro valor, como `contain`, `fill` o sin declarar), el `ResizeObserver` avisa del cambio, `guiaEnPantalla` cabe en el nuevo tamaño y el atributo `style` del vídeo, del `<html>` y del `<body>` no cambia
+
+#### Scenario: Adaptadores
+- **WHEN** React, Vue y Angular montan el lector con dependencias falsas que miden 260x400 y luego 320x200
+- **THEN** `estado.guiaEnPantalla` refleja cada medida
+
+### Requirement: SDK-63 Captura a la resolución de la pista
+La captura y la revalidación SHALL usar `videoWidth` x `videoHeight` de la pista, nunca el tamaño CSS del elemento, por pequeño que sea el recuadro.
+
+#### Scenario: Recuadros pequeños
+- **WHEN** la pista es de 1280x720 y el `<video>` mide 260x400, 320x200 o 64x64 CSS
+- **THEN** el frame de captura es de 1280x720
+
+### Requirement: SDK-64 Ejemplo de login con recuadro embebido
+`examples/login` (React) SHALL mostrar una pantalla de login con contenido propio (cabecera, dibujo sintético propio, indicaciones, campo de correo, casilla de autorización del titular y pie) y la cámara en un recuadro embebido de 260x400 (`?recuadro=vertical`, por omisión, guía vertical) o de 320x200 (`?recuadro=horizontal`, guía horizontal), con `object-fit: cover` y la guía pintada con `estado.guiaEnPantalla`. Proyectos Playwright `login-chromium` y `login-pixel7`.
+
+#### Scenario: Lectura de pie en el recuadro vertical
+- **WHEN** en Chromium escritorio y en Pixel 7 se abre `?recuadro=vertical` con el vídeo sintético `amarilla-de-pie-vertical` o `digital-de-pie-vertical` (1080x1920, cédula de pie en la guía vertical del recuadro 260x400: x 69, y 213, 942x1494; añadidos a `e2e/videos/cedulas.mjs` sin cambiar las escenas existentes), se marca la autorización y se pulsa "Escanear cédula"
+- **THEN** el recuadro sigue midiendo 260x400 (menos de la mitad de la ventana), la guía es más alta que ancha y está dentro del vídeo, la fase llega a `resultado` con NUIP `9999123456` y contenido `pdf417` o `mrz-td1`, y el vídeo conserva `object-fit: cover` sin estilos en línea
+
+#### Scenario: Lectura en el recuadro horizontal
+- **WHEN** se abre `?recuadro=horizontal` con `amarilla-1080p`, se marca la autorización y se pulsa "Escanear cédula"
+- **THEN** el recuadro mide 320x200, la guía es más ancha que alta y está dentro del vídeo, y la lectura da NUIP `9999123456`
+
+#### Scenario: Redimensionar durante la captura
+- **WHEN** con `sin-documento-1080p` (la fase se queda en `activo`) el recuadro pasa de 260x400 a 320x200
+- **THEN** la guía pintada cambia y queda dentro del vídeo sin reiniciar la cámara
+
+#### Scenario: Accesibilidad
+- **WHEN** axe analiza las dos variantes (WCAG 2.1 A y AA)
+- **THEN** no hay violaciones `serious` ni `critical`
+
+#### Scenario: Autorización del titular antes de escanear
+- **WHEN** se abre el ejemplo en cualquiera de las dos variantes
+- **THEN** la casilla de autorización del titular (Ley 1581 de 2012, art. 9; texto de plantilla que el integrador sustituye por su política) está sin marcar y "Escanear cédula" está deshabilitado; al marcarla se habilita y al desmarcarla vuelve a deshabilitarse, y el código del ejemplo indica que el integrador obtiene la autorización expresa antes de `iniciar()` y que en producción no pinta ni registra el NUIP
+
+#### Scenario: Sin red externa ni almacenamiento
+- **WHEN** termina cualquiera de las lecturas de los escenarios anteriores
+- **THEN** todas las peticiones de la página fueron al origen del preview (`http://localhost:4196`) y `localStorage.length`, `sessionStorage.length` y `indexedDB.databases()` están vacíos

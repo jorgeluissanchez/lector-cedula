@@ -55,3 +55,8 @@ h1 { font-size: 1.5rem; margin: 0; }
 .nota-riesgo { margin: 0; font-size: 0.875rem; color: #cbd5e1; }
 .aviso-demo { padding: 12px; border: 2px solid #fbbf24; border-radius: 8px; background: #422006; color: #fef3c7; font-weight: 600; }
 .aviso-demo p { margin: 0; }
+
+/* otros-documentos (OD-34b): texto de la autorización del representante; las URL largas de las fuentes no
+   ensanchan la página en el móvil (tapaban "Continuar" y "Cancelar" en Pixel 7). */
+.autorizacion-representante { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.autorizacion-representante p, .autorizacion-representante li { margin: 0; overflow-wrap: anywhere; }

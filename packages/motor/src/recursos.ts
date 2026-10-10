@@ -28,3 +28,18 @@ export function verificarModelo(directorio: string, esperado: string = SHA256_MR
   bytes.fill(0);
   if (sha !== esperado) throw new ErrorMotor("recurso-corrupto");
 }
+
+/**
+ * Modo de prueba `__registroBuferes` (MOT-07): solo con NODE_ENV=test y un arreglo instalado en esta clave global, cada
+ * copia interna de la imagen y cada búfer de píxeles se registra para comprobar que termina a cero. No está en los tipos
+ * públicos. En los workers el registro es del propio worker (las pruebas usan `hilos: 0`).
+ */
+const CLAVE_REGISTRO = Symbol.for("@lector-cedula/motor.registroBuferes");
+
+export function registrarBufer<T extends Uint8Array | Uint8ClampedArray>(b: T): T {
+  if (process.env.NODE_ENV === "test") {
+    const registro = (globalThis as Record<symbol, unknown>)[CLAVE_REGISTRO];
+    if (Array.isArray(registro)) registro.push(b);
+  }
+  return b;
+}

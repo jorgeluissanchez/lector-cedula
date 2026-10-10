@@ -7,7 +7,7 @@ import fc from "fast-check";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CODIGOS_ERROR_MOTOR, crearMotor, SHA256_MRZ, type Motor } from "../src/index.js";
 import { rutaModeloPorDefecto } from "../src/recursos.js";
-import { amarilla, digital, NUIP, sinDocumento } from "./ayudas/imagenes.js";
+import { amarilla, digital, digitalAlterada, NUIP, sinDocumento } from "./ayudas/imagenes.js";
 
 let A: Uint8Array;
 let D: Uint8Array;
@@ -50,6 +50,24 @@ describe("motor real", { timeout: 180_000 }, () => {
     const r = await m.leerDocumento(D, FECHA);
     expect(r).toMatchObject({ ok: true, tipoDocumento: "cedula-ciudadania", fuente: "mrz-td1", campos: { nuip: NUIP }, confiable: false });
     expect((r as { resultado: { valido: boolean } }).resultado.valido).toBe(true);
+  });
+
+  it("MOT-01 Imagen ilegible (cabecera PNG válida, contenido roto) y sin documento son códigos distintos", async () => {
+    const m = await motor({ hilos: 1 });
+    const rota = new Uint8Array(A.slice(0, 200));
+    expect(await m.leerDocumento(rota, FECHA)).toStrictEqual({ ok: false, error: { codigo: "imagen-ilegible" }, confiable: false, riesgo: null });
+    expect(await m.leerDocumento(sinDocumento(), FECHA)).toStrictEqual({ ok: false, error: { codigo: "sin-lectura", tipo: "mrz" }, confiable: false, riesgo: null });
+  });
+
+  it("MOT-01 MRZ con dígito de control inválido: mrz-no-valida con digitosValidos", async () => {
+    const m = await motor({ hilos: 1 });
+    // Agota el presupuesto de OCR (12 llamadas): más tiempo que el valor por omisión.
+    expect(await m.leerDocumento(await digitalAlterada(), { ...FECHA, tiempoMaximoMs: 120_000 })).toStrictEqual({
+      ok: false,
+      error: { codigo: "mrz-no-valida", tipo: "mrz", digitosValidos: 3 },
+      confiable: false,
+      riesgo: null,
+    });
   });
 
   it("MOT-01 Formato no soportado", async () => {
@@ -148,6 +166,25 @@ describe("motor real", { timeout: 180_000 }, () => {
     const c = new Uint8Array(A);
     await m.leerDocumento(c, { ...FECHA, fraude: false, borrarEntrada: true });
     expect(c.every((x) => x === 0)).toBe(true);
+  });
+
+  it("MOT-07 Copias a cero: tras una lectura y tras una que rechaza con tiempo-agotado (__registroBuferes)", async () => {
+    const clave = Symbol.for("@lector-cedula/motor.registroBuferes");
+    const registro: (Uint8Array | Uint8ClampedArray)[] = [];
+    (globalThis as Record<symbol, unknown>)[clave] = registro;
+    try {
+      const m = await motor({ hilos: 0 });
+      await m.leerDocumento(A, FECHA);
+      expect(registro.length).toBeGreaterThanOrEqual(2);
+      for (const b of registro) expect(b.every((x) => x === 0)).toBe(true);
+      registro.length = 0;
+      expect(await codigo(m.leerDocumento(D, { ...FECHA, tiempoMaximoMs: 1 }))).toBe("tiempo-agotado");
+      expect(registro.length).toBeGreaterThanOrEqual(1);
+      // La lectura abortada termina en segundo plano en el hilo principal y pone a cero sus píxeles al acabar.
+      await expect.poll(() => registro.length >= 2 && registro.every((b) => b.every((x) => x === 0)), { timeout: 120_000, interval: 200 }).toBe(true);
+    } finally {
+      Reflect.deleteProperty(globalThis, clave);
+    }
   });
 
   it("MOT-08 el registro solo recibe evento, duración y código", async () => {

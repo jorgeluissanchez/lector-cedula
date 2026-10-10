@@ -10,6 +10,7 @@
   },
   "exports": {
     ".": {
+      "edge-light": "./edge.js",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
@@ -31,7 +32,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "edge.js"
   ],
   "scripts": {
     "build": "tsc -b",

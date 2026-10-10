@@ -137,6 +137,27 @@ describe("LPI-06 CLI leer-foto", { timeout: 60_000 }, () => {
     expect(r.stdout.trim().split("\n")).toHaveLength(1);
   });
 
+  it("MOT-02 --resultado --sin-mascara imprime el RESULTADO del motor (@lector-cedula/motor)", async () => {
+    const r = await correr("--sin-mascara", "--resultado", rutaS);
+    expect(r.status).toBe(0);
+    const salida = JSON.parse(r.stdout);
+    expect(salida).toMatchObject({ ok: true, tipoDocumento: "cedula-ciudadania", fuente: "pdf417", campos: { nuip: "9999123456" }, confiable: false });
+    expect(salida.riesgo).toMatchObject({ version: 1 });
+    expect(r.stdout.trim().split("\n")).toHaveLength(1);
+  });
+
+  it("MOT-02 --resultado exige --sin-mascara", async () => {
+    const r = await correr("--resultado", rutaS);
+    expect(r.status).toBe(64);
+    expect(r.stdout).toBe("");
+  });
+
+  it("MOT-02 --resultado sin documento: RESULTADO con sin-lectura y código 1", async () => {
+    const r = await correr("--sin-mascara", "--resultado", escribir(join(dirTmp, "blanco-resultado.png"), pngBlanco(800, 600)));
+    expect(r.status).toBe(1);
+    expect(JSON.parse(r.stdout)).toStrictEqual({ ok: false, error: { codigo: "sin-lectura", tipo: "mrz" }, confiable: false, riesgo: null });
+  });
+
   it("LPI-06 Máscara por defecto", async () => {
     const r = await correr(rutaS);
     expect(r.status).toBe(0);

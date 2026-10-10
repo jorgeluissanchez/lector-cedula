@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 import { PNG } from "pngjs";
 import { describe, expect, it } from "vitest";
 import { leerCabeceraY4m } from "../../e2e/videos/y4m.mjs";
-import { ESCENAS_CEDULA, fuentesCedula } from "../../e2e/videos/cedulas.mjs";
+import { ESCENAS_CEDULA, PERSONA_TI, fuentesCedula } from "../../e2e/videos/cedulas.mjs";
+import { parsearPdf417Amarilla } from "@lector-cedula/parsers";
 import { ESCENAS } from "../../e2e/videos/generar.mjs";
 import { lectorReal } from "../../packages/capture/test/pdf417/sintetica.ts";
 
@@ -39,11 +40,19 @@ describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () =
       ["digital-suave-1080p", "digital", 1920, 1080],
       // otros-documentos (OD-21): pasaporte colombiano sintético (TD3).
       ["pasaporte-col-1080p", "pasaporte", 1920, 1080],
+      // otros-documentos (OD-34b): TI amarilla sintética de una persona menor.
+      ["ti-amarilla-1080p", "ti-amarilla", 1920, 1080],
+      // sdk-integracion (SDK-64): cédulas de pie en vídeo vertical (celular de pie).
+      ["amarilla-de-pie-vertical", "amarilla", 1080, 1920],
+      ["digital-de-pie-vertical", "digital", 1080, 1920],
     ]);
     expect(ESCENAS_CEDULA.find((e) => e.nombre === "amarilla-suave-1080p").filtro).toContain("gblur=sigma=2.5");
     expect(ESCENAS_CEDULA.find((e) => e.nombre === "digital-suave-1080p").filtro).toContain("gblur=sigma=5");
     expect(ESCENAS.map((e) => e.nombre)).not.toContain("nitida-1080p");
     expect(ESCENAS_CEDULA[2].filtro).toContain("transpose=1");
+    // SDK-64: la cédula de pie ocupa la guía vertical del recuadro 260x400 con cover (x 69, y 213, 942x1494).
+    expect(ESCENAS_CEDULA.find((e) => e.nombre === "amarilla-de-pie-vertical").filtro).toContain("s=1080x1920:r=10[f];[0:v]transpose=1,scale=942:1494");
+    expect(ESCENAS_CEDULA.find((e) => e.nombre === "digital-de-pie-vertical").filtro).toContain("overlay=69:213");
     expect(ESCENAS_CEDULA[3].filtro).toContain("[0:v]hflip,vflip,scale=1541:972");
     for (const e of ESCENAS_CEDULA.filter((x) => x.fuente !== "sin-documento")) expect(e.filtro).toContain("lutyuv=y='clip(val,40,200)'");
   });
@@ -66,6 +75,18 @@ describe("Vídeos sintéticos de cédula (tarea 1.2)", { timeout: 60_000 }, () =
     expect([ilegible.width, ilegible.height]).toStrictEqual([1011, 638]);
     // La tarjeta ilegible no contiene ningún PDF417 decodificable.
     expect(await decodificar({ data: new Uint8ClampedArray(ilegible.data), width: ilegible.width, height: ilegible.height }, { formats: ["PDF417"], tryHarder: true })).toHaveLength(0);
+  });
+
+  it("OD-34b la TI amarilla es un PDF417 sintético de PERSONA_TI (NUIP ^9999, 12 años el 2026-10-06)", async () => {
+    const f = await fuentesCedula();
+    const ti = PNG.sync.read(Buffer.from(f.tiAmarilla));
+    const leidos = await (await lectorReal())({ data: new Uint8ClampedArray(ti.data), width: ti.width, height: ti.height }, { formats: ["PDF417"], tryHarder: true });
+    expect(leidos).toHaveLength(1);
+    const r = parsearPdf417Amarilla(leidos[0].bytes);
+    expect(r.ok).toBe(true);
+    expect(r.campos.numeroDocumento).toMatch(/^9999/u);
+    expect(r.campos.fechaNacimiento).toBe(PERSONA_TI.fechaNacimiento);
+    expect(r.campos.fechaNacimiento > "2008-10-06").toBe(true);
   });
 
   for (const e of ESCENAS_CEDULA) {

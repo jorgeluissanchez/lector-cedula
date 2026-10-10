@@ -21,7 +21,7 @@
 
 ## 3. Evals
 
-- [ ] 3.1 Golden sintético por tipo (pasaporte COL, pasaporte extranjero, CE, TI) y distorsiones del renderizador para TD3. Cubre: OD-21. Tipos: eval. Verificación: `npm run eval:quick` y `npm run eval:mrz-imagen` (sin regresión; el baseline solo se amplía, nunca se baja).
+- [x] 3.1 Golden sintético por tipo (pasaporte COL, pasaporte extranjero, CE, TI) y distorsiones del renderizador para TD3. Cubre: OD-21. Tipos: eval. Verificación: `npm run eval:quick` y `npm run eval:mrz-imagen` (sin regresión; el baseline solo se amplía, nunca se baja).
 
 ## 4. Servidor (`server/`, Docker)
 
@@ -36,12 +36,12 @@
 
 - [x] 6.1 `VITE_ADMITIR_TI` con validación en build. Cubre: OD-30. Tipos: unitaria. Verificación: `npx vitest run apps/pwa/test/config`.
 - [x] 6.2 Etiquetas por documento, mensajes nuevos y guía ID-3. Cubre: OD-23. Tipos: unitaria, E2E y accesibilidad (planner, generator, healer de Playwright; vídeo `pasaporte-col-1080p`). Verificación: `npm run test:e2e` (E2E `e2e/lectura/pasaporte.spec.ts` en verde en `lectura-chromium`; la guía ID-1 admite la página ID-3 del vídeo sin cambios).
-- [ ] 6.3 (parcial: pantalla, casilla, enlace condicionado y pruebas unitarias hechos en `apps/pwa`; falta el E2E con `ti-amarilla-1080p` y una segunda compilación con `VITE_ADMITIR_TI=true`, que requiere la plantilla de 7.1) Pantalla `autorizacion-representante` y enlaces legales condicionados. Cubre: OD-34b, OD-35. Tipos: E2E y accesibilidad (vídeo `ti-amarilla-1080p`, dos builds). Verificación: `npm run test:e2e`.
+- [x] 6.3 Pantalla `autorizacion-representante` y enlaces legales condicionados. Cubre: OD-34b, OD-35. Tipos: E2E y accesibilidad (vídeo `ti-amarilla-1080p`, dos builds; la de `VITE_ADMITIR_TI=true` la compila la propia spec en un temporal) y unitaria del marcador `URL-AUTORIZACION-TI` (`apps/pwa/test/od-35-marcador-ti.test.ts`). Verificación: `npx playwright test e2e/lectura/tarjeta-identidad.spec.ts --workers=1` en `lectura-chromium` y `lectura-pixel7`.
 
 ## 7. Legal y privacidad
 
-- [ ] 7.1 Agente legal: `docs/legal/autorizacion-representante-ti.md`, sección de menores en `aviso-privacidad-app.md` y `politica-tratamiento-datos.md`, entrada en `CHECKLIST-CUMPLIMIENTO.md` y pregunta en `PARA-EL-ABOGADO.md`. Cubre: OD-35. Tipos: unitaria de presencia de textos. Verificación: `npx vitest run tools/test/legal-ti.test.mjs`.
-- [ ] 7.2 `privacidad-check`: dependencias de QR/NFC prohibidas y lista de números sintéticos declarados. Cubre: OD-40. Tipos: unitaria con casos que deben fallar. Verificación: `npx vitest run tools/test` y `npm run check:privacidad`.
+- [x] 7.1 Agente legal: `docs/legal/autorizacion-representante-ti.md`, sección de menores en `aviso-privacidad-app.md` y `politica-tratamiento-datos.md`, entrada en `CHECKLIST-CUMPLIMIENTO.md` y pregunta en `PARA-EL-ABOGADO.md`. Cubre: OD-35. Tipos: unitaria de presencia de textos. Verificación: `npx vitest run tools/test/legal-ti.test.mjs`.
+- [x] 7.2 `privacidad-check`: dependencias de QR/NFC prohibidas y lista de números sintéticos declarados (`tools/privacidad/numeros-mrz-sinteticos.json`; opción `--raiz <dir>`). Pruebas: `tools/test/privacidad-od40.test.mjs` (unitarias y del comando sobre directorios temporales). Cubre: OD-40. Tipos: unitaria con casos que deben fallar. Verificación: `npx vitest run tools/test` y `npm run check:privacidad`.
 - [ ] 7.3 `revisor-privacidad` sobre captura, servidor, datos de menores y retención. Cubre: OD-34, OD-40. Tipos: revisión con evidencia de `npm run check:privacidad`. Verificación: informe sin hallazgos críticos abiertos.
 
 ## 8. Cierre

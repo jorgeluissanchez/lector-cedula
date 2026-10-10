@@ -48,6 +48,7 @@ const CASOS: [ConfigMotorFalso, Partial<OpcionesLectorServidor>, unknown][] = [
   [{ resultado: TI_MENOR }, {}, undefined],
   [{ resultado: PASAPORTE }, { limites: { documentos: ["cedula"] } }, undefined],
   [{ resultado: AMARILLA_RIESGO_ALTO }, {}, CLIENTE],
+  [{ resultado: AMARILLA_RIESGO_ALTO }, { fraude: { bloquearSi: "alto" } }, CLIENTE],
   [{ error: new ErrorMotor("motor-ocupado") }, {}, undefined],
   [{ error: new ErrorMotor("imagen-demasiado-grande") }, {}, undefined],
   [{ error: new Error("x") }, {}, undefined],
@@ -120,7 +121,7 @@ describe("MOT-23 privacidad del manejador", { timeout: 60_000 }, () => {
     todosACero();
 
     registro.length = 0;
-    const rechazo = crearLectorServidor({ alConfirmar: () => undefined, motor: motorFalso({ resultado: AMARILLA_RIESGO_ALTO }) });
+    const rechazo = crearLectorServidor({ alConfirmar: () => undefined, motor: motorFalso({ resultado: AMARILLA_RIESGO_ALTO }), fraude: { bloquearSi: "alto" } });
     await (await rechazo.manejar(peticion(imagenSintetica(), { headers: { "content-type": "image/png", "x-lector-cliente": base64url("{}") } }))).text();
     todosACero();
 

@@ -6,6 +6,7 @@ import { decodificarPdf417Imagen, decodificarPixeles, leerDocumento, type Lector
 import { evaluarFraude, type EntradaFraude } from "@lector-cedula/fraud";
 import { buscarDivipol, parsearPdf417Amarilla } from "@lector-cedula/parsers";
 import { ErrorMotor, type ResultadoMotor, type RiesgoMotor } from "@lector-cedula/protocolo";
+import { registrarBufer } from "./recursos.js";
 
 export interface OpcionesLeer {
   readonly fechaReferencia: string;
@@ -19,7 +20,8 @@ export function hoyEnBogota(ahora: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" }).format(ahora);
 }
 
-const SIN_LECTURA = new Set(["pdf417-no-encontrado", "mrz-no-encontrada", "imagen-ilegible", "entrada-invalida"]);
+const SIN_LECTURA = new Set(["pdf417-no-encontrado", "mrz-no-encontrada"]);
+const ILEGIBLE = new Set(["imagen-ilegible", "entrada-invalida"]);
 
 type LecturaOk = Extract<ResultadoLectura, { ok: true }>;
 
@@ -52,11 +54,21 @@ function entradaFraude(lectura: LecturaOk, pixeles: { data: Uint8ClampedArray; w
 
 export async function leerImagen(bytes: Uint8Array, lectorMrz: Pick<LectorMrz, "leer">, opciones: OpcionesLeer): Promise<ResultadoMotor> {
   const pixeles = await decodificarPixeles(bytes);
-  if (pixeles === null) return { ok: false, error: { codigo: "sin-lectura" }, confiable: false, riesgo: null };
+  if (pixeles === null) return { ok: false, error: { codigo: "imagen-ilegible" }, confiable: false, riesgo: null };
+  registrarBufer(pixeles.data);
+  // Se conserva `digitosValidos` de la última MRZ leída para el error `mrz-no-valida` (la CLI lo muestra, LPI-06).
+  let digitosValidos: number | null = null;
+  const lectorConDigitos: Pick<LectorMrz, "leer"> = {
+    async leer(...args) {
+      const r = await lectorMrz.leer(...args);
+      if (r.ok) digitosValidos = r.digitosValidos;
+      return r;
+    },
+  };
   try {
     const lectura = await leerDocumento(
       pixeles,
-      { decodificar: decodificarPdf417Imagen, lectorMrz, parsearPdf417: parsearPdf417Amarilla, buscarDivipol },
+      { decodificar: decodificarPdf417Imagen, lectorMrz: lectorConDigitos, parsearPdf417: parsearPdf417Amarilla, buscarDivipol },
       {
         fechaReferencia: opciones.fechaReferencia,
         enmascarar: false,
@@ -68,8 +80,13 @@ export async function leerImagen(bytes: Uint8Array, lectorMrz: Pick<LectorMrz, "
       if (lectura.error === "cancelada") throw new ErrorMotor("cancelado");
       if (lectura.error === "modelo-no-disponible" || lectura.error === "lector-terminado") throw new ErrorMotor("motor-error-interno");
       if (lectura.error === "fecha-referencia-invalida") throw new ErrorMotor("opciones-invalidas");
-      const codigo = SIN_LECTURA.has(lectura.error) ? "sin-lectura" : lectura.error;
-      return { ok: false, error: { codigo }, confiable: false, riesgo: null };
+      const codigo = SIN_LECTURA.has(lectura.error) ? "sin-lectura" : ILEGIBLE.has(lectura.error) ? "imagen-ilegible" : lectura.error;
+      const error = {
+        codigo,
+        ...(lectura.tipo ? { tipo: lectura.tipo } : {}),
+        ...(codigo === "mrz-no-valida" && digitosValidos !== null ? { digitosValidos } : {}),
+      };
+      return { ok: false, error, confiable: false, riesgo: null };
     }
     let riesgo: RiesgoMotor | null = null;
     if (opciones.fraude) {

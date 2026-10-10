@@ -28,28 +28,27 @@ describe("crearLectorServidor con el motor real", { timeout: 120_000 }, () => {
     if (!local.ok) throw new Error("lectura local fallida");
     const cliente = { tipo: local.tipoDocumento, campos: local.campos, warnings: local.warnings, confiable: false, validacion_id: null };
     const alConfirmar = vi.fn();
-    // Los fixtures sintéticos son en escala de grises: @lector-cedula/fraud los marca "fotocopia" (alto). La señal real
-    // se prueba en packages/motor (MOT-09); aquí se valida el resto del flujo.
-    const lector = crearLectorServidor({ alConfirmar, motor: m, fraude: false });
+    // Los fixtures sintéticos en grises dan riesgo alto ("fotocopia"); por defecto no bloquea (FRA-04): se devuelve.
+    const lector = crearLectorServidor({ alConfirmar, motor: m });
     const r = await lector.manejar(peticion(multipart(A, cliente)));
     expect(r.status).toBe(200);
     const evs = await eventos(r);
-    expect(etapas(evs)).toStrictEqual(["recibido", "leyendo", "comparando", "resultado"]);
-    expect(ultimo(evs)).toMatchObject({ etapa: "resultado", ok: true, documento: { campos: { nuip: NUIP }, confiable: true } });
+    expect(etapas(evs)).toStrictEqual(["recibido", "leyendo", "fraude", "comparando", "resultado"]);
+    expect(ultimo(evs)).toMatchObject({ etapa: "resultado", ok: true, documento: { campos: { nuip: NUIP }, confiable: true }, riesgo: { nivel: "alto" } });
     expect(alConfirmar).toHaveBeenCalledTimes(1);
   });
 
   it("MOT-22 ocupado con la cola llena del pool real", async () => {
     const m = await motor(1, 0);
-    const lector = crearLectorServidor({ alConfirmar: () => undefined, motor: m, fraude: false });
+    const lector = crearLectorServidor({ alConfirmar: () => undefined, motor: m });
     const [a, b] = await Promise.all([lector.manejar(peticion(multipart(A))), lector.manejar(peticion(multipart(A)))]);
     const finales = [ultimo(await eventos(a)), ultimo(await eventos(b))];
     expect(finales.map((f) => (f.ok === true ? "ok" : (f.rechazo as { motivo: string }).motivo)).sort()).toStrictEqual(["ocupado", "ok"]);
   });
 
-  it("MOT-22 fraude con el pool real: la amarilla sintética en grises da riesgo alto (fotocopia)", async () => {
+  it("MOT-22 fraude con el pool real y bloquearSi alto: la amarilla sintética en grises (fotocopia) se rechaza", async () => {
     const m = await motor(1);
-    const lector = crearLectorServidor({ alConfirmar: () => undefined, motor: m });
+    const lector = crearLectorServidor({ alConfirmar: () => undefined, motor: m, fraude: { bloquearSi: "alto" } });
     expect(ultimo(await eventos(await lector.manejar(peticion(multipart(A)))))).toStrictEqual({ etapa: "resultado", ok: false, rechazo: { motivo: "fraude" } });
   });
 

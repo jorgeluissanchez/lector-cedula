@@ -7,6 +7,7 @@ export { crearLector } from "./controlador.js";
 export { decidirFront, UMBRALES_FRONT } from "./decidir-front.js";
 export { TRANSICIONES } from "./maquina.js";
 export { ESTADO_INICIAL } from "./estado.js";
+export { guiaEnElemento, guiaEnVideo, regionVisible } from "./pantalla.js";
 export { NOMBRE_CACHE } from "./cargador.js";
 export { VERSION } from "./version.js";
 export type * from "./tipos.js";

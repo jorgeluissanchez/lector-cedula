@@ -66,5 +66,12 @@ export function opcionInvalida(o: unknown): string | null {
   if (op.admitirTi !== undefined && typeof op.admitirTi !== "boolean") return "admitirTi";
   if (op.enviarMenores !== undefined && typeof op.enviarMenores !== "boolean") return "enviarMenores";
   if (op.idioma !== undefined && op.idioma !== "es" && op.idioma !== "en") return "idioma";
+  if (op.guia !== undefined) {
+    const g = op.guia as Record<string, unknown> | null;
+    if (typeof g !== "object" || g === null) return "guia";
+    if (g["orientacion"] !== undefined && g["orientacion"] !== "horizontal" && g["orientacion"] !== "vertical") return "guia";
+    const m = g["margen"];
+    if (m !== undefined && !(typeof m === "number" && Number.isFinite(m) && m >= 0 && m <= 0.25)) return "guia";
+  }
   return null;
 }

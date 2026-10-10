@@ -25,6 +25,24 @@ export interface Rectangulo {
   readonly alto: number;
 }
 
+/** SDK-62: cómo se ajusta el vídeo a su elemento (`object-fit` computado; cualquier valor distinto de `cover` es `contain`). */
+export type AjusteVideo = "cover" | "contain";
+
+/** SDK-61: guía ID-1 de pie (`vertical`) o apaisada (`horizontal`, por omisión) y margen por lado (0 a 0,25; por omisión 0,05). */
+export interface OpcionesGuiaLector {
+  readonly orientacion?: "horizontal" | "vertical";
+  readonly margen?: number;
+}
+
+/** SDK-62: medidas del `<video>` del integrador (píxeles del vídeo y píxeles CSS del elemento). */
+export interface MedidasVideo {
+  readonly anchoVideo: number;
+  readonly altoVideo: number;
+  readonly anchoElemento: number;
+  readonly altoElemento: number;
+  readonly ajuste: AjusteVideo;
+}
+
 export interface CalidadLector {
   readonly score: number;
   readonly motivo: MotivoCalidad | null;
@@ -102,6 +120,8 @@ export interface EstadoLector {
   readonly fase: FaseLector;
   readonly calidad: CalidadLector | null;
   readonly guia: GuiaLector | null;
+  /** SDK-62: la guía en píxeles CSS relativos al `<video>` (según su tamaño y `object-fit`); `null` sin guía o sin medidas. */
+  readonly guiaEnPantalla: Rectangulo | null;
   readonly contenido: ContenidoLector | null;
   readonly progreso: number | null;
   readonly intento: number;
@@ -163,6 +183,8 @@ export interface OpcionesLector {
   readonly enviarMenores?: boolean;
   /** Solo afecta a `error.mensaje`. */
   readonly idioma?: Idioma;
+  /** SDK-61: orientación y margen de la guía; se calcula dentro de la zona visible del `<video>`. */
+  readonly guia?: OpcionesGuiaLector;
 }
 
 export interface ControladorLector {
@@ -198,8 +220,11 @@ export interface FrameCalidad {
 }
 
 export interface CalidadInyectada {
-  /** `null` si aún no hay frame. Rechaza ante un fallo del Worker. */
-  analizar(video: HTMLVideoElement): Promise<FrameCalidad | null>;
+  /**
+   * `null` si aún no hay frame. Rechaza ante un fallo del Worker. `guia` (SDK-61): guía en píxeles del vídeo dentro
+   * de la zona visible; la calidad y la presencia se evalúan dentro de ella. Sin ella, la guía de las opciones en el frame completo.
+   */
+  analizar(video: HTMLVideoElement, guia?: Rectangulo | null): Promise<FrameCalidad | null>;
   terminar(): void;
 }
 
@@ -222,7 +247,7 @@ export interface DependenciasLector {
   abrirCamara(video: HTMLVideoElement): Promise<CamaraLector>;
   crearCalidad(): CalidadInyectada;
   /** Revalida a resolución completa; `null` si no alcanza el umbral. */
-  capturar(video: HTMLVideoElement, camara: CamaraLector, contenido: "pdf417" | "mrz" | null): Promise<CapturaLector | null>;
+  capturar(video: HTMLVideoElement, camara: CamaraLector, contenido: "pdf417" | "mrz" | null, guia?: Rectangulo | null): Promise<CapturaLector | null>;
   crearLector(): LectorInyectado;
   /** Programa el siguiente ciclo de análisis; devuelve la cancelación. */
   programar(fn: () => void): () => void;
@@ -235,6 +260,10 @@ export interface DependenciasLector {
   enLinea?(): boolean;
   /** SDK-58: avisa al volver la red (por omisión el evento `online`); devuelve la cancelación. */
   alConectar?(fn: () => void): () => void;
+  /** SDK-62: medidas del vídeo y su elemento (por omisión `videoWidth`, `clientWidth` y `getComputedStyle`); `null` sin medidas. Solo lee: nunca cambia estilos. */
+  medirVideo?(video: HTMLVideoElement): MedidasVideo | null;
+  /** SDK-62: avisa cuando cambia el tamaño del elemento o del vídeo (por omisión `ResizeObserver` y el evento `resize`); devuelve la cancelación. */
+  observarVideo?(video: HTMLVideoElement, fn: () => void): () => void;
   /** Temporizador (por omisión `setTimeout`); reloj falso en pruebas. */
   temporizar?(fn: () => void, ms: number): () => void;
 }

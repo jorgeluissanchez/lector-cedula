@@ -51,5 +51,113 @@
       "falsas": 0
     }
   },
+  "td3": {
+    "limpias": {
+      "n": 40,
+      "correctas": 40,
+      "falsas": 0
+    },
+    "distorsiones": {
+      "rotacion+2": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "rotacion-2": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "blur1": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "brillo+20": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "brillo-20": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "jpeg70": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "escala0.8": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "ruido8": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "rotacion180": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      }
+    }
+  },
+  "ce": {
+    "limpias": {
+      "n": 40,
+      "correctas": 40,
+      "falsas": 0
+    },
+    "distorsiones": {
+      "rotacion+2": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "rotacion-2": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "blur1": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "brillo+20": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "brillo-20": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "jpeg70": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "escala0.8": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "ruido8": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      },
+      "rotacion180": {
+        "n": 20,
+        "correctas": 20,
+        "falsas": 0
+      }
+    }
+  },
   "cumple": true
 }

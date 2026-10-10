@@ -11,10 +11,10 @@ export async function amarilla(): Promise<Uint8Array> {
   return imagenSintetica(generarPdf417(PERSONA_BASE, { semilla: 1 }).bytes);
 }
 
-export async function digital(): Promise<Uint8Array> {
+export async function digital(variante?: string): Promise<Uint8Array> {
   const render = (await crearRenderizador()) as { render(l: unknown): Promise<{ bytes: Uint8Array }>; cerrar(): Promise<void> };
   try {
-    return (await render.render(generarMrzTd1(PERSONA_BASE, { semilla: 1 }).lineas)).bytes;
+    return (await render.render((variante ? generarMrzTd1(PERSONA_BASE, { variante } as never) : generarMrzTd1(PERSONA_BASE, { semilla: 1 })).lineas)).bytes;
   } finally {
     await render.cerrar();
   }
@@ -22,4 +22,9 @@ export async function digital(): Promise<Uint8Array> {
 
 export function sinDocumento(): Uint8Array {
   return pngBlanco(800, 600);
+}
+
+/** MRZ con el dígito compuesto alterado (la misma variante que LPI-06 en la CLI): 3 dígitos válidos. */
+export function digitalAlterada(): Promise<Uint8Array> {
+  return digital("cd-compuesto-alterado");
 }

@@ -45,6 +45,20 @@ describe("MOT-19 crearLectorServidor", { timeout: 60_000 }, () => {
     expect(ultimo(evs)).toMatchObject({ etapa: "resultado", ok: true, documento: { campos: { nuip: NUIP } } });
   });
 
+  it("MOT-19 multipart con frontera en mayúsculas y minúsculas (como la envía Chromium)", async () => {
+    const { lector, motor } = montar();
+    const frontera = "----WebKitFormBoundaryEtBxoZIS1w8tF1sw";
+    const cuerpo = Buffer.concat([
+      Buffer.from(`--${frontera}\r\nContent-Disposition: form-data; name="imagen"; filename="imagen.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`, "latin1"),
+      Buffer.from(imagenSintetica()),
+      Buffer.from(`\r\n--${frontera}--\r\n`, "latin1"),
+    ]);
+    const r = await lector.manejar(peticion(cuerpo, { headers: { "content-type": `multipart/form-data; boundary=${frontera}` } }));
+    expect(r.status).toBe(200);
+    expect(ultimo(await eventos(r))).toMatchObject({ ok: true });
+    expect(motor.llamadas).toHaveLength(1);
+  });
+
   it("MOT-19 Cuerpo binario", async () => {
     const a = montar();
     const multi = await eventos(await a.lector.manejar(peticion(multipart(imagenSintetica(), CLIENTE))));
@@ -264,7 +278,7 @@ describe("MOT-22 motivos de rechazo", { timeout: 60_000 }, () => {
       await motivo({ resultado: SIN_DOCUMENTO }, documentos),
       await motivo({ resultado: TI_MENOR }, documentos),
       await motivo({ resultado: PASAPORTE }, documentos),
-      await motivo({ resultado: AMARILLA_RIESGO_ALTO }, documentos),
+      await motivo({ resultado: AMARILLA_RIESGO_ALTO }, { ...documentos, fraude: { bloquearSi: "alto" } }),
       await motivo({ error: new ErrorMotor("motor-ocupado") }, documentos),
     ];
     expect(motivos).toStrictEqual(["ilegible", "menor-de-edad", "documento-no-admitido", "fraude", "ocupado"]);
@@ -332,13 +346,46 @@ describe("MOT-22 motivos de rechazo", { timeout: 60_000 }, () => {
     }
   });
 
-  it("MOT-22 fraude.rechazarDesde medio rechaza riesgo medio; por omisión solo alto", async () => {
+  it("MOT-22 Fraude no bloquea por defecto (FRA-04): riesgo alto se calcula y se devuelve, y se confirma", async () => {
+    const { lector, alConfirmar } = montar({ resultado: AMARILLA_RIESGO_ALTO });
+    const evs = await eventos(await lector.manejar(peticion(multipart(imagenSintetica(), CLIENTE))));
+    expect(etapas(evs)).toStrictEqual(["recibido", "leyendo", "fraude", "comparando", "resultado"]);
+    expect(ultimo(evs)).toMatchObject({ ok: true, riesgo: { nivel: "alto" } });
+    expect(alConfirmar).toHaveBeenCalledTimes(1);
+    expect(alConfirmar.mock.calls[0]?.[1]).toMatchObject({ riesgo: { nivel: "alto" } });
+  });
+
+  it("MOT-22 fraude.bloquearSi por nivel: medio bloquea medio y alto; alto solo alto", async () => {
     const medio = { ...AMARILLA, riesgo: { ...AMARILLA.riesgo, nivel: "medio" } } as typeof AMARILLA;
-    expect(await motivo({ resultado: medio }, { fraude: { rechazarDesde: "medio" } })).toBe("fraude");
-    const { lector } = montar({ resultado: medio });
+    expect(await motivo({ resultado: medio }, { fraude: { bloquearSi: "medio" } })).toBe("fraude");
+    expect(await motivo({ resultado: AMARILLA_RIESGO_ALTO }, { fraude: { bloquearSi: "medio" } })).toBe("fraude");
+    expect(await motivo({ resultado: AMARILLA_RIESGO_ALTO }, { fraude: { bloquearSi: "alto" } })).toBe("fraude");
+    for (const [resultado, bloquearSi] of [[medio, "alto"], [AMARILLA, "medio"]] as const) {
+      const { lector } = montar({ resultado }, { fraude: { bloquearSi } });
+      expect(ultimo(await eventos(await lector.manejar(peticion(multipart(imagenSintetica())))))).toMatchObject({ ok: true });
+    }
+    const sinRegla = montar({ resultado: AMARILLA_RIESGO_ALTO }, { fraude: {} });
+    expect(ultimo(await eventos(await sinRegla.lector.manejar(peticion(multipart(imagenSintetica())))))).toMatchObject({ ok: true });
+  });
+
+  it("MOT-22 fraude.bloquearSi como función recibe el riesgo; si lanza, error-interno", async () => {
+    const vistos: unknown[] = [];
+    const bloquearSi = (r: { accion?: unknown }) => {
+      vistos.push(r);
+      return r.accion === "bloquear";
+    };
+    expect(await motivo({ resultado: AMARILLA_RIESGO_ALTO }, { fraude: { bloquearSi } })).toBe("fraude");
+    expect(vistos).toStrictEqual([AMARILLA_RIESGO_ALTO.riesgo]);
+    const { lector } = montar({}, { fraude: { bloquearSi } });
     expect(ultimo(await eventos(await lector.manejar(peticion(multipart(imagenSintetica())))))).toMatchObject({ ok: true });
-    const bajo = montar({}, { fraude: { rechazarDesde: "medio" } });
-    expect(ultimo(await eventos(await bajo.lector.manejar(peticion(multipart(imagenSintetica())))))).toMatchObject({ ok: true });
+    expect(await motivo({}, { fraude: { bloquearSi: () => { throw new Error("x"); } } })).toBe("error-interno");
+  });
+
+  it("MOT-22 sin riesgo (null) bloquearSi no se evalúa", async () => {
+    const bloquearSi = vi.fn(() => true);
+    const { lector } = montar({ resultado: { ...AMARILLA, riesgo: null } }, { fraude: { bloquearSi } });
+    expect(ultimo(await eventos(await lector.manejar(peticion(multipart(imagenSintetica())))))).toMatchObject({ ok: true, riesgo: null });
+    expect(bloquearSi).not.toHaveBeenCalled();
   });
 
   it("MOT-22 con fraude: false no se rechaza por riesgo y el final lleva riesgo null", async () => {
@@ -397,6 +444,7 @@ describe("MOT-25 respuesta sin streaming", { timeout: 60_000 }, () => {
       [{ resultado: TI_MENOR }, {}, undefined],
       [{ resultado: PASAPORTE }, { limites: { documentos: ["cedula"] } }, undefined],
       [{ resultado: AMARILLA_RIESGO_ALTO }, {}, undefined],
+      [{ resultado: AMARILLA_RIESGO_ALTO }, { fraude: { bloquearSi: "alto" } }, undefined],
       [{ error: new ErrorMotor("motor-ocupado") }, {}, undefined],
       [{ demora: 200 }, { limites: { tiempoMs: 20 } }, undefined],
     ];

@@ -45,9 +45,13 @@ export interface LimitesLector {
   readonly admitirMenores?: boolean;
 }
 
+/**
+ * Decisión del orquestador (2026-10-10), coherente con FRA-04: por omisión el riesgo se calcula y se devuelve, pero
+ * no rechaza. Solo con `bloquearSi` el manejador rechaza con `fraude`: un nivel (`"medio"` bloquea medio y alto;
+ * `"alto"` solo alto) o una función de la empresa sobre la señal completa.
+ */
 export interface OpcionesFraude {
-  /** Nivel desde el que se rechaza con `fraude` (por omisión `"alto"`). */
-  readonly rechazarDesde?: Exclude<NivelRiesgo, "bajo">;
+  readonly bloquearSi?: Exclude<NivelRiesgo, "bajo"> | ((riesgo: RiesgoMotor) => boolean);
 }
 
 export interface OpcionesLectorServidor {
@@ -132,7 +136,12 @@ export function crearLectorServidor(opciones: OpcionesLectorServidor): LectorSer
   const admitirMenores = limites.admitirMenores === true;
   const documentos = limites.documentos?.map((d) => ALIAS_DOCUMENTO[d] ?? d);
   const fraudeActivo = opciones.fraude !== false;
-  const rechazarDesde = typeof opciones.fraude === "object" ? (opciones.fraude.rechazarDesde ?? "alto") : "alto";
+  const bloquearSi = typeof opciones.fraude === "object" ? opciones.fraude.bloquearSi : undefined;
+  const bloquea = (riesgo: RiesgoMotor): boolean => {
+    if (bloquearSi === undefined) return false;
+    if (typeof bloquearSi === "function") return bloquearSi(riesgo) === true;
+    return NIVELES[riesgo.nivel] >= NIVELES[bloquearSi];
+  };
   const comparar = opciones.comparar !== false;
   const motor = cargarMotor(opciones.motor);
 
@@ -201,7 +210,11 @@ export function crearLectorServidor(opciones: OpcionesLectorServidor): LectorSer
     const riesgo = fraudeActivo ? lectura.riesgo : null;
     if (fraudeActivo) {
       emitir({ etapa: "fraude" });
-      if (riesgo && NIVELES[riesgo.nivel] >= NIVELES[rechazarDesde]) return rechazo("fraude");
+      try {
+        if (riesgo && bloquea(riesgo)) return rechazo("fraude");
+      } catch {
+        return rechazo("error-interno");
+      }
     }
     let comparacion: Comparacion | null = null;
     if (comparar && cliente !== SIN_CLIENTE) {

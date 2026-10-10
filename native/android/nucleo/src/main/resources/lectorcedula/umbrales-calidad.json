@@ -1,0 +1,22 @@
+{
+  "origen": "packages/capture/src/calidad/umbrales.ts y presencia.ts (generado; no editar)",
+  "umbrales": {
+    "laplacianoDesenfocado": 40,
+    "laplacianoNitido": 200,
+    "luminanciaSaturada": 250,
+    "fraccionSaturadaMax": 0.05,
+    "componenteSaturadoMax": 0.02,
+    "luminanciaOscura": 5,
+    "fraccionOscuraMax": 0.25,
+    "mediaNegra": 20,
+    "mediaOscuraOk": 60,
+    "mediaClaraOk": 200,
+    "mediaBlanca": 240,
+    "ratioMinimo": 0.1,
+    "ratioOk": 0.3,
+    "umbralListo": 70,
+    "framesConsecutivos": 3,
+    "intervaloMinimoMs": 100,
+    "laplacianoMinimoGuiado": 12
+  }
+}

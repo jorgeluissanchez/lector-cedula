@@ -8,6 +8,7 @@ export const ESTADO_INICIAL: EstadoLector = congelar({
   fase: "inicio",
   calidad: null,
   guia: null,
+  guiaEnPantalla: null,
   contenido: null,
   progreso: null,
   intento: 1,

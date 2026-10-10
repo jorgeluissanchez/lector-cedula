@@ -1,0 +1,22 @@
+{
+  "name": "@lector-cedula/ejemplo-backend-express",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ejemplo front React + backend Express propio: crearLectorServidor(...).express() en POST /api/cedula con el motor en proceso (motor-backend-embebido, tarea 1.2; MOT-13, SDK-51).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node ../copiar-recursos.mjs dist/lector-cedula",
+    "start": "node servidor.mjs",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@lector-cedula/motor": "0.1.0",
+    "@lector-cedula/react": "0.1.0",
+    "@lector-cedula/servidor": "0.1.0",
+    "@lector-cedula/web": "0.1.0",
+    "express": "^4.22.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

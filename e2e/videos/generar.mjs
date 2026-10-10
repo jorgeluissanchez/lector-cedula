@@ -66,6 +66,7 @@ async function main() {
     writeFileSync(join(tmp, "amarilla.png"), fuentes.amarilla);
     writeFileSync(join(tmp, "digital.png"), fuentes.digital);
     writeFileSync(join(tmp, "pasaporte.png"), fuentes.pasaporte);
+    writeFileSync(join(tmp, "ti-amarilla.png"), fuentes.tiAmarilla);
     writeFileSync(join(tmp, "sin-documento.png"), fuentes.sinDocumento);
     writeFileSync(join(tmp, "ilegible.png"), fuentes.ilegible);
     // deteccion-fraude (5.1b): reverso a color, pantalla y fotocopia.

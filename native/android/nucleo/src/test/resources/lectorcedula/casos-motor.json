@@ -1,0 +1,729 @@
+{
+ "origen": "packages/nucleo-js/scripts/generar-casos-nativos.mjs (generado; no editar)",
+ "version": "0.1.0",
+ "casos": [
+  {
+   "id": "completa-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "completa-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "completa-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "windows-truncada-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAFB1YkRTS18xAAAAAAAAAAA2NzQ5NDQxNDk5OTkxMjM0NTZQUlVFQkEAAAAAAAAAAAAAAAAAAAAAAEVKRU1QTE8AAAAAAAAAAAAAAAAAAAAARklDVElDSUEAAAAAAAAAAAAAAAAAAABMVVoAAAAAAAAAAAAAAAAAAAAAAAAAADBGMTk4NTAzMTQxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5XjzojRg==",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H02\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "windows-truncada-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAFB1YkRTS18xAAAAAAAAAAA2NzQ5NDQxNDk5OTkxMjM0NTZQUlVFQkEAAAAAAAAAAAAAAAAAAAAAAEVKRU1QTE8AAAAAAAAAAAAAAAAAAAAARklDVElDSUEAAAAAAAAAAAAAAAAAAABMVVoAAAAAAAAAAAAAAAAAAAAAAAAAADBGMTk4NTAzMTQxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5XjzojRg==",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H02\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "windows-truncada-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAFB1YkRTS18xAAAAAAAAAAA2NzQ5NDQxNDk5OTkxMjM0NTZQUlVFQkEAAAAAAAAAAAAAAAAAAAAAAEVKRU1QTE8AAAAAAAAAAAAAAAAAAAAARklDVElDSUEAAAAAAAAAAAAAAAAAAABMVVoAAAAAAAAAAAAAAAAAAAAAAAAAADBGMTk4NTAzMTQxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5XjzojRg==",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H02\",\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "sin-pubdsk-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2NzQ5NDQxNDk5OTkxMjM0NTZQUlVFQkEAAAAAAAAAAAAAAAAAAAAAAEVKRU1QTE8AAAAAAAAAAAAAAAAAAAAARklDVElDSUEAAAAAAAAAAAAAAAAAAABMVVoAAAAAAAAAAAAAAAAAAAAAAAAAADBGMTk4NTAzMTQxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H07\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "sin-pubdsk-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2NzQ5NDQxNDk5OTkxMjM0NTZQUlVFQkEAAAAAAAAAAAAAAAAAAAAAAEVKRU1QTE8AAAAAAAAAAAAAAAAAAAAARklDVElDSUEAAAAAAAAAAAAAAAAAAABMVVoAAAAAAAAAAAAAAAAAAAAAAAAAADBGMTk4NTAzMTQxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H07\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "sin-pubdsk-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2NzQ5NDQxNDk5OTkxMjM0NTZQUlVFQkEAAAAAAAAAAAAAAAAAAAAAAEVKRU1QTE8AAAAAAAAAAAAAAAAAAAAARklDVElDSUEAAAAAAAAAAAAAAAAAAABMVVoAAAAAAAAAAAAAAAAAAAAAAAAAADBGMTk4NTAzMTQxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H07\",\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "fecha-primero-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMDIxOTg1MDMxNEYxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":null},\"warnings\":[\"H08\",\"lugar-nacimiento-no-resuelto\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "fecha-primero-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMDIxOTg1MDMxNEYxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":null},\"warnings\":[\"H08\",\"lugar-nacimiento-no-resuelto\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "fecha-primero-base",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMDIxOTg1MDMxNEYxNjAwMTJPKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":null},\"warnings\":[\"H08\",\"lugar-nacimiento-no-resuelto\",\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "sin-segundo-nombre",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "sin-segundo-nombre",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F*******\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "sin-segundo-nombre",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "apellido-compuesto",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NkRFIExBIE9TU0EAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"DE LA OSSA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "apellido-compuesto",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NkRFIExBIE9TU0EAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"D* L* O*** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "apellido-compuesto",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NkRFIExBIE9TU0EAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"DE LA OSSA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "enie",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBF0UEAAAAAAAAAAAAAAAAAAAAAAAAATlXRRVoAAAAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PEÑA NUÑEZ\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "enie",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBF0UEAAAAAAAAAAAAAAAAAAAAAAAAATlXRRVoAAAAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P*** N****\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "enie",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBF0UEAAAAAAAAAAAAAAAAAAAAAAAAATlXRRVoAAAAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PEÑA NUÑEZ\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "rh-ab-positivo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMkFCKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"AB+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "rh-ab-positivo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMkFCKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"AB+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "rh-ab-positivo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMkFCKyd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"AB+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "rh-ab-negativo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMkFCLSd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"AB-\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "rh-ab-negativo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMkFCLSd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"AB-\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "rh-ab-negativo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMkFCLSd9EWXESTAKbZfMSzSoi8IxuHTF/j3BJ1JpPya5kyBDDJ/dPf23Zk2t8+yx69XvHQreS+GC77QqrfIh+iljHmZTqIKIE87aRSpN5Eokp4xTHiQRTaymHYKFNspA/fTeAC4H+1S43RhA3svKOBgmaIpJ4k/o3KKrPGJONEPu9yhUEwnIYz4l0k7khm2vWD6Jw8sMNaGlB1Nt36ZbWpkD7IqRpB8R0CS1RqRLi+wSHCyuC4dhx0MV//oD3Bxkm4ZitiJI956KCimfPCejnAQRB2atp8ylrPUF3usG0oqQXxsVr2ADgYyv3H/EEGa8NN/HGC+zCM31VunZoHeZbzQl8KULmZcoJ/RFA35T+aF6AKIIyfgtpeKWlWedkcjfZMK3PSjkYvSBpG4cwqDFHwHJxzhRvgg8DU7vUGirJKTLqXgaaOp26P+bMqOemOhe6QxzPgOAdctOz+hsL42JX/amg3wKZjGNCY5Xjzoj",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"AB-\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "rh-o-negativo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8tJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O-\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "rh-o-negativo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8tJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O-\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "rh-o-negativo",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1NlBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8tJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O-\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "sexo-f-apellido-con-m",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1Nk1BUlRJTkVaAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"MARTINEZ EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "sexo-f-apellido-con-m",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1Nk1BUlRJTkVaAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"********56\",\"apellidos\":\"M******* E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"********56\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "sexo-f-apellido-con-m",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0OTk5OTEyMzQ1Nk1BUlRJTkVaAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"MARTINEZ EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"9999123456\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "nuip-corto",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0MDA5OTk5MTIzNFBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"99991234\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"99991234\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "nuip-corto",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0MDA5OTk5MTIzNFBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2026-10-09",
+     "enmascarar": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"******34\",\"apellidos\":\"P***** E******\",\"nombres\":\"F******* L**\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"******34\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "nuip-corto",
+   "fn": "procesarPdf417",
+   "args": [
+    "NjA5OTk5NTk5MgAAAAAAAAAAAAAAAAAAUHViRFNLXzEAAAAAAAAAADY3NDk0NDE0MDA5OTk5MTIzNFBSVUVCQQAAAAAAAAAAAAAAAAAAAAAARUpFTVBMTwAAAAAAAAAAAAAAAAAAAABGSUNUSUNJQQAAAAAAAAAAAAAAAAAAAExVWgAAAAAAAAAAAAAAAAAAAAAAAAAAMEYxOTg1MDMxNDE2MDAxMk8rJ30RZcRJMAptl8xLNKiLwjG4dMX+PcEnUmk/JrmTIEMMn909/bdmTa3z7LHr1e8dCt5L4YLvtCqt8iH6KWMeZlOogogTztpFKk3kSiSnjFMeJBFNrKYdgoU2ykD99N4ALgf7VLjdGEDey8o4GCZoikniT+jcoqs8Yk40Q+73KFQTCchjPiXSTuSGba9YPonDyww1oaUHU23fpltamQPsipGkHxHQJLVGpEuL7BIcLK4Lh2HHQxX/+gPcHGSbhmK2Ikj3nooKKZ88J6OcBBEHZq2nzKWs9QXe6wbSipBfGxWvYAOBjK/cf8QQZrw038cYL7MIzfVW6dmgd5lvNCXwpQuZlygn9EUDflP5oXoAogjJ+C2l4paVZ52RyN9kwrc9KORi9IGkbhzCoMUfAcnHOFG+CDwNTu9QaKskpMupeBpo6nbo/5syo56Y6F7pDHM+A4B1y07P6GwvjYlf9qaDfApmMY0JjlePOiNG",
+    {
+     "fechaReferencia": "2000-01-01",
+     "admitirTi": true
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"tarjeta-identidad\",\"campos\":{\"numeroDocumento\":\"99991234\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":null,\"nuip\":\"99991234\",\"rh\":\"O+\",\"lugarNacimiento\":{\"codigo\":\"16001\",\"departamento\":\"BOGOTA D.C\",\"municipio\":\"BOGOTA, D.C.\"}},\"warnings\":[\"H10\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"pdf417\",\"menorDeEdad\":true}"
+  },
+  {
+   "id": "valida-base",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503149F3503144COL9999123456<5",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":\"2035-03-14\",\"nuip\":\"9999123456\"},\"warnings\":[\"M03\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"mrz-td1\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "cd-documento-alterado",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345616001<<<<<<<<<<",
+     "8503149F3503144COL9999123456<2",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"lectura-fallida\",\"motivo\":\"mrz-no-valida\"}}"
+  },
+  {
+   "id": "cd-nacimiento-alterado",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503140F3503144COL9999123456<8",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"lectura-fallida\",\"motivo\":\"mrz-no-valida\"}}"
+  },
+  {
+   "id": "cd-vencimiento-alterado",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503149F3503145COL9999123456<6",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"lectura-fallida\",\"motivo\":\"mrz-no-valida\"}}"
+  },
+  {
+   "id": "cd-compuesto-alterado",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503149F3503144COL9999123456<6",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"lectura-fallida\",\"motivo\":\"mrz-no-valida\"}}"
+  },
+  {
+   "id": "cd-documento-relleno",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345<16001<<<<<<<<<<",
+     "8503149F3503144COL9999123456<0",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":\"2035-03-14\",\"nuip\":\"9999123456\"},\"warnings\":[\"M03\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"mrz-td1\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "ocr-b-un-error",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503149F3S03144COL9999123456<5",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":\"2035-03-14\",\"nuip\":\"9999123456\"},\"warnings\":[\"M03\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"mrz-td1\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "ocr-b-cinco-errores",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL9999I234551G001<<<<<<<<<<",
+     "85Q3149F3S03144COL9999123456<S",
+     "PRUEBA<EJEMPLO<<FICTICIA<LUZ<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":\"2035-03-14\",\"nuip\":\"9999123456\"},\"warnings\":[\"M03\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"mrz-td1\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "enie",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503149F3503144COL9999123456<5",
+     "PENA<NUNEZ<<FICTICIA<LUZ<<<<<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PENA NUNEZ\",\"nombres\":\"FICTICIA LUZ\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":\"2035-03-14\",\"nuip\":\"9999123456\"},\"warnings\":[\"M03\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"mrz-td1\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "apellido-compuesto",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503149F3503144COL9999123456<5",
+     "DE<LA<OSSA<EJEMPLO<<FICTICIA<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"DE LA OSSA EJEMPLO\",\"nombres\":\"FICTICIA\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":\"2035-03-14\",\"nuip\":\"9999123456\"},\"warnings\":[\"M03\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"mrz-td1\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "sin-segundo-nombre",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "ICCOL999912345516001<<<<<<<<<<",
+     "8503149F3503144COL9999123456<5",
+     "PRUEBA<EJEMPLO<<FICTICIA<<<<<<"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":true,\"resultado\":{\"tipo\":\"cedula-ciudadania\",\"campos\":{\"numeroDocumento\":\"9999123456\",\"apellidos\":\"PRUEBA EJEMPLO\",\"nombres\":\"FICTICIA\",\"fechaNacimiento\":\"1985-03-14\",\"sexo\":\"F\",\"nacionalidad\":\"COL\",\"paisEmisor\":\"COL\",\"fechaVencimiento\":\"2035-03-14\",\"nuip\":\"9999123456\"},\"warnings\":[\"M03\"],\"confiable\":false,\"validacion_id\":null},\"contenido\":\"mrz-td1\",\"menorDeEdad\":false}"
+  },
+  {
+   "id": "entrada-0",
+   "fn": "procesarPdf417",
+   "args": [
+    "no-es-base64!",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"lectura-fallida\",\"motivo\":\"entrada-invalida\"}}"
+  },
+  {
+   "id": "entrada-1",
+   "fn": "procesarPdf417",
+   "args": [
+    "",
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"lectura-fallida\",\"motivo\":\"entrada-invalida\"}}"
+  },
+  {
+   "id": "entrada-2",
+   "fn": "procesarPdf417",
+   "args": [
+    "AQID",
+    {
+     "fechaReferencia": "2026-02-30"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"opcion-invalida\",\"motivo\":\"fecha-referencia-invalida\"}}"
+  },
+  {
+   "id": "entrada-3",
+   "fn": "procesarMrz",
+   "args": [
+    [
+     "a",
+     "b"
+    ],
+    {
+     "fechaReferencia": "2026-10-09"
+    }
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"lectura-fallida\",\"motivo\":\"mrz-no-encontrada\"}}"
+  },
+  {
+   "id": "entrada-4",
+   "fn": "procesarMrz",
+   "args": [
+    null,
+    null
+   ],
+   "salida": "{\"ok\":false,\"error\":{\"codigo\":\"opcion-invalida\",\"motivo\":\"fecha-referencia-invalida\"}}"
+  },
+  {
+   "id": "entrada-5",
+   "fn": "validarOpciones",
+   "args": [
+    {
+     "sesion": "abc"
+    }
+   ],
+   "salida": "\"servidor\""
+  },
+  {
+   "id": "entrada-6",
+   "fn": "crearEstado",
+   "args": [
+    {
+     "sesion": "abc"
+    }
+   ],
+   "salida": "{\"fase\":\"error\",\"calidad\":null,\"guia\":null,\"guiaEnPantalla\":null,\"contenido\":null,\"progreso\":null,\"intento\":1,\"resultado\":null,\"error\":{\"codigo\":\"opcion-invalida\",\"mensaje\":\"La configuración del lector no es válida.\",\"opcion\":\"servidor\"},\"envio\":null,\"verificacion\":null,\"rechazo\":null,\"intentosVerificacion\":null,\"modo\":null,\"validacion\":null,\"frontActivo\":null,\"modoMotivo\":null}"
+  },
+  {
+   "id": "entrada-7",
+   "fn": "crearEstado",
+   "args": [
+    {
+     "servidor": "ftp://x",
+     "idioma": "en"
+    }
+   ],
+   "salida": "{\"fase\":\"error\",\"calidad\":null,\"guia\":null,\"guiaEnPantalla\":null,\"contenido\":null,\"progreso\":null,\"intento\":1,\"resultado\":null,\"error\":{\"codigo\":\"opcion-invalida\",\"mensaje\":\"The reader configuration is not valid.\",\"opcion\":\"servidor\"},\"envio\":null,\"verificacion\":null,\"rechazo\":null,\"intentosVerificacion\":null,\"modo\":null,\"validacion\":null,\"frontActivo\":null,\"modoMotivo\":null}"
+  },
+  {
+   "id": "entrada-8",
+   "fn": "transicion",
+   "args": [
+    {
+     "fase": "inicio",
+     "calidad": null,
+     "guia": null,
+     "guiaEnPantalla": null,
+     "contenido": null,
+     "progreso": null,
+     "intento": 1,
+     "resultado": null,
+     "error": null,
+     "envio": null,
+     "verificacion": null,
+     "rechazo": null,
+     "intentosVerificacion": null,
+     "modo": null,
+     "validacion": null,
+     "frontActivo": null,
+     "modoMotivo": null
+    },
+    {
+     "tipo": "iniciar"
+    }
+   ],
+   "salida": "{\"fase\":\"permiso\",\"calidad\":null,\"guia\":null,\"guiaEnPantalla\":null,\"contenido\":null,\"progreso\":null,\"intento\":1,\"resultado\":null,\"error\":null,\"envio\":null,\"verificacion\":null,\"rechazo\":null,\"intentosVerificacion\":null,\"modo\":null,\"validacion\":null,\"frontActivo\":null,\"modoMotivo\":null}"
+  },
+  {
+   "id": "entrada-9",
+   "fn": "transicion",
+   "args": [
+    {
+     "fase": "nada"
+    },
+    {
+     "tipo": "iniciar"
+    }
+   ],
+   "salida": "{\"fase\":\"inicio\",\"calidad\":null,\"guia\":null,\"guiaEnPantalla\":null,\"contenido\":null,\"progreso\":null,\"intento\":1,\"resultado\":null,\"error\":null,\"envio\":null,\"verificacion\":null,\"rechazo\":null,\"intentosVerificacion\":null,\"modo\":null,\"validacion\":null,\"frontActivo\":null,\"modoMotivo\":null}"
+  },
+  {
+   "id": "entrada-10",
+   "fn": "validarUrlSubida",
+   "args": [
+    "https://otro.example/subir",
+    "https://api.lector-cedula.example"
+   ],
+   "salida": "false"
+  }
+ ]
+}

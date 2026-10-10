@@ -37,6 +37,170 @@
         "exact_match": 1,
         "cer": 0
       }
+    },
+    "mrz-td3": {
+      "__claves": {
+        "n": 9,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "ok": {
+        "n": 9,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "codigoDocumento": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "estadoEmisor": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "apellidos": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "nombres": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "numeroDocumento": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "nacionalidad": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "fechaNacimiento": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "sexo": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "fechaVencimiento": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "datoOpcional": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "nombrePaisEmisor": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "nombreNacionalidad": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "cd_numeroDocumento": {
+        "n": 7,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "cd_nacimiento": {
+        "n": 7,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "cd_vencimiento": {
+        "n": 7,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "cd_datoOpcional": {
+        "n": 7,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "cd_compuesto": {
+        "n": 7,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "correcciones": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "warnings": {
+        "n": 5,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "error": {
+        "n": 4,
+        "exact_match": 1,
+        "cer": 0
+      }
+    },
+    "clasificar-documento": {
+      "__claves": {
+        "n": 9,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "ok": {
+        "n": 9,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "tipoDocumento": {
+        "n": 6,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "fuente": {
+        "n": 6,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "numeroDocumento": {
+        "n": 6,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "nacionalidad": {
+        "n": 6,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "apellidos": {
+        "n": 6,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "nombres": {
+        "n": 6,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "warnings": {
+        "n": 9,
+        "exact_match": 1,
+        "cer": 0
+      },
+      "error": {
+        "n": 3,
+        "exact_match": 1,
+        "cer": 0
+      }
     }
   }
 }

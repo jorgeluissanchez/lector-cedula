@@ -1,0 +1,23 @@
+{
+  "sintetico": true,
+  "tipo": "clasificar-documento",
+  "descripcion": "OD-11: pasaporte extranjero (ESP) sintético",
+  "entrada": [
+    "P<ESPLORANTE<VIDAL<<TOMAS<<<<<<<<<<<<<<<<<<<",
+    "XDA1234565ESP8506302M3201152<<<<<<<<<<<<<<08"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "tipoDocumento": "pasaporte",
+    "fuente": "mrz-td3",
+    "numeroDocumento": "XDA123456",
+    "nacionalidad": "ESP",
+    "apellidos": "LORANTE VIDAL",
+    "nombres": "TOMAS",
+    "warnings": ""
+  }
+}

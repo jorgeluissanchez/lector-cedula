@@ -104,7 +104,9 @@ export async function leerEntrada(peticion: Request, maximo: number): Promise<En
     await peticion.body?.cancel().catch(() => undefined);
     return { tipo: "demasiado-grande" };
   }
-  const tipo = (peticion.headers.get("content-type") ?? "").toLowerCase();
+  // La frontera del multipart distingue mayúsculas: solo se pasa a minúsculas para clasificar.
+  const tipoOriginal = peticion.headers.get("content-type") ?? "";
+  const tipo = tipoOriginal.toLowerCase();
   const esMultipart = tipo.startsWith("multipart/form-data");
   const esBinario = tipo.startsWith("image/") || tipo.startsWith("application/octet-stream");
   if (!esMultipart && !esBinario) {
@@ -119,7 +121,7 @@ export async function leerEntrada(peticion: Request, maximo: number): Promise<En
     return { tipo: "ok", imagen: cuerpo, cliente: clienteDeCabecera(peticion.headers.get(CABECERA_CLIENTE)) };
   }
   try {
-    const entrada = await deMultipart(cuerpo, tipo);
+    const entrada = await deMultipart(cuerpo, tipoOriginal);
     if (entrada.tipo === "ok" && entrada.imagen.byteLength > maximo) {
       borrar(entrada.imagen);
       return { tipo: "demasiado-grande" };

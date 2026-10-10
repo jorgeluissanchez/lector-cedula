@@ -184,6 +184,18 @@ Comandos nuevos:
 | SDK-59 | Unitaria (Accept y JSON único) | Vitest | `UB` | 2/2 escenarios |
 | SDK-60 | E2E de front, back, front-back estricta y front-back auto (potente y débil), streaming on/off | Playwright | `EB(modos)` | matriz completa verde en Chromium y Pixel 7 |
 
+### Pruebas de la guía en un recuadro embebido (necesidad del usuario, 2026-10-10)
+
+| Requisito | Tipo de prueba | Herramienta | Comando | Umbral |
+|---|---|---|---|---|
+| SDK-61 | Unitaria y propiedad de `calcularGuia` con orientación y margen; Worker con guía (amarilla, digital y pasaporte de pie sintéticos) | Vitest + fast-check | `npx vitest run packages/capture/test/lectura/sdk-61-guia-vertical.test.ts` | 8/8 escenarios |
+| SDK-61, SDK-62 | Unitaria y propiedad de `guiaEnElemento`, `guiaEnVideo` y `regionVisible`; controlador con medidas y redimensionado | Vitest + fast-check | `npx vitest run packages/web/test/sdk-61-63-guia.test.ts` | 10/10 escenarios |
+| SDK-62 | Adaptadores React, Vue y Angular | Vitest (jsdom) | `npx vitest run packages/react/test/sdk-62-react.test.ts packages/vue/test/sdk-62-vue.test.ts packages/angular/test/sdk-62-angular.test.ts` | 3/3 |
+| SDK-62, SDK-63 | Navegador: medidas por omisión, ResizeObserver, sin tocar estilos, captura a la resolución de la pista | Vitest browser | `npm run test:browser -- packages/web/test-browser/sdk-62-63-recuadro.browser.test.ts` | 4/4 |
+| SDK-64 | E2E del ejemplo de login (260x400 vertical y 320x200 horizontal, redimensionado), autorización del titular y accesibilidad | Playwright + axe | `npx playwright test --project=login-chromium --project=login-pixel7 --workers=1` | 6/6 en cada proyecto, 0 violaciones serias o críticas |
+| SDK-64 | Privacidad del ejemplo: todas las peticiones al origen del preview; `localStorage`, `sessionStorage` e `indexedDB.databases()` vacíos al terminar cada lectura | Playwright | igual | 0 peticiones fuera de `http://localhost:4196`, almacenamiento vacío |
+| SDK-64 | Escenas sintéticas declaradas | Vitest | `npx vitest run tools/test/videos-cedula.test.mjs` | verde |
+
 ## Decisiones del orquestador por delegación del usuario (2026-10-08)
 
 - Ruta: se usa la existente `/v1/validations` (AV-01), sin alias.

@@ -8,7 +8,7 @@ import { codigoErrorMotor, ErrorMotor, type MotorLector, type OpcionesLecturaMot
 import { leerCabecera } from "./cabeceras.js";
 import { hoyEnBogota, leerImagen } from "./leer.js";
 import { crearPool, type EstadisticasPool, type Pool } from "./pool.js";
-import { rutaModeloPorDefecto, verificarModelo } from "./recursos.js";
+import { registrarBufer, rutaModeloPorDefecto, verificarModelo } from "./recursos.js";
 
 export const LIMITES_POR_DEFECTO = {
   bytesMaximos: 10_485_760,
@@ -81,16 +81,22 @@ export async function crearMotor(opciones: OpcionesMotor = {}): Promise<Motor> {
     enCursoPrincipal++;
     maximoPrincipal = Math.max(maximoPrincipal, enCursoPrincipal);
     let temporizador: ReturnType<typeof setTimeout> | undefined;
+    // Sin worker que terminar: al agotar el tiempo se aborta la lectura (capture la corta entre pasos) y se responde ya.
+    const corte = new AbortController();
+    const senal = op.senal ? AbortSignal.any([op.senal, corte.signal]) : corte.signal;
     try {
       return await Promise.race([
         leerImagen(copia, lectorPrincipal, {
           fechaReferencia,
           admitirTarjetaIdentidad: op.admitirTarjetaIdentidad === true,
           fraude: op.fraude ?? fraudePorDefecto,
-          ...(op.senal ? { senal: op.senal } : {}),
+          senal,
         }),
         new Promise<never>((_r, rechazar) => {
-          temporizador = setTimeout(() => rechazar(new ErrorMotor("tiempo-agotado")), tiempoMs);
+          temporizador = setTimeout(() => {
+            corte.abort();
+            rechazar(new ErrorMotor("tiempo-agotado"));
+          }, tiempoMs);
         }),
       ]);
     } finally {
@@ -109,7 +115,7 @@ export async function crearMotor(opciones: OpcionesMotor = {}): Promise<Motor> {
     if (cabecera.ancho * cabecera.alto > pixelesMaximos) throw new ErrorMotor("imagen-demasiado-grande");
     const tiempoMs = entero(op.tiempoMaximoMs, 1, tiempoPorDefecto);
     const fechaReferencia = op.fechaReferencia ?? hoyEnBogota();
-    const copia = new Uint8Array(imagen);
+    const copia = registrarBufer(new Uint8Array(imagen));
     try {
       if (pool === null) return await enHiloPrincipal(copia, op, fechaReferencia, tiempoMs);
       const carga = { bytes: copia.buffer, fechaReferencia, admitirTarjetaIdentidad: op.admitirTarjetaIdentidad === true, fraude: op.fraude ?? fraudePorDefecto };

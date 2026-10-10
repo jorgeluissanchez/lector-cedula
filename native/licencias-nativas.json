@@ -3,6 +3,9 @@
   "gradle": {
     "org.jetbrains.kotlin:kotlin-stdlib": { "licencia": "Apache-2.0", "ambito": "produccion", "fuente": "https://github.com/JetBrains/kotlin/blob/master/license/LICENSE.txt" },
     "org.jetbrains:annotations": { "licencia": "Apache-2.0", "ambito": "produccion", "fuente": "https://github.com/JetBrains/java-annotations/blob/master/LICENSE.txt" },
+    "io.github.dokar3:quickjs-kt": { "licencia": "Apache-2.0", "ambito": "produccion", "fuente": "https://repo1.maven.org/maven2/io/github/dokar3/quickjs-kt/1.0.15/quickjs-kt-1.0.15.pom", "justificacion": "Versión 1.0.15 (POM: Apache-2.0). Embebe como código nativo QuickJS (bellard/quickjs, MIT: https://github.com/bellard/quickjs/blob/master/LICENSE) y c-vector (eteran/c-vector, MIT: https://github.com/eteran/c-vector/blob/master/LICENSE), submódulos listados en https://github.com/dokar3/quickjs-kt/blob/main/.gitmodules. Transitivas: kotlin-stdlib y kotlinx-coroutines-core." },
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core": { "licencia": "Apache-2.0", "ambito": "produccion", "fuente": "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core/1.11.0/kotlinx-coroutines-core-1.11.0.pom" },
+    "org.jetbrains.kotlinx:kotlinx-serialization-json": { "licencia": "Apache-2.0", "ambito": "produccion", "fuente": "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-json/1.11.0/kotlinx-serialization-json-1.11.0.pom" },
     "io.kotest:kotest-runner-junit5": { "licencia": "Apache-2.0", "ambito": "prueba", "fuente": "https://github.com/kotest/kotest/blob/master/LICENSE" },
     "io.kotest:kotest-assertions-core": { "licencia": "Apache-2.0", "ambito": "prueba", "fuente": "https://github.com/kotest/kotest/blob/master/LICENSE" },
     "io.kotest:kotest-extensions-pitest": { "licencia": "Apache-2.0", "ambito": "prueba", "fuente": "https://github.com/kotest/kotest/blob/master/LICENSE" },

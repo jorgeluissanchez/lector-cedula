@@ -4,7 +4,7 @@
   "descripcion": "OD-01a: pasaporte colombiano sintético, apellido compuesto y Ñ transliterada",
   "entrada": [
     "P<COLPEREZ<NUNEZ<<ANA<MARIA<<<<<<<<<<<<<<<<<",
-    "AZ12345673COL9002155F31021451234567890<<<<78"
+    "AZ12345673COL9002155F31021459999123456<<<<78"
   ],
   "opciones": {
     "fechaReferencia": "2026-10-08"
@@ -21,7 +21,7 @@
     "fechaNacimiento": "1990-02-15",
     "sexo": "F",
     "fechaVencimiento": "2031-02-14",
-    "datoOpcional": "1234567890",
+    "datoOpcional": "9999123456",
     "nombrePaisEmisor": "Colombia",
     "nombreNacionalidad": "Colombia",
     "cd_numeroDocumento": "valido",

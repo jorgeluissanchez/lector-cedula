@@ -104,3 +104,56 @@ describe("MOT-05 lector de cabeceras", { timeout: 60_000 }, () => {
     );
   });
 });
+
+describe("MOT-05 cabeceras: casos borde (mutación)", { timeout: 60_000 }, () => {
+  const sof = (ancho: number, alto: number, marcador = 0xc0) => [0xff, marcador, 0x00, 0x11, 8, alto >> 8, alto & 0xff, ancho >> 8, ancho & 0xff, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1];
+
+  it.each([
+    ["relleno 0xFF antes del marcador", [0xff, 0xd8, 0xff, 0xff, 0xff, ...sof(321, 123).slice(1)]],
+    ["marcadores sin longitud (RST0, TEM) antes del SOF", [0xff, 0xd8, 0xff, 0xd0, 0xff, 0x01, 0xff, 0xd7, ...sof(321, 123)]],
+    ["segmento vacío (longitud 2) antes del SOF", [0xff, 0xd8, 0xff, 0xe1, 0x00, 0x02, ...sof(321, 123)]],
+    ["DHT (C4), JPG (C8) y DAC (CC) no son SOF", [0xff, 0xd8, 0xff, 0xc4, 0x00, 0x07, 0, 0x01, 0, 0x01, 0, 0xff, 0xc8, 0x00, 0x02, 0xff, 0xcc, 0x00, 0x04, 0, 0, ...sof(321, 123, 0xc2)]],
+  ])("MOT-05 JPEG %s", (_n, bytes) => {
+    expect(leerCabecera(new Uint8Array(bytes))).toStrictEqual({ formato: "jpeg", ancho: 321, alto: 123 });
+  });
+
+  it.each([
+    ["byte que no es 0xFF donde va un marcador", [0xff, 0xd8, 0x00, ...sof(5, 5)]],
+    ["EOI antes del SOF", [0xff, 0xd8, 0xff, 0xd9, ...sof(5, 5)]],
+    ["SOS antes del SOF", [0xff, 0xd8, 0xff, 0xda, 0x00, 0x02, ...sof(5, 5)]],
+    ["segmento de longitud 1", [0xff, 0xd8, 0xff, 0xe0, 0x00, 0x01, ...sof(5, 5)]],
+    ["marcador al final sin longitud", [0xff, 0xd8, 0xff, 0xe0, 0x00]],
+    ["SOF truncado justo antes del ancho", [0xff, 0xd8, ...sof(5, 5).slice(0, 8)]],
+    ["solo SOI", [0xff, 0xd8, 0xff]],
+  ])("MOT-05 JPEG sin dimensiones: %s", (_n, bytes) => {
+    expect(leerCabecera(new Uint8Array(bytes))).toBeNull();
+  });
+
+  it("MOT-05 JPEG con el SOF justo al límite de longitud", () => {
+    expect(leerCabecera(new Uint8Array([0xff, 0xd8, ...sof(7, 9).slice(0, 9)]))).toStrictEqual({ formato: "jpeg", ancho: 7, alto: 9 });
+  });
+
+  it("MOT-05 PNG de exactamente 24 bytes se lee; de 23, no", () => {
+    expect(leerCabecera(png(3, 4).slice(0, 24))).toStrictEqual({ formato: "png", ancho: 3, alto: 4 });
+    expect(leerCabecera(png(3, 4).slice(0, 23))).toBeNull();
+  });
+
+  it("MOT-05 WebP: longitudes mínimas exactas por chunk", () => {
+    expect(leerCabecera(webpVp8(10, 11).slice(0, 30))).toStrictEqual({ formato: "webp", ancho: 10, alto: 11 });
+    expect(leerCabecera(webpVp8(10, 11).slice(0, 29))).toBeNull();
+    expect(leerCabecera(webpVp8l(10, 11).slice(0, 25))).toStrictEqual({ formato: "webp", ancho: 10, alto: 11 });
+    expect(leerCabecera(webpVp8l(10, 11).slice(0, 24))).toBeNull();
+    expect(leerCabecera(webpVp8x(10, 11).slice(0, 30))).toStrictEqual({ formato: "webp", ancho: 10, alto: 11 });
+    expect(leerCabecera(webpVp8x(10, 11).slice(0, 29))).toBeNull();
+    expect(leerCabecera(webpVp8x(10, 11).slice(0, 15))).toBeNull();
+  });
+
+  it("MOT-05 un RIFF que no es WEBP con chunk VP8X no se lee como WebP; WEBP sin RIFF tampoco", () => {
+    const b = webpVp8x(10, 11);
+    b.set(ascii("WAVE"), 8);
+    expect(leerCabecera(b)).toBeNull();
+    const sinRiff = webpVp8x(10, 11);
+    sinRiff.set(ascii("XXXX"), 0);
+    expect(leerCabecera(sinRiff)).toBeNull();
+  });
+});

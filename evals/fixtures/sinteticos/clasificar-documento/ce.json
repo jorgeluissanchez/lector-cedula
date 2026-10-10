@@ -3,8 +3,8 @@
   "tipo": "clasificar-documento",
   "descripcion": "OD-11: CE sintética con hipótesis",
   "entrada": [
-    "I<COL1234567<<4<<<<<<<<<<<<<<<",
-    "8001014F3001019VEN<<<<<<<<<<<4",
+    "I<COL9999123<<8<<<<<<<<<<<<<<<",
+    "8001014F3001019VEN<<<<<<<<<<<6",
     "GARCIA<<MARIA<JOSE<<<<<<<<<<<<"
   ],
   "opciones": {
@@ -15,7 +15,7 @@
     "ok": true,
     "tipoDocumento": "cedula-extranjeria",
     "fuente": "mrz-td1",
-    "numeroDocumento": "1234567",
+    "numeroDocumento": "9999123",
     "nacionalidad": "VEN",
     "apellidos": "GARCIA",
     "nombres": "MARIA JOSE",

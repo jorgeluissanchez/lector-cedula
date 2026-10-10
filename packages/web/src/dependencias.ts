@@ -6,7 +6,6 @@
  */
 // Stryker disable all
 import {
-  calcularGuia,
   crearClienteCalidad,
   evaluarEntorno,
   fotoAPixeles,
@@ -23,7 +22,8 @@ import { entornoNavegador, ErrorMotor, motorMemorizado, recursosPorOmision, type
 import { crearClienteLector, type ClienteLector } from "./cliente-lector.js";
 import { leerSecuencia, MAX_FRAMES_LECTURA } from "./secuencia.js";
 import { conCeroAnteError, copiaEnvio, type PixelesCopia } from "./copias.js";
-import type { CalidadInyectada, CamaraLector, CapturaLector, DependenciasLector, LectorInyectado, MotivoCalidad, OpcionesLector } from "./tipos.js";
+import { guiaEnVideo } from "./pantalla.js";
+import type { CalidadInyectada, CamaraLector, CapturaLector, DependenciasLector, LectorInyectado, MotivoCalidad, OpcionesLector, Rectangulo } from "./tipos.js";
 
 /** Presupuestos de lectura de la PWA (OFF-23, OFF-28). */
 const PRESUPUESTO = { maxLlamadasOcr: 12, tiempoLimiteMs: 15_000, realcePdf417: true, limitePdf417Ms: 6_000 } as const;
@@ -105,6 +105,10 @@ export function crearDependencias(opciones: OpcionesLector, modo: { readonly lig
   const conImagen = opciones.sesion !== undefined || (opciones.backend !== undefined && opciones.modo !== "front");
   let cliente: ClienteCalidad | null = null;
   let lectorWorker: ClienteLector | null = null;
+  // SDK-61: sin guía del controlador (sin medidas del elemento), la de las opciones sobre el frame completo.
+  // Una guía medida con otras dimensiones (la pista acaba de girar) tampoco se usa.
+  const guiaDe = (ancho: number, alto: number, g: Rectangulo | null | undefined): Rectangulo =>
+    g !== null && g !== undefined && g.x >= 0 && g.y >= 0 && g.x + g.ancho <= ancho && g.y + g.alto <= alto ? g : (guiaEnVideo({ anchoVideo: ancho, altoVideo: alto, anchoElemento: 0, altoElemento: 0, ajuste: "contain" }, opciones.guia) as Rectangulo);
 
   return {
     async abrirCamara(video) {
@@ -124,16 +128,18 @@ export function crearDependencias(opciones: OpcionesLector, modo: { readonly lig
     crearCalidad(): CalidadInyectada {
       let terminado = false;
       return {
-        async analizar(video) {
+        async analizar(video, g) {
           if (video.videoWidth === 0 || terminado) return null;
           const m = await motor();
           cliente ??= crearClienteCalidad(workerDe(m.urls["calidad.js"]));
-          const r = await cliente.analizar(tomarFrameAnalisis(video, video.videoWidth, video.videoHeight));
+          const guia = guiaDe(video.videoWidth, video.videoHeight, g);
+          // SDK-61: la calidad y la presencia se evalúan dentro de la guía (zona visible del elemento).
+          const r = await cliente.analizar({ ...tomarFrameAnalisis(video, video.videoWidth, video.videoHeight), guia });
           if (!r.ok) throw new Error(r.codigo);
           return {
             score: r.resultado.score,
             motivo: r.resultado.motivo as MotivoCalidad | null,
-            guia: calcularGuia(video.videoWidth, video.videoHeight),
+            guia,
             anchoVideo: video.videoWidth,
             altoVideo: video.videoHeight,
             contenido: r.contenido,
@@ -146,11 +152,13 @@ export function crearDependencias(opciones: OpcionesLector, modo: { readonly lig
         },
       };
     },
-    async capturar(video, camara, contenido): Promise<CapturaLector | null> {
+    async capturar(video, camara, contenido, g): Promise<CapturaLector | null> {
       const c = cliente;
       if (c === null) return null;
+      // SDK-63: resolución de la pista (videoWidth x videoHeight), nunca el tamaño CSS del elemento.
       const completo = tomarFrameCaptura(video);
-      const r = await conLienzo(completo, (l) => c.analizar(tomarFrameAnalisis(l, completo.ancho, completo.alto)));
+      const guia = guiaDe(completo.ancho, completo.alto, g);
+      const r = await conLienzo(completo, (l) => c.analizar({ ...tomarFrameAnalisis(l, completo.ancho, completo.alto), guia }));
       if (!r.ok || r.resultado.score < UMBRALES_POR_DEFECTO.umbralListo) {
         completo.pixeles.fill(0);
         return null;

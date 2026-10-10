@@ -111,3 +111,7 @@ Con el parámetro encendido la PWA MUST enlazar la plantilla `docs/legal/autoriz
 #### Scenario: Enlaces solo con el parámetro
 - **WHEN** el E2E carga la PWA construida con `VITE_ADMITIR_TI=false` y con `true`
 - **THEN** el enlace a la autorización del representante no existe en la primera y existe en la segunda
+
+#### Scenario: Marcador URL-AUTORIZACION-TI en la política publicada
+- **WHEN** se construye la PWA y la política de `docs/legal/` contiene un enlace Markdown a `URL-AUTORIZACION-TI`
+- **THEN** con `VITE_ADMITIR_TI=true` la página `/assets/politica-tratamiento.html` lo enlaza a `/assets/autorizacion-representante-ti.html`; con `false` queda solo el texto del enlace; en ninguna de las dos aparece el marcador

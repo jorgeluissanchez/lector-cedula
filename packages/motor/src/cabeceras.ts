@@ -12,6 +12,7 @@ export interface Cabecera {
 const FIRMA_PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 
 function empieza(b: Uint8Array, firma: readonly number[], desde = 0): boolean {
+  // Stryker disable next-line ConditionalExpression,EqualityOperator,ArithmeticOperator: equivalente; un byte ausente es undefined y nunca coincide con la firma.
   return b.length >= desde + firma.length && firma.every((x, i) => b[desde + i] === x);
 }
 

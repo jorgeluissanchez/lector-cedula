@@ -106,3 +106,103 @@ describe("MOT-04 pool de worker_threads", { timeout: 60_000 }, () => {
     expect(progresos).toStrictEqual([0.5]);
   });
 });
+
+describe("pool: casos borde (mutación)", { timeout: 60_000 }, () => {
+  it("MOT-04 maximoEnCurso cuenta solo los hilos ocupados", async () => {
+    const p = pool(3);
+    await p.ejecutar({ accion: "eco" });
+    expect(p.estadisticas()).toMatchObject({ maximoEnCurso: 1, enCurso: 0, workers: 3, tareas: 1 });
+  });
+
+  it("MOT-04 con un hilo libre se acepta aunque la cola máxima sea 0", async () => {
+    const p = pool(2, 0);
+    const a = p.ejecutar({ accion: "dormir", ms: 200 });
+    await expect.poll(() => p.estadisticas().enCurso).toBe(1);
+    expect(await p.ejecutar({ accion: "eco" })).toStrictEqual({ accion: "eco", suma: 0 });
+    expect(await codigo(p.ejecutar({ accion: "eco" }).then(() => a))).toBe("resuelve");
+  });
+
+  it("MOT-04 tras caer un worker se despacha la tarea en cola", async () => {
+    const p = pool(1, 4);
+    const [a, b] = await Promise.all([codigo(p.ejecutar({ accion: "salir" })), p.ejecutar({ accion: "eco" })]);
+    expect(a).toBe("motor-error-interno");
+    expect(b).toStrictEqual({ accion: "eco", suma: 0 });
+  });
+
+  it("MOT-05 tras agotar el tiempo se despacha la tarea en cola y el worker viejo no deja hilos de más", async () => {
+    const p = pool(1, 4);
+    const viejo = p.trabajadores()[0];
+    const salida = new Promise((r) => viejo?.once("exit", r));
+    const [a, b] = await Promise.all([codigo(p.ejecutar({ accion: "dormir", ms: 5_000 }, { tiempoMs: 30 })), p.ejecutar({ accion: "eco" })]);
+    expect(a).toBe("tiempo-agotado");
+    expect(b).toStrictEqual({ accion: "eco", suma: 0 });
+    await salida;
+    expect(p.estadisticas().workers).toBe(1);
+    expect(await p.ejecutar({ accion: "eco" })).toStrictEqual({ accion: "eco", suma: 0 });
+  });
+
+  it("MOT-04 un worker que muere sin tarea se reemplaza y el pool sigue", async () => {
+    const p = pool(1);
+    const viejo = p.trabajadores()[0];
+    const salida = new Promise((r) => viejo?.once("exit", r));
+    await p.ejecutar({ accion: "salir-luego" });
+    await salida;
+    await expect.poll(() => p.trabajadores()[0]?.threadId !== viejo?.threadId).toBe(true);
+    expect(p.estadisticas().workers).toBe(1);
+    expect(await p.ejecutar({ accion: "eco" })).toStrictEqual({ accion: "eco", suma: 0 });
+  });
+
+  it("MOT-05 una tarea que termina antes del tiempo no deja el temporizador ni la escucha vivos", async () => {
+    const p = pool(1);
+    const id = p.trabajadores()[0]?.threadId;
+    // Calienta el worker: su arranque no debe contar en los 40 ms.
+    await p.ejecutar({ accion: "eco" });
+    const control = new AbortController();
+    await p.ejecutar({ accion: "eco" }, { tiempoMs: 40, senal: control.signal });
+    const b = p.ejecutar({ accion: "dormir", ms: 150 });
+    control.abort();
+    await new Promise((r) => setTimeout(r, 80));
+    expect(await b).toStrictEqual({ accion: "dormir", suma: 0 });
+    expect(p.trabajadores()[0]?.threadId).toBe(id);
+  });
+
+  it("MOT-21 cancelar la tarea en curso no quita la que espera en la cola", async () => {
+    const p = pool(1, 4);
+    const control = new AbortController();
+    const a = codigo(p.ejecutar({ accion: "dormir", ms: 5_000 }, { senal: control.signal }));
+    const b = p.ejecutar({ accion: "eco" });
+    await expect.poll(() => p.estadisticas().enCurso).toBe(1);
+    control.abort();
+    expect(await a).toBe("cancelado");
+    expect(await b).toStrictEqual({ accion: "eco", suma: 0 });
+  });
+
+  it("MOT-04 se ignoran mensajes con otro id y el progreso sin callback no falla", async () => {
+    const p = pool(1);
+    expect(await p.ejecutar({ accion: "doble" })).toStrictEqual({ accion: "doble", suma: 0 });
+    expect(await p.ejecutar({ accion: "progreso" })).toStrictEqual({ accion: "progreso", suma: 0 });
+  });
+
+  it("MOT-04 un código de error desconocido del worker es motor-error-interno", async () => {
+    const p = pool(1);
+    expect(await codigo(p.ejecutar({ accion: "error-raro" }))).toBe("motor-error-interno");
+  });
+
+  it("MOT-07 workerData llega al worker y LECTOR_MOTOR_EXEC_ARGV solo cuenta con NODE_ENV=test", async () => {
+    const antes = { argv: process.env.LECTOR_MOTOR_EXEC_ARGV, entorno: process.env.NODE_ENV };
+    try {
+      process.env.LECTOR_MOTOR_EXEC_ARGV = "--no-warnings\n--no-deprecation";
+      const con = crearPool({ archivo: FALSO, hilos: 1, colaMaxima: 1, datos: { rutaModelo: "x" } });
+      abiertos.push(con);
+      expect(await con.ejecutar({ accion: "argv" })).toStrictEqual({ execArgv: ["--no-warnings", "--no-deprecation"], datos: { rutaModelo: "x" } });
+      process.env.NODE_ENV = "production";
+      const sin = crearPool({ archivo: FALSO, hilos: 1, colaMaxima: 1 });
+      abiertos.push(sin);
+      expect(await sin.ejecutar({ accion: "argv" })).toStrictEqual({ execArgv: [], datos: null });
+    } finally {
+      process.env.NODE_ENV = antes.entorno;
+      if (antes.argv === undefined) delete process.env.LECTOR_MOTOR_EXEC_ARGV;
+      else process.env.LECTOR_MOTOR_EXEC_ARGV = antes.argv;
+    }
+  });
+});

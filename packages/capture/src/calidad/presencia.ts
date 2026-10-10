@@ -199,6 +199,16 @@ export function hayMrzTd3(p: PixelesRgba): boolean {
   return esTd3(evidenciaTd3(p)) || esTd3(evidenciaTd3(girar(p, 180)));
 }
 
+/**
+ * SDK-61: la amarilla de pie tiene las barras del PDF417 horizontales. Devuelve la luminancia de `r` traspuesta (las
+ * filas pasan a columnas) para aplicar los mismos detectores; el rectángulo resultante empieza en (0, 0).
+ */
+function traspuesta(l: Uint8Array, w: number, r: Rect): { l: Uint8Array; w: number; r: Rect } {
+  const t = new Uint8Array(r.ancho * r.alto);
+  for (let y = 0; y < r.alto; y++) for (let x = 0; x < r.ancho; x++) t[x * r.alto + y] = l[(r.y + y) * w + r.x + x] as number;
+  return { l: t, w: r.alto, r: { x: 0, y: 0, ancho: r.alto, alto: r.ancho } };
+}
+
 export function detectarPresencia(frame: FrameAnalisis, guia: Cuadrilatero): Presencia {
   const recorte = recorteGuia(frame, guia);
   if (recorte.ancho < 8 || recorte.alto < 8) return { tarjeta: null, contenido: null, presente: false };
@@ -206,11 +216,12 @@ export function detectarPresencia(frame: FrameAnalisis, guia: Cuadrilatero): Pre
   const t = buscarTarjeta(l, recorte.ancho, recorte.alto);
   if (t === null) return { tarjeta: null, contenido: null, presente: false };
   const tarjeta = { x: recorte.x + t.x, y: recorte.y + t.y, ancho: t.ancho, alto: t.alto };
-  if (hayPdf417(l, recorte.ancho, t)) return { tarjeta, contenido: "pdf417", presente: true };
+  const vertical = t.alto > t.ancho ? traspuesta(l, recorte.ancho, t) : null;
+  if (hayPdf417(l, recorte.ancho, t) || (vertical !== null && hayPdf417(vertical.l, vertical.w, vertical.r))) return { tarjeta, contenido: "pdf417", presente: true };
   const imagen = subimagen(frame, tarjeta);
   if (hayMrz(imagen)) return { tarjeta, contenido: "mrz-td1", presente: true };
   if (hayMrzTd3(imagen)) return { tarjeta, contenido: "mrz-td3", presente: true };
-  if (hayPdf417Suave(l, recorte.ancho, t)) return { tarjeta, contenido: "pdf417", presente: true };
+  if (hayPdf417Suave(l, recorte.ancho, t) || (vertical !== null && hayPdf417Suave(vertical.l, vertical.w, vertical.r))) return { tarjeta, contenido: "pdf417", presente: true };
   return { tarjeta, contenido: null, presente: false };
 }
 

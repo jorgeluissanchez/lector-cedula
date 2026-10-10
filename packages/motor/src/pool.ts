@@ -102,11 +102,13 @@ export function crearPool(opciones: OpcionesPool): Pool {
         terminarTarea(t);
         t.rechazar(new ErrorMotor("motor-error-interno"));
       }
+      // Stryker disable next-line ConditionalExpression: equivalente; cerrar() vacía `hilos` antes de terminar, así que tras el cierre i es -1.
       if (!cerrado) {
         hilos.push(crearHilo());
         despachar();
       }
     };
+    // Stryker disable next-line StringLiteral: equivalente; tras "error" Node emite siempre "exit", que también llama a caida.
     hilo.worker.on("error", caida);
     hilo.worker.on("exit", caida);
     return hilo;
@@ -116,12 +118,15 @@ export function crearPool(opciones: OpcionesPool): Pool {
   function abortarEnCurso(hilo: Hilo, codigo: "tiempo-agotado" | "cancelado"): void {
     const t = hilo.tarea;
     const i = hilos.indexOf(hilo);
+    // Stryker disable next-line ConditionalExpression,LogicalOperator,UnaryOperator: defensivo; el temporizador y la escucha se retiran al terminar la tarea.
     if (t === null || i === -1) return;
     hilos.splice(i, 1);
     hilo.tarea = null;
+    // Stryker disable next-line BlockStatement,CallExpression: equivalente; un temporizador o escucha que quedara encontraría el hilo ya fuera de `hilos`.
     terminarTarea(t);
     void hilo.worker.terminate();
     t.rechazar(new ErrorMotor(codigo));
+    // Stryker disable next-line ConditionalExpression: equivalente; tras cerrar() ninguna tarea sigue en un hilo.
     if (!cerrado) {
       hilos.push(crearHilo());
       despachar();
@@ -150,6 +155,7 @@ export function crearPool(opciones: OpcionesPool): Pool {
         if (op.senal?.aborted === true) return rechazar(new ErrorMotor("cancelado"));
         const libre = hilos.some((h) => h.tarea === null);
         if (!libre && cola.length >= opciones.colaMaxima) return rechazar(new ErrorMotor("motor-ocupado"));
+        // Stryker disable next-line UpdateOperator: equivalente; los ids decrecientes también son únicos.
         const t: Tarea = { id: siguienteId++, carga, opciones: op, resolver, rechazar };
         if (op.senal) {
           const senal = op.senal;
@@ -164,6 +170,7 @@ export function crearPool(opciones: OpcionesPool): Pool {
             const hilo = hilos.find((h) => h.tarea === t);
             if (hilo) abortarEnCurso(hilo, "cancelado");
           };
+          // Stryker disable next-line ObjectLiteral,BooleanLiteral: equivalente; la escucha se retira al terminar la tarea.
           senal.addEventListener("abort", alAbortar, { once: true });
           t.quitarEscucha = () => senal.removeEventListener("abort", alAbortar);
         }
@@ -172,6 +179,7 @@ export function crearPool(opciones: OpcionesPool): Pool {
       });
     },
     async cerrar() {
+      // Stryker disable next-line ConditionalExpression: equivalente; un segundo cierre recorre listas ya vacías.
       if (cerrado) return;
       cerrado = true;
       const pendientes = [...cola.splice(0), ...hilos.flatMap((h) => (h.tarea ? [h.tarea] : []))];
@@ -180,6 +188,7 @@ export function crearPool(opciones: OpcionesPool): Pool {
         return h.worker;
       });
       for (const t of pendientes) {
+        // Stryker disable next-line CallExpression: equivalente; los hilos ya no están en `hilos` y sus temporizadores no hacen nada.
         terminarTarea(t);
         t.rechazar(new ErrorMotor("motor-cerrado"));
       }

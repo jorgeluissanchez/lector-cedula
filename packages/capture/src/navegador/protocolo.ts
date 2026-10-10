@@ -13,6 +13,8 @@ export type MensajeAlWorker =
       readonly altoOriginal: number;
       /** Transferido, sin copia. */
       readonly pixeles: ArrayBuffer;
+      /** SDK-61: guía en píxeles del frame original (zona visible); dentro del frame o `frame-invalido`. */
+      readonly guia?: { readonly x: number; readonly y: number; readonly ancho: number; readonly alto: number };
     };
 
 /**

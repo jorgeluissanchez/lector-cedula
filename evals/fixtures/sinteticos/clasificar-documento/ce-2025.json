@@ -1,0 +1,24 @@
+{
+  "sintetico": true,
+  "tipo": "clasificar-documento",
+  "descripcion": "OD-11: CE sintética de 6 cifras, nacionalidad ECU",
+  "entrada": [
+    "I<COL999912<<<7<<<<<<<<<<<<<<<",
+    "9205174M3301018ECU<<<<<<<<<<<8",
+    "TORIBA<<PEDRO<<<<<<<<<<<<<<<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "tipoDocumento": "cedula-extranjeria",
+    "fuente": "mrz-td1",
+    "numeroDocumento": "999912",
+    "nacionalidad": "ECU",
+    "apellidos": "TORIBA",
+    "nombres": "PEDRO",
+    "warnings": "CE01,CE02,CE03,CE05,CE06,CE07"
+  }
+}

@@ -65,7 +65,8 @@ export function crearClienteCalidad<C extends ContenidoPresencia | ContenidoPres
     async analizar(frame) {
       const pixeles = frame.pixeles.buffer as ArrayBuffer;
       const { ancho, alto, anchoOriginal, altoOriginal } = frame;
-      const m = await enviar({ tipo: "analizar", ancho, alto, anchoOriginal, altoOriginal, pixeles }, [pixeles]);
+      const guia = frame.guia === undefined ? {} : { guia: { x: frame.guia.x, y: frame.guia.y, ancho: frame.guia.ancho, alto: frame.guia.alto } };
+      const m = await enviar({ tipo: "analizar", ancho, alto, anchoOriginal, altoOriginal, pixeles, ...guia }, [pixeles]);
       if (m?.tipo === "resultado") return { ok: true, resultado: m.resultado, deteccion: m.deteccion, pixeles: new Uint8ClampedArray(m.pixeles), contenido: (m.contenido ?? null) as C };
       return { ok: false, codigo: m?.tipo === "error" ? m.codigo : "mensaje-invalido" };
     },

@@ -3,8 +3,8 @@
   "tipo": "clasificar-documento",
   "descripcion": "OD-11: TD1 con emisor ESP",
   "entrada": [
-    "I<ESP1234567<<4<<<<<<<<<<<<<<<",
-    "8001014F3001019VEN<<<<<<<<<<<4",
+    "I<ESP9999123<<8<<<<<<<<<<<<<<<",
+    "8001014F3001019VEN<<<<<<<<<<<6",
     "GARCIA<<MARIA<JOSE<<<<<<<<<<<<"
   ],
   "opciones": {

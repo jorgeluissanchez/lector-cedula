@@ -26,6 +26,10 @@ El lector MRZ desde imagen (LMI) MUST aceptar un parámetro `formato: "td1" | "t
 - **WHEN** se llama `leerDocumento` con `pista: "mrz-td3"` y lectores inyectados en los que TD3 devuelve `mrz-no-encontrada` y TD1 una CE válida
 - **THEN** el resultado tiene `tipoDocumento: "cedula-extranjeria"`, TD3 tiene 1 llamada antes que TD1 y PDF417 0 llamadas
 
+#### Scenario: Eval de imagen de pasaporte y CE
+- **WHEN** `npm run eval:mrz-imagen` lee con OCR real, además del conjunto E de la cédula digital, 40 pasaportes sintéticos (colombianos y extranjeros, semilla 20261010, `formato: "td3"`) y 40 CE sintéticas (TD1, semilla 20261011), con las 9 distorsiones de LMI-06 sobre los 20 primeros de cada tipo
+- **THEN** el reporte `evals/reports/mrz-imagen.json` lleva los grupos `td3` y `ce` (solo contadores), cada grupo (limpias y cada distorsión) tiene al menos el 90 % de lecturas correctas y 0 lecturas falsas, y un documento leído con campos distintos de los de su verdad cuenta como falso
+
 ### Requirement: OFF-27c Presupuesto del respaldo MRZ tras una pista PDF417
 Si la MRZ es solo respaldo de una pista `"pdf417"` (en la misma llamada o en otra marcada `respaldoDe: "pdf417"`, como el respaldo final de OFF-28 c en la PWA), `leerDocumento` MUST pedir solo TD1 con `maxLlamadasOcr: 4` (`MAX_LLAMADAS_RESPALDO_MRZ`), tope por lectura que nunca amplía el del lector. Sin pista o con pista MRZ no cambia. Motivo en design.md.
 
@@ -84,3 +88,14 @@ El lector MUST NOT decodificar QR, leer chips NFC (ni BAC/PACE) ni extraer foto,
 #### Scenario: Fixture no declarado
 - **WHEN** `privacidad-check` analiza un directorio temporal con un fixture TD3 cuyo número `XY9999999` no figura en la lista de sintéticos
 - **THEN** el comando falla y nombra el archivo
+
+#### Scenario: Alcance de la revisión
+- **WHEN** `node tools/privacidad-check.mjs --raiz <dir>` analiza un directorio sin git, o el repositorio con `npm run check:privacidad`
+- **THEN** revisa todas las secciones de dependencias de `apps/*/package.json` y `packages/*/package.json` y falla ante librerías de QR, de códigos de barras de terceros o de NFC (`jsqr`, `html5-qrcode`, `qr-scanner`, `@zxing/*`, `zbar`, `barcode-detector`, `@capacitor-mlkit/barcode-scanning` u otra `mlkit`/`barcode-scanning`, `@ericblade/quagga*`, `*nfc*`, `*mrtd*`); `zxing-wasm`, que lee el PDF417, es la única excepción y solo por su nombre exacto
+- **AND** revisa `native/**/build.gradle.kts` y falla ante `com.google.mlkit:barcode-scanning` o `com.google.zxing`, y los `AndroidManifest.xml` de `native/` y falla ante `android.permission.NFC`
+- **AND** revisa el número de documento de las líneas MRZ TD1, TD2 y TD3 de `evals/fixtures/**/*.json` contra `tools/privacidad/numeros-mrz-sinteticos.json`; una cadena JSON con varias líneas se separa por `\n` y se consideran líneas de 28 a 46 caracteres (TD1 30, TD2 36, TD3 44, con margen para el ruido OCR)
+- **AND** cada entrada de `tools/privacidad/numeros-mrz-sinteticos.json` declara su `origen`: `sintetico-9999` (empieza por `9999`), `especimen-icao` o `especimen-publico` (espécimen publicado por un emisor), o `sintetico-alfanumerico` (contiene una letra y no puede coincidir con un NUIP); una entrada solo de cifras que no empieza por `9999` debe ser un espécimen
+
+#### Scenario: NUIP no declarado en el opcional
+- **WHEN** `privacidad-check` analiza un fixture TD1 cuyo dato opcional de la línea 2 (posiciones 18 a 28, el NUIP de la cédula digital) o un TD3 cuyo número personal de la línea 2 (posiciones 28 a 42) es `5000000001`
+- **THEN** el comando falla y nombra el número, porque el opcional o el número personal debe estar vacío (`<`), empezar por `9999` tras quitar los ceros a la izquierda o figurar en la lista declarada

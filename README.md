@@ -39,6 +39,10 @@ Quien instala, despliega u ofrece este software a terceros decide los fines y me
 
 Código bajo licencia **MIT** (ver [`LICENSE`](LICENSE)), entregado "tal cual" y sin garantía. Excepción: algunos datos geográficos derivados (por ejemplo, los consulados DIVIPOL de 2018) se distribuyen bajo **CC BY-SA**; ver los avisos de terceros de cada paquete y `tools/divipol/fuentes/LICENSES.md`.
 
+## Integrar el SDK
+
+Guía de uso del SDK (front headless en React, Next, Angular, Vue, JavaScript, Ionic y backend propio en Express, Nest, Next, Fastify, Java o Go): [`docs/sdk/README.md`](docs/sdk/README.md). Empieza por [`docs/sdk/inicio-rapido.md`](docs/sdk/inicio-rapido.md).
+
 ## Cómo autoalojar
 
 - Guía técnica de despliegue: `docs/despliegue/README.md` (en preparación).

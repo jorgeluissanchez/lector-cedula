@@ -6,7 +6,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { autorizacionMd, avisoCorto, bloquesMd, descargoMd, TEXTO_AUTORIZACION, TEXTO_DESCARGO, type Bloque } from "./src/legal";
+import { autorizacionMd, avisoCorto, bloquesMd, descargoMd, RUTA_AUTORIZACION_TI, TEXTO_AUTORIZACION, TEXTO_DESCARGO, type Bloque } from "./src/legal";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -21,8 +21,24 @@ export function leerLegal(archivo: string): string {
 
 const escapar = (t: string): string => t.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
+/** OD-35: solo se enlazan rutas propias de la PWA (`/assets/<archivo>.html`); el resto de enlaces queda como texto. */
 function enLinea(t: string): string {
-  return escapar(t).replace(/\*\*([^*]+)\*\*/gu, "<strong>$1</strong>");
+  return escapar(t)
+    .replace(/\[([^\]]+)\]\((\/assets\/[a-z0-9-]+\.html)\)/gu, '<a href="$2">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/gu, "<strong>$1</strong>");
+}
+
+/** OD-35: marcador de los borradores de docs/legal/ para el enlace a la autorización del representante legal. */
+export const MARCADOR_AUTORIZACION_TI = "URL-AUTORIZACION-TI";
+
+/**
+ * OD-35: con `VITE_ADMITIR_TI=true` el marcador pasa a la página de la autorización (`RUTA_AUTORIZACION_TI`); apagado
+ * esa página no existe, así que el enlace se quita y queda su texto. Los demás marcadores no se tocan.
+ */
+export function sustituirMarcadorTi(md: string, admitirTi: boolean): string {
+  return admitirTi
+    ? md.replaceAll(`](${MARCADOR_AUTORIZACION_TI})`, `](${RUTA_AUTORIZACION_TI})`)
+    : md.replace(/\[([^\]]+)\]\(URL-AUTORIZACION-TI\)/gu, "$1");
 }
 
 export function mdAHtml(md: string, titulo: string): string {

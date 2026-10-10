@@ -7,7 +7,8 @@
 import { clasificarErrorCamara, crearAutocaptura, UMBRALES_POR_DEFECTO, type ResultadoLectura } from "@lector-cedula/capture";
 import { decidirFront, leerDispositivo } from "./decidir-front.js";
 import { enviarCaptura } from "./envio.js";
-import { congelar, ESTADO_INICIAL } from "./estado.js";
+import { actualizar, congelar, ESTADO_INICIAL, normalizarGuia } from "./estado.js";
+import { guiaEnElemento, guiaEnVideo } from "./pantalla.js";
 import { contenidoDePista, transicion, type EventoLector } from "./maquina.js";
 import { aPresentacion } from "./presentacion.js";
 import { marcarInicioLectura, medirLectura } from "./medidas.js";
@@ -26,8 +27,10 @@ import type {
   EstadoLector,
   FrameCalidad,
   LectorInyectado,
+  MedidasVideo,
   ModoLector,
   OpcionesLector,
+  Rectangulo,
   ResultadoPresentacion,
   TipoDocumento,
 } from "./tipos.js";
@@ -70,6 +73,30 @@ export function resultadoConfiable(doc: DocumentoBackend, local: ResultadoPresen
   const tipo = typeof doc.tipo === "string" ? doc.tipo : typeof doc.tipoDocumento === "string" ? doc.tipoDocumento : (local?.tipo ?? "cedula-ciudadania");
   const warnings = Array.isArray(doc.warnings) ? doc.warnings.filter((w): w is string => typeof w === "string") : [];
   return { tipo: tipo as TipoDocumento, campos: doc.campos as unknown as ResultadoPresentacion["campos"], warnings, confiable: true, validacion_id: null };
+}
+
+/** SDK-62: medidas por omisión, solo lectura del `<video>` (nunca cambia estilos ni tamaño). */
+export function medirVideoPorOmision(v: HTMLVideoElement): MedidasVideo | null {
+  const anchoVideo = v.videoWidth;
+  const altoVideo = v.videoHeight;
+  const anchoElemento = v.clientWidth;
+  const altoElemento = v.clientHeight;
+  if (![anchoVideo, altoVideo, anchoElemento, altoElemento].every((n) => typeof n === "number" && n > 0)) return null;
+  const estilo = typeof getComputedStyle === "function" ? getComputedStyle(v) : null;
+  return { anchoVideo, altoVideo, anchoElemento, altoElemento, ajuste: estilo?.objectFit === "cover" ? "cover" : "contain" };
+}
+
+/** SDK-62: `ResizeObserver` sobre el elemento, más el evento `resize` del vídeo (cambio de orientación de la pista). */
+export function observarVideoPorOmision(v: HTMLVideoElement, fn: () => void): () => void {
+  const RO = (globalThis as { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+  const ro = RO === undefined ? null : new RO(() => fn());
+  ro?.observe(v);
+  const conEventos = typeof v.addEventListener === "function";
+  if (conEventos) v.addEventListener("resize", fn);
+  return () => {
+    ro?.disconnect();
+    if (conEventos) v.removeEventListener("resize", fn);
+  };
 }
 
 const temporizarPorOmision = (fn: () => void, ms: number): (() => void) => {
@@ -117,14 +144,45 @@ export function crearLector(entrada: OpcionesLector = {}, deps?: DependenciasLec
   let cola: Cola | null = null;
   let pararBucle: (() => void) | null = null;
   let autoArranque = false;
+  let medidas: MedidasVideo | null = null;
+  let dejarDeObservar: (() => void) | null = null;
   let autoArranqueUsado = false;
   const autocaptura = crearAutocaptura(UMBRALES_POR_DEFECTO);
   const reintentos = crearReintentos(() => d?.ahora() ?? 0);
   const frontActivo = (): boolean => estado.frontActivo !== false;
 
-  function emitir(ev: EventoLector): void {
+  /** SDK-62: `guiaEnPantalla` es derivada de `guia` y de las medidas del elemento. */
+  function conPantalla(e: EstadoLector): EstadoLector {
+    const g = e.guia === null || medidas === null ? null : guiaEnElemento(e.guia.video, medidas);
+    return actualizar(e, { guiaEnPantalla: g });
+  }
+
+  function medir(v: HTMLVideoElement): void {
+    try {
+      medidas = (d?.medirVideo ?? medirVideoPorOmision)(v);
+    } catch {
+      medidas = null;
+    }
+  }
+
+  /** SDK-61: guía en píxeles del vídeo dentro de la zona visible; `null` sin medidas (las dependencias usan el frame completo). */
+  function guiaActual(): Rectangulo | null {
+    return medidas === null ? null : guiaEnVideo(medidas, opciones.guia);
+  }
+
+  /** SDK-62: al cambiar el tamaño del elemento o del vídeo, la guía y `guiaEnPantalla` se recalculan sin esperar un frame. */
+  function alRedimensionar(v: HTMLVideoElement): void {
     if (destruido) return;
-    const siguiente = transicion(estado, ev);
+    medir(v);
+    let siguiente = estado;
+    const g = guiaActual();
+    if (g !== null && medidas !== null && estado.guia !== null && (estado.fase === "activo" || estado.fase === "listo")) {
+      siguiente = actualizar(siguiente, { guia: normalizarGuia(g, medidas.anchoVideo, medidas.altoVideo) ?? siguiente.guia });
+    }
+    publicar(conPantalla(siguiente));
+  }
+
+  function publicar(siguiente: EstadoLector): void {
     if (siguiente === estado) return;
     estado = siguiente;
     for (const fn of [...suscriptores]) {
@@ -134,6 +192,13 @@ export function crearLector(entrada: OpcionesLector = {}, deps?: DependenciasLec
         // Un suscriptor que lanza no rompe a los demás ni al lector.
       }
     }
+  }
+
+  function emitir(ev: EventoLector): void {
+    if (destruido) return;
+    const siguiente = transicion(estado, ev);
+    if (siguiente === estado) return;
+    publicar(conPantalla(siguiente));
   }
 
   function detenerCamara(): void {
@@ -216,9 +281,10 @@ export function crearLector(entrada: OpcionesLector = {}, deps?: DependenciasLec
   async function ciclo(gen: number, v: HTMLVideoElement, deps: DependenciasLector): Promise<void> {
     if (gen !== generacion) return;
     calidad ??= deps.crearCalidad();
+    medir(v);
     let f: FrameCalidad | null;
     try {
-      f = await calidad.analizar(v);
+      f = await calidad.analizar(v, guiaActual());
     } catch {
       if (gen !== generacion) return;
       liberarTodo(true);
@@ -243,7 +309,7 @@ export function crearLector(entrada: OpcionesLector = {}, deps?: DependenciasLec
     if (cam === null) return false;
     let c: CapturaLector | null;
     try {
-      c = await deps.capturar(v, cam, f.contenido);
+      c = await deps.capturar(v, cam, f.contenido, guiaActual());
     } catch {
       c = null;
     }
@@ -450,6 +516,13 @@ export function crearLector(entrada: OpcionesLector = {}, deps?: DependenciasLec
     async iniciar(v) {
       if (destruido || invalida !== null || estado.fase !== "inicio") return;
       video = v;
+      dejarDeObservar?.();
+      dejarDeObservar = null;
+      try {
+        dejarDeObservar = (d?.observarVideo ?? observarVideoPorOmision)(v, () => alRedimensionar(v));
+      } catch {
+        // Sin observador: la guía se recalcula en cada frame.
+      }
       reintentos.reiniciar();
       autoArranque = opciones.autoIniciar === true && !autoArranqueUsado;
       autoArranqueUsado = true;
@@ -473,6 +546,8 @@ export function crearLector(entrada: OpcionesLector = {}, deps?: DependenciasLec
     destruir() {
       if (destruido) return;
       liberarTodo(true);
+      dejarDeObservar?.();
+      dejarDeObservar = null;
       destruido = true;
       suscriptores.clear();
     },

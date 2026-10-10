@@ -42,7 +42,8 @@
     "eval:fraude": "tsc -b && node evals/runners/fraude/eval-fraude.mjs",
     "check:tamano-sdk": "node tools/tamano-sdk.mjs",
     "check:tamano-nativo": "node tools/tamano-nativo.mjs",
-    "nucleo:construir": "node packages/nucleo-js/scripts/construir.mjs"
+    "nucleo:construir": "node packages/nucleo-js/scripts/construir.mjs",
+    "motor:contrato": "tsc -b && node tools/motor-contrato.mjs"
   },
   "devDependencies": {
     "@angular/common": "21.2.25",

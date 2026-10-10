@@ -2,7 +2,7 @@
  * Entrada del IIFE (sdk-nativo, NAT-07): expone `globalThis.LectorCedulaNucleo`, congelado. Es lo único que el bundle
  * escribe en el ámbito global.
  */
-import { crearEstado, decidirEnvio, procesarMrz, procesarPdf417, transicion, validarOpciones, validarUrlSubida, VERSION } from "./nucleo.js";
+import { crearEstado, decidirEnvio, mensajeError, procesarMrz, procesarPdf417, transicion, validarOpciones, validarUrlSubida, VERSION } from "./nucleo.js";
 
 (globalThis as Record<string, unknown>)["LectorCedulaNucleo"] = Object.freeze({
   version: VERSION,
@@ -13,4 +13,5 @@ import { crearEstado, decidirEnvio, procesarMrz, procesarPdf417, transicion, val
   validarOpciones,
   validarUrlSubida,
   decidirEnvio,
+  mensajeError,
 });

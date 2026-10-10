@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import type { OutputBundle } from "rollup";
 import type { Plugin } from "vite";
 import { textoAvisosTerceros } from "./avisos-terceros";
-import { ARCHIVO_AUTORIZACION_TI, leerLegal, mdAHtml } from "./legal-paginas";
+import { ARCHIVO_AUTORIZACION_TI, leerLegal, mdAHtml, sustituirMarcadorTi } from "./legal-paginas";
 import { construirManifiesto } from "./src/precache/manifiesto";
 
 function trozo(tipo: string, datos: Buffer): Buffer {
@@ -116,7 +116,7 @@ export function pluginPwa(opciones: { readonly admitirTi?: boolean } = {}): Plug
       // OFF-20 (condición C3 de licencias): avisos de terceros, en la precaché y enlazados desde "Acerca de y licencias".
       this.emitFile({ type: "asset", fileName: "assets/THIRD_PARTY_LICENSES.txt", source: textoAvisosTerceros() });
       // OFF-21: política de tratamiento y términos de uso, en la precaché (disponibles sin conexión).
-      this.emitFile({ type: "asset", fileName: "assets/politica-tratamiento.html", source: mdAHtml(leerLegal("politica-tratamiento-datos.md"), "Política de tratamiento de datos") });
+      this.emitFile({ type: "asset", fileName: "assets/politica-tratamiento.html", source: mdAHtml(sustituirMarcadorTi(leerLegal("politica-tratamiento-datos.md"), opciones.admitirTi === true), "Política de tratamiento de datos") });
       this.emitFile({ type: "asset", fileName: "assets/terminos-de-uso.html", source: mdAHtml(leerLegal("terminos-de-uso.md"), "Términos de uso") });
       if (opciones.admitirTi === true)
         this.emitFile({ type: "asset", fileName: "assets/autorizacion-representante-ti.html", source: mdAHtml(leerLegal(ARCHIVO_AUTORIZACION_TI), "Autorización del representante legal") });

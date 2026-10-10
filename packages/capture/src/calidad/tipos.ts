@@ -14,6 +14,8 @@ export interface FrameAnalisis {
   readonly pixeles: Uint8ClampedArray;
   readonly anchoOriginal: number;
   readonly altoOriginal: number;
+  /** SDK-61: guía en píxeles del frame original elegida por el llamador (zona visible, orientación); sin ella, CAM-08. */
+  readonly guia?: { readonly x: number; readonly y: number; readonly ancho: number; readonly alto: number };
 }
 
 export interface DeteccionDocumento {

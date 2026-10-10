@@ -38,10 +38,45 @@ export async function conjuntoE(n = 200) {
   return r;
 }
 
+/** OD-21 (otros-documentos, tarea 3.1): tamaño de los conjuntos TD3 y CE, distorsiones sobre los primeros y umbral por grupo. */
+export const N_OTROS = 40;
+export const N_OTROS_DISTORSION = 20;
+export const UMBRAL_OTROS = 0.9;
+export const SEMILLA_TD3 = 20261010;
+export const SEMILLA_CE = 20261011;
+
+/**
+ * Conjuntos sintéticos de otros documentos: `td3` (pasaportes colombianos y extranjeros, se leen con `formato: "td3"`)
+ * y `ce` (cédulas de extranjería TD1). Cada entrada lleva `camposEsperados` de `clasificarDocumento` sobre sus líneas.
+ */
+export async function conjuntosOtros(n = N_OTROS) {
+  const { clasificarDocumento } = await import("../../packages/parsers/dist/index.js");
+  const { pasaporteFicticio, ceFicticia } = await import("../sinteticos/generador-icao.mjs");
+  const armar = (crear, semilla) => {
+    const r = [];
+    const vistos = new Set();
+    for (let i = 0; r.length < n; i++) {
+      const f = crear(semilla + i);
+      const clave = f.lineas.join("");
+      if (vistos.has(clave)) continue;
+      vistos.add(clave);
+      const c = clasificarDocumento(f.lineas, { fechaReferencia: FECHA_REFERENCIA });
+      if (!c.ok) throw new Error("fixture sintético no clasificable");
+      r.push({ ...f, camposEsperados: c.campos });
+    }
+    return r;
+  };
+  return { td3: armar(pasaporteFicticio, SEMILLA_TD3), ce: armar(ceFicticia, SEMILLA_CE) };
+}
+
 const iguales = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 /** "correcta", "falsa" (4 dígitos válidos con otras líneas) o "fallo" para una lectura con verdad `v`. */
 export function clasificar(lectura, v) {
+  if (lectura?.ok === true && lectura.documento?.ok === true) {
+    // OD-21: un documento (pasaporte o CE) solo sale con todos sus dígitos válidos; si sus campos no son los de la verdad, es falso.
+    return v.camposEsperados !== undefined && iguales(lectura.documento.campos, v.camposEsperados) ? "correcta" : "falsa";
+  }
   const r = lectura?.ok === true ? lectura.resultado : null;
   if (r?.ok !== true) return "fallo";
   const d = r.digitosControl;
@@ -57,28 +92,43 @@ export function cumple(reporte) {
   const grupos = [reporte.limpias, ...Object.values(reporte.distorsiones)];
   if (grupos.some((g) => g.falsas !== 0)) return false;
   if (reporte.limpias.correctas < Math.ceil(UMBRAL_LIMPIAS * reporte.limpias.n)) return false;
-  return Object.values(reporte.distorsiones).every((g) => g.correctas >= Math.ceil(UMBRAL_DISTORSION * g.n));
+  if (!Object.values(reporte.distorsiones).every((g) => g.correctas >= Math.ceil(UMBRAL_DISTORSION * g.n))) return false;
+  // OD-21: pasaporte y CE, 0 falsas y al menos el 90 % por grupo (limpias y cada distorsión).
+  return ["td3", "ce"]
+    .filter((t) => reporte[t] !== undefined)
+    .flatMap((t) => [reporte[t].limpias, ...Object.values(reporte[t].distorsiones)])
+    .every((g) => g.falsas === 0 && g.correctas >= Math.ceil(UMBRAL_OTROS * g.n));
 }
 
 /**
  * Ejecuta el eval. `lectores` es una lista de lectores (`leer(bytes, opciones)`) que trabajan en paralelo;
  * `renderizar(lineas, opciones)` devuelve `{ bytes }`. Devuelve el reporte (solo contadores).
  */
-export async function ejecutarEval({ lectores, renderizar, conjunto, nDistorsion = 50 }) {
+export async function ejecutarEval({ lectores, renderizar, conjunto, otros, nDistorsion = 50 }) {
   const tareas = [];
-  conjunto.forEach((v, i) => {
-    tareas.push({ grupo: null, v, opciones: {} });
-    if (i < nDistorsion) for (const d of DISTORSIONES) tareas.push({ grupo: d, v, opciones: { distorsion: d, semillaRuido: i + 1 } });
-  });
-  const reporte = { limpias: contadores(), distorsiones: Object.fromEntries(DISTORSIONES.map((d) => [d, contadores()])) };
+  const nuevoGrupo = () => ({ limpias: contadores(), distorsiones: Object.fromEntries(DISTORSIONES.map((d) => [d, contadores()])) });
+  const reporte = nuevoGrupo();
+  const agregar = (lista, destino, n, lectura) =>
+    lista.forEach((v, i) => {
+      tareas.push({ destino: destino.limpias, v, opciones: {}, lectura });
+      if (i < n) for (const d of DISTORSIONES) tareas.push({ destino: destino.distorsiones[d], v, opciones: { distorsion: d, semillaRuido: i + 1 }, lectura });
+    });
+  agregar(conjunto, reporte, nDistorsion, {});
+  // OD-21: pasaportes con formato td3 y CE con td1 (el lector por defecto), en grupos aparte del reporte.
+  if (otros !== undefined) {
+    reporte.td3 = nuevoGrupo();
+    reporte.ce = nuevoGrupo();
+    agregar(otros.td3, reporte.td3, N_OTROS_DISTORSION, { formato: "td3" });
+    agregar(otros.ce, reporte.ce, N_OTROS_DISTORSION, {});
+  }
   let siguiente = 0;
   await Promise.all(
     lectores.map(async (lector) => {
       while (siguiente < tareas.length) {
         const t = tareas[siguiente++];
         const { bytes } = await renderizar(t.v.lineas, t.opciones);
-        const clase = clasificar(await lector.leer(bytes, { fechaReferencia: FECHA_REFERENCIA }), t.v);
-        const g = t.grupo === null ? reporte.limpias : reporte.distorsiones[t.grupo];
+        const clase = clasificar(await lector.leer(bytes, { fechaReferencia: FECHA_REFERENCIA, ...t.lectura }), t.v);
+        const g = t.destino;
         g.n++;
         if (clase === "correcta") g.correctas++;
         if (clase === "falsa") g.falsas++;
@@ -89,12 +139,16 @@ export async function ejecutarEval({ lectores, renderizar, conjunto, nDistorsion
 }
 
 /** Corre el eval, escribe el reporte en `salida` y devuelve el código de salida (0 cumple, 1 no). */
-export async function correr({ lectores, renderizar, conjunto, salida = SALIDA, log = console.log }) {
-  const reporte = await ejecutarEval({ lectores, renderizar, conjunto: conjunto ?? (await conjuntoE()) });
+export async function correr({ lectores, renderizar, conjunto, otros, salida = SALIDA, log = console.log }) {
+  const reporte = await ejecutarEval({ lectores, renderizar, conjunto: conjunto ?? (await conjuntoE()), otros });
   await writeFile(salida, `${JSON.stringify(reporte, null, 2)}\n`);
   const fila = (nombre, g) => `${nombre.padEnd(12)} ${g.correctas}/${g.n} correctas, ${g.falsas} falsas`;
   log(fila("limpias", reporte.limpias));
   for (const [d, g] of Object.entries(reporte.distorsiones)) log(fila(d, g));
+  for (const t of ["td3", "ce"].filter((x) => reporte[x] !== undefined)) {
+    log(fila(`${t} limpias`, reporte[t].limpias));
+    for (const [d, g] of Object.entries(reporte[t].distorsiones)) log(fila(`${t} ${d}`, g));
+  }
   log(reporte.cumple ? "eval:mrz-imagen: OK" : "eval:mrz-imagen: NO CUMPLE LMI-06");
   return reporte.cumple ? 0 : 1;
 }
@@ -110,7 +164,7 @@ async function principal() {
   const lectores = Array.from({ length: Math.max(1, Math.min(4, cpus().length - 1)) }, () => crearLectorMrz({ rutaModelo }));
   const renderizador = await crearRenderizador();
   try {
-    return await correr({ lectores, renderizar: (l, o) => renderizador.render(l, o) });
+    return await correr({ lectores, renderizar: (l, o) => renderizador.render(l, o), otros: await conjuntosOtros() });
   } finally {
     await renderizador.cerrar();
     await Promise.all(lectores.map((l) => l.terminar()));

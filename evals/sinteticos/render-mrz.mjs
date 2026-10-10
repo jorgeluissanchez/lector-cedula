@@ -131,7 +131,7 @@ export async function crearRenderizador() {
   return {
     async render(lineas, opciones = {}) {
       if (opciones.distorsion !== undefined && !DISTORSIONES.includes(opciones.distorsion)) throw new Error("distorsion desconocida");
-      const ruido = opciones.distorsion === "ruido8" ? ruidoGaussiano(ANCHO_R * ALTO_R, 8, opciones.semillaRuido ?? 1) : undefined;
+      const ruido = opciones.distorsion === "ruido8" ? ruidoGaussiano(lineas.length === 2 ? ANCHO_P * ALTO_P : ANCHO_R * ALTO_R, 8, opciones.semillaRuido ?? 1) : undefined;
       const r = await pagina.evaluate(([l, o]) => window.__mrz.render(l, o), [[...lineas], { ...opciones, ruido }]);
       return { bytes: new Uint8Array(Buffer.from(r.b64, "base64")), cajaMrz: r.cajaMrz, width: r.width, height: r.height };
     },

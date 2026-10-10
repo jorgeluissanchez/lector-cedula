@@ -16,6 +16,7 @@ export interface ApiNucleo {
   validarOpciones(opciones: unknown): unknown;
   validarUrlSubida(url: unknown, servidor: unknown): unknown;
   decidirEnvio(salida: unknown, opciones: unknown): unknown;
+  mensajeError(codigo: unknown, idioma?: unknown): unknown;
 }
 
 let cache: Promise<string> | null = null;
@@ -59,7 +60,7 @@ export const json = <T>(v: T): T => (v === undefined ? v : (JSON.parse(JSON.stri
 /** La API importada desde la fuente TypeScript (sin bundle), normalizada con JSON como `evaluarEnVm`. */
 export async function apiFuente(): Promise<ApiNucleo> {
   const m = (await import("../src/nucleo.js")) as unknown as Record<string, unknown>;
-  const nombres = ["procesarPdf417", "procesarMrz", "transicion", "crearEstado", "validarOpciones", "validarUrlSubida", "decidirEnvio"];
+  const nombres = ["procesarPdf417", "procesarMrz", "transicion", "crearEstado", "validarOpciones", "validarUrlSubida", "decidirEnvio", "mensajeError"];
   const api: Record<string, unknown> = { version: m["VERSION"] };
   for (const n of nombres) api[n] = (...a: unknown[]) => json((m[n] as (...x: unknown[]) => unknown)(...a));
   return api as unknown as ApiNucleo;

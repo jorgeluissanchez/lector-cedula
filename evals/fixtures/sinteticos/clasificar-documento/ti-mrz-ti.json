@@ -1,0 +1,19 @@
+{
+  "sintetico": true,
+  "tipo": "clasificar-documento",
+  "descripcion": "OD-12 y T01: TI por MRZ (TI) no admitida",
+  "entrada": [
+    "TICOL9999123455<<<<<<<<<<<<<<<",
+    "1403011M3203019COL<<<<<<<<<<<8",
+    "MAROTA<<LUIS<<<<<<<<<<<<<<<<<<"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": false,
+    "error": "documento-no-admitido",
+    "warnings": "T01"
+  }
+}

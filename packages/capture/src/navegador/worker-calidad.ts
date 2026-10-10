@@ -19,6 +19,18 @@ type Registro = Record<string, unknown>;
 
 const esRegistro = (v: unknown): v is Registro => typeof v === "object" && v !== null;
 const dimensionValida = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v > 0;
+type CajaGuia = { x: number; y: number; ancho: number; alto: number };
+const finito = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/** SDK-61: guía opcional en píxeles del frame original; `null` si es inválida o sale del frame, `undefined` si falta. */
+function guiaDe(v: unknown, anchoOriginal: number, altoOriginal: number): CajaGuia | null | undefined {
+  if (v === undefined) return undefined;
+  if (!esRegistro(v)) return null;
+  const { x, y, ancho, alto } = v;
+  if (!finito(x) || !finito(y) || !finito(ancho) || !finito(alto) || ancho <= 0 || alto <= 0) return null;
+  if (x < 0 || y < 0 || x + ancho > anchoOriginal || y + alto > altoOriginal) return null;
+  return { x, y, ancho, alto };
+}
 
 /** OFF-22 (pwa-lectura-offline): con `presencia`, un frame sin cédula en la guía nunca llega al umbral de `listo`. */
 export interface OpcionesWorkerCalidad {
@@ -59,7 +71,9 @@ export function iniciarWorkerCalidad(alcance: AlcanceWorker, detector: DetectorD
       ) {
         return error("frame-invalido");
       }
-      const frame = { ancho, alto, anchoOriginal, altoOriginal, pixeles: new Uint8ClampedArray(pixeles) };
+      const guia = guiaDe(datos["guia"], anchoOriginal, altoOriginal);
+      if (guia === null) return error("frame-invalido");
+      const frame = { ancho, alto, anchoOriginal, altoOriginal, pixeles: new Uint8ClampedArray(pixeles), ...(guia === undefined ? {} : { guia }) };
       const deteccion = await detector.detectar(frame);
       const r = analizarFrame(frame, deteccion, configuracion.umbrales);
       if (!r.ok) return error(r.codigo);

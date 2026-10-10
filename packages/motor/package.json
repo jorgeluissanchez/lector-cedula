@@ -5,12 +5,25 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "engines": { "node": ">=20" },
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  "engines": {
+    "node": ">=20"
   },
-  "files": ["dist", "!dist/.tsbuildinfo"],
-  "scripts": { "build": "tsc -b", "test": "vitest run" },
+  "exports": {
+    ".": {
+      "edge-light": "./edge.js",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "edge.js"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
   "dependencies": {
     "@lector-cedula/capture": "0.0.0",
     "@lector-cedula/fraud": "0.0.0",

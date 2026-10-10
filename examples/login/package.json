@@ -1,0 +1,19 @@
+{
+  "name": "@lector-cedula/ejemplo-login",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ejemplo de pantalla de login con la cámara en un recuadro embebido y la cédula de pie (sdk-integracion, SDK-64).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node ../copiar-recursos.mjs dist/lector-cedula",
+    "typecheck": "tsc --noEmit -p .",
+    "preview": "vite preview --port 4196 --strictPort"
+  },
+  "dependencies": {
+    "@lector-cedula/react": "0.1.0",
+    "@lector-cedula/web": "0.1.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

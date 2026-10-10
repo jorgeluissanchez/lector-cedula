@@ -60,12 +60,13 @@ export interface LecturaMotorOk {
 }
 
 /**
- * Lectura sin documento válido. Códigos: `sin-lectura` (no se encontró ni PDF417 ni MRZ, o la imagen es ilegible),
+ * Lectura sin documento válido. Códigos: `sin-lectura` (no se encontró ni PDF417 ni MRZ), `imagen-ilegible` (no se pudo decodificar),
  * `pdf417-no-valido`, `mrz-no-valida`, `menor-de-edad`, `ti-mayor-de-edad`, `documento-no-admitido`.
  */
 export interface LecturaMotorFallida {
   readonly ok: false;
-  readonly error: { readonly codigo: string };
+  /** `tipo`: lector que dio el error (`pdf417` o `mrz`); `digitosValidos`: solo con `mrz-no-valida`. */
+  readonly error: { readonly codigo: string; readonly tipo?: "pdf417" | "mrz"; readonly digitosValidos?: number };
 }
 
 /** RESULTADO de la spec: `confiable` siempre `false` en el motor; `riesgo` `null` con `fraude: false` o sin lectura. */

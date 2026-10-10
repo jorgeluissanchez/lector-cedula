@@ -66,6 +66,8 @@ export interface Falsos {
   lecturasHechas: number;
   capturas: number;
   pixeles: Uint8ClampedArray[];
+  /** SDK-61: guía recibida en cada análisis y captura. */
+  guiasRecibidas: unknown[];
   /** Ejecuta los ciclos programados (modo manual). */
   tick(): void;
 }
@@ -86,6 +88,7 @@ export function crearFalsos(o: OpcionesFalsas = {}): Falsos {
     lecturasHechas: 0,
     capturas: 0,
     pixeles: [],
+    guiasRecibidas: [],
     tick() {
       const c = cola;
       cola = [];
@@ -111,7 +114,8 @@ export function crearFalsos(o: OpcionesFalsas = {}): Falsos {
       },
       crearCalidad() {
         return {
-          async analizar(): Promise<FrameCalidad> {
+          async analizar(_v, g): Promise<FrameCalidad> {
+            f.guiasRecibidas.push(g);
             await Promise.resolve();
             const s = scores[Math.min(iScore++, scores.length - 1)] ?? 0;
             const { score, motivo } = typeof s === "number" ? { score: s, motivo: null } : s;
@@ -123,7 +127,8 @@ export function crearFalsos(o: OpcionesFalsas = {}): Falsos {
           },
         };
       },
-      async capturar(): Promise<CapturaLector | null> {
+      async capturar(_v, _c, _p, g): Promise<CapturaLector | null> {
+        f.guiasRecibidas.push(g);
         await Promise.resolve();
         f.capturas++;
         if (f.capturas <= (o.capturasRechazadas ?? 0)) return null;

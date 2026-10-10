@@ -1,0 +1,20 @@
+{
+  "descripcion": "OD-40 (otros-documentos): números sintéticos declarados para las líneas MRZ (TD1, TD2 y TD3) de evals/fixtures: número de documento, opcional de la línea 2 del TD1 (NUIP de la digital) y número personal del TD3. privacidad-check falla ante un fixture MRZ con un número fuera de esta lista (el opcional y el número personal también pasan si están vacíos o empiezan por 9999). Cada entrada declara su origen: sintetico-9999 (empieza por 9999), especimen-icao (ICAO 9303, UTO), especimen-publico (espécimen publicado por un emisor, persona ficticia) o sintetico-alfanumerico (contiene una letra y no puede coincidir con un NUIP). Un número solo de cifras que no empieza por 9999 debe ser un espécimen.",
+  "numeros": [
+    { "numero": "000000012", "origen": "especimen-publico", "nota": "serial del espécimen anterior de la Registraduría publicado por Eitol (WALTEROS LAURA, persona ficticia)" },
+    { "numero": "1234567890", "origen": "especimen-publico", "nota": "NUIP del mismo espécimen de Eitol (caso negativo MZ-20)" },
+    { "numero": "999900123", "origen": "sintetico-9999" },
+    { "numero": "99990012X", "origen": "sintetico-9999" },
+    { "numero": "999912345", "origen": "sintetico-9999" },
+    { "numero": "9999123", "origen": "sintetico-9999", "nota": "CE sintética de 7 cifras" },
+    { "numero": "999912", "origen": "sintetico-9999", "nota": "CE sintética de 6 cifras" },
+    { "numero": "AZ1234567", "origen": "sintetico-alfanumerico", "nota": "pasaporte colombiano sintético" },
+    { "numero": "AZ7654321", "origen": "sintetico-alfanumerico", "nota": "pasaporte colombiano sintético" },
+    { "numero": "C0123456", "origen": "sintetico-alfanumerico", "nota": "pasaporte venezolano sintético" },
+    { "numero": "XDA123456", "origen": "sintetico-alfanumerico", "nota": "pasaporte español sintético" },
+    { "numero": "C01X00T47", "origen": "especimen-publico", "nota": "espécimen MUSTERMANN del pasaporte alemán" },
+    { "numero": "L898902C3", "origen": "especimen-icao", "nota": "espécimen ERIKSSON ANNA MARIA de ICAO 9303" },
+    { "numero": "L898902C4", "origen": "especimen-icao", "nota": "espécimen ICAO con el dígito alterado (cd-numero-alterado)" },
+    { "numero": "ZE184226B", "origen": "especimen-icao", "nota": "número personal del espécimen ICAO 9303" }
+  ]
+}

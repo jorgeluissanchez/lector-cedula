@@ -1,0 +1,23 @@
+{
+  "sintetico": true,
+  "tipo": "clasificar-documento",
+  "descripcion": "OD-11: pasaporte de Venezuela sintético con número alfanumérico",
+  "entrada": [
+    "P<VENBARIMO<<LUCIA<ROSA<<<<<<<<<<<<<<<<<<<<<",
+    "C0123456<5VEN0102030F2909093<<<<<<<<<<<<<<02"
+  ],
+  "opciones": {
+    "fechaReferencia": "2026-10-08"
+  },
+  "clavesExactas": true,
+  "esperado": {
+    "ok": true,
+    "tipoDocumento": "pasaporte",
+    "fuente": "mrz-td3",
+    "numeroDocumento": "C0123456",
+    "nacionalidad": "VEN",
+    "apellidos": "BARIMO",
+    "nombres": "LUCIA ROSA",
+    "warnings": ""
+  }
+}

@@ -3,8 +3,8 @@
   "tipo": "clasificar-documento",
   "descripcion": "OD-11: digital colombiana",
   "entrada": [
-    "ICCOL1234567897<<<<<<<<<<<<<<<",
-    "8001014F3001019COL1234567890<5",
+    "ICCOL9999001238<<<<<<<<<<<<<<<",
+    "8001014F3001019COL9999123456<3",
     "PEREZ<<ANA<<<<<<<<<<<<<<<<<<<<"
   ],
   "opciones": {
@@ -15,7 +15,7 @@
     "ok": true,
     "tipoDocumento": "cedula-ciudadania",
     "fuente": "mrz-td1",
-    "numeroDocumento": "123456789",
+    "numeroDocumento": "999900123",
     "nacionalidad": "COL",
     "apellidos": "PEREZ",
     "nombres": "ANA",

@@ -59,7 +59,7 @@ describe("NAT-07 Reglas en un único bundle JS", { timeout: 60_000 }, () => {
     const paquete = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
     expect(api.version).toBe(paquete.version);
     expect(Object.keys(crudo).sort()).toStrictEqual(
-      ["crearEstado", "decidirEnvio", "procesarMrz", "procesarPdf417", "transicion", "validarOpciones", "validarUrlSubida", "version"].sort(),
+      ["crearEstado", "decidirEnvio", "mensajeError", "procesarMrz", "procesarPdf417", "transicion", "validarOpciones", "validarUrlSubida", "version"].sort(),
     );
   });
 

@@ -1,0 +1,24 @@
+/* UI propia del ejemplo de login (SDK-64): la cámara es un recuadro pequeño dentro de la página, nunca pantalla completa. */
+body { margin: 0; font-family: system-ui, sans-serif; background: #f4f6fb; color: #1b2233; }
+.pagina { min-height: 100vh; display: flex; flex-direction: column; }
+.barra { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem; padding: .75rem 1.25rem; background: #1b2a4a; color: #fff; }
+.barra a { color: #fff; margin-left: 1rem; }
+.barra a[aria-current="page"] { font-weight: 700; }
+.marca { font-weight: 700; }
+.login { display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center; align-items: flex-start; padding: 2rem 1rem; }
+.indicaciones { max-width: 320px; }
+.ilustracion { width: 120px; height: 120px; display: block; }
+label { display: grid; gap: .25rem; margin-top: 1rem; }
+input { font: inherit; padding: .5rem; border: 1px solid #5a6680; border-radius: 6px; }
+.camara { display: grid; gap: .75rem; justify-items: center; }
+.recuadro { position: relative; overflow: hidden; border-radius: 16px; background: #000; }
+.recuadro video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.guia { position: absolute; border: 3px dashed rgb(255, 196, 0); border-radius: 10px; box-sizing: border-box; pointer-events: none; }
+.guia.lista { border-style: solid; border-color: rgb(40, 200, 120); }
+.acciones { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; }
+button { font: inherit; padding: .6rem 1rem; border-radius: 8px; border: 0; background: #1b2a4a; color: #fff; }
+.estado { list-style: none; padding: 0; margin: 0; }
+.pie { margin-top: auto; padding: 1.5rem; background: #e3e8f2; min-height: 40vh; }
+.autorizacion { display: flex; gap: .5rem; align-items: flex-start; max-width: 320px; margin-top: 0; font-size: .9rem; }
+.autorizacion input { margin-top: .2rem; }
+button:disabled { background: #6b7590; cursor: not-allowed; }

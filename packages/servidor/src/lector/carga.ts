@@ -27,7 +27,9 @@ type Resolver = (especificador: string) => string;
 type Importar = (especificador: string) => Promise<{ crearMotor(): MotorLector }>;
 
 const resolverPorDefecto: Resolver = (e) => createRequire(import.meta.url).resolve(e);
-const importarPorDefecto: Importar = (e) => import(e) as Promise<{ crearMotor(): MotorLector }>;
+// Import en tiempo de ejecución que los empaquetadores (webpack, Turbopack, Vite) no deben resolver ni incluir: el motor
+// usa worker_threads, WASM y archivos de su paquete (ejemplo Next, MOT-12).
+const importarPorDefecto: Importar = (e) => import(/* webpackIgnore: true */ /* turbopackIgnore: true */ /* @vite-ignore */ e) as Promise<{ crearMotor(): MotorLector }>;
 
 export function cargarMotor(inyectado: MotorLector | undefined, resolver: Resolver = resolverPorDefecto, importar: Importar = importarPorDefecto): MotorPerezoso {
   if (inyectado) return { obtener: () => Promise.resolve(inyectado), cerrar: () => inyectado.cerrar() };
