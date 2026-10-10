@@ -202,6 +202,38 @@ jobs:
 
   # Emulador con KVM (no hay KVM anidado en Docker Desktop sobre Windows). Job trivial de la fase 0: arranca el
   # emulador API 34 x86_64 en modo avión y comprueba que responde; las instrumentadas (KI) y el humo (KH) llegan en la fase 1.
+  # KM de la tarea 1.5 (NAT-06): mutación con PIT del plan de vistas, la vista del OCR y el bucle MRZ, con sus pruebas
+  # unitarias (las diferenciales en QuickJS y las de Tesseract real quedan fuera: minutos por mutante). Umbral 85 %.
+  mutacion-mrz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Bundle nucleo-js y modelo MRZ verificado
+        run: |
+          npm ci --ignore-scripts
+          npm run nucleo:construir
+          npm run modelos:mrz
+      - name: Imagen del SDK de Android (acepta la Android SDK License; ver docker/android-sdk/Dockerfile)
+        run: docker build --build-arg ACEPTO_LICENCIA_ANDROID_SDK=si -t lector-android-sdk docker/android-sdk
+      - name: PIT (KM) de io.github.jorgeluissanchez.lectorcedula.mrz
+        run: >-
+          docker run --rm -v "$PWD:/work" -w /work/native/android lector-android-sdk ./gradlew --no-daemon :nucleo:pitest -PpitHilos=4
+          "-PpitClases=io.github.jorgeluissanchez.lectorcedula.mrz.PlanMrz*,io.github.jorgeluissanchez.lectorcedula.mrz.VistaOcr*,io.github.jorgeluissanchez.lectorcedula.mrz.LectorMrz*,io.github.jorgeluissanchez.lectorcedula.mrz.EvaluadorBundle*,io.github.jorgeluissanchez.lectorcedula.mrz.DecodificadorMrz*,io.github.jorgeluissanchez.lectorcedula.mrz.ModeloMrz*,io.github.jorgeluissanchez.lectorcedula.mrz.ImagenRgba*"
+          "-PpitSinPruebas=io.github.jorgeluissanchez.lectorcedula.calidad.*,io.github.jorgeluissanchez.lectorcedula.motor.*,io.github.jorgeluissanchez.lectorcedula.nucleo.*,io.github.jorgeluissanchez.lectorcedula.Lector*,io.github.jorgeluissanchez.lectorcedula.EstadoLector*,*DiferencialMrzNat06Test,*TesseractNat06Test"
+      - name: Informe de mutación
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nativo-android-pit-mrz-${{ github.sha }}
+          path: native/android/nucleo/build/reports/pitest/
+          if-no-files-found: ignore
+
   emulador:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
