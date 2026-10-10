@@ -101,5 +101,5 @@ export { AVISO_LUGAR_NO_RESUELTO, conLugarNacimiento } from "./lectura/lugar.js"
 export { clasificarErrorLectura, TEXTOS_ERROR_LECTURA, type CodigoErrorLectura } from "./lectura/errores.js";
 export { crearManejadorLector, type MensajeAlLector, type MensajeCancelar, type MensajeLeer, type RespuestaLector } from "./lectura/manejador.js";
 export { iniciarWorkerLector, type AlcanceLector, type RutasLector } from "./lectura/worker-lector.js";
-export { aplicarPresencia, detectarPresencia, evaluarConPresencia, LAPLACIANO_MINIMO_GUIADO, type Presencia, type Rect } from "./calidad/presencia.js";
+export { aplicarPresencia, detectarPresencia, evaluarConPresencia, type Presencia, type Rect } from "./calidad/presencia.js";
 export type { OpcionesWorkerCalidad } from "./navegador/worker-calidad.js";

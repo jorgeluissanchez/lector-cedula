@@ -1,6 +1,7 @@
 /**
  * Umbrales calibrables de CAL-08 (design.md, decisión 5). Valores provisionales documentados en
- * `docs/decisiones/2026-10-06-umbrales-calidad-captura.md`; cambiar uno es un cambio OpenSpec.
+ * `docs/decisiones/2026-10-06-umbrales-calidad-captura.md` (la nitidez, recalibrada en
+ * `docs/decisiones/2026-10-10-recalibracion-nitidez.md`); cambiar uno es un cambio OpenSpec.
  */
 
 export interface Umbrales {
@@ -23,8 +24,8 @@ export interface Umbrales {
 }
 
 export const UMBRALES_POR_DEFECTO: Readonly<Umbrales> = Object.freeze({
-  laplacianoDesenfocado: 40,
-  laplacianoNitido: 200,
+  laplacianoDesenfocado: 8,
+  laplacianoNitido: 35,
   luminanciaSaturada: 250,
   fraccionSaturadaMax: 0.05,
   componenteSaturadoMax: 0.02,

@@ -77,7 +77,7 @@ export function iniciarWorkerCalidad(alcance: AlcanceWorker, detector: DetectorD
       const deteccion = await detector.detectar(frame);
       const r = analizarFrame(frame, deteccion, configuracion.umbrales);
       if (!r.ok) return error(r.codigo);
-      // OFF-22 y OFF-25: la presencia solo se busca si el frame supera el umbral o solo le falta nitidez.
+      // OFF-22 y OFF-25: la presencia solo se busca si el frame ya supera el umbral; nunca eleva el score.
       // OFF-27: el contenido detectado viaja como pista de tipo; `null` si la presencia no se evaluó.
       const cuadrilatero = deteccion.cuadrilatero;
       let contenido: ContenidoPresencia | ContenidoPresenciaTd = null;

@@ -6,7 +6,7 @@ import type { Cuadrilatero } from "../src/calidad/tipos.js";
 import { completo, desenfoqueCaja, gris, rayas, rect, ruido, tablero, type Escena } from "./escenas.js";
 
 /** Valores por defecto de CAL-08 que usa la nitidez. */
-const U = { laplacianoDesenfocado: 40, laplacianoNitido: 200 };
+const U = { laplacianoDesenfocado: 8, laplacianoNitido: 35 };
 
 function nitidez(e: Escena, cuad: Cuadrilatero = completo(e.ancho, e.alto)) {
   const region = calcularRegion(cuad, e.ancho, e.alto);
@@ -27,7 +27,7 @@ describe("CAL-03 Nitidez", { timeout: 600_000 }, () => {
   });
 
   it("CAL-03 Subscore intermedio", () => {
-    expect([40, 120, 200].map((v) => subscoreNitidez(v, U))).toStrictEqual([0, 50, 100]);
+    expect([8, 21.5, 27, 35].map((v) => subscoreNitidez(v, U))).toStrictEqual([0, 50, 70, 100]);
   });
 
   it("CAL-03 Solo cuentan los píxeles de M que no están en el borde del frame", () => {
