@@ -24,6 +24,12 @@ class ModeloMrzNat06Test : StringSpec({
         mrz["licencia"]!!.jsonPrimitive.content shouldBe "BSD-3-Clause"
     }
 
+    val manifiestoWeb = File("../../../packages/web/dist/assets/manifest.json")
+    "NAT-06 Mismo modelo: igual al mrz.traineddata de @lector-cedula/web/assets/manifest.json".config(enabled = obligatorio || manifiestoWeb.isFile) {
+        val recursos = Json.parseToJsonElement(manifiestoWeb.readText()).jsonObject["recursos"]!!.jsonArray.map { it.jsonObject }
+        recursos.single { it["archivo"]!!.jsonPrimitive.content == "mrz.traineddata" }["sha256"]!!.jsonPrimitive.content shouldBe ModeloMrz.SHA256
+    }
+
     "NAT-06 Mismo modelo: el mrz.traineddata empaquetado coincide con el manifiesto".config(enabled = obligatorio || ModeloMrz.cargar() != null) {
         val bytes = ModeloMrz::class.java.classLoader.getResourceAsStream(ModeloMrz.RECURSO)?.use { it.readBytes() }
         bytes shouldNotBe null

@@ -128,6 +128,10 @@ El núcleo SHALL decodificar el PDF417 con zxing-cpp (binding nativo) habilitand
 ### Requirement: NAT-06 MRZ nativa con Tesseract
 El núcleo SHALL leer MRZ TD1 (cédula digital, tarjeta de identidad) y TD3 (pasaporte) con Tesseract nativo y el mismo `mrz.traineddata` (BSD-3) que la web, aplicando localización de franja, enderezado y el plan de vistas y giros de `lectura-mrz-imagen` (LMI-11x, LMI-12c, LMI-14x). SHALL entregar las líneas crudas a `procesarMrz` del bundle JS. Las líneas MUST coincidir con las de `packages/capture` para los mismos fixtures.
 
+Decisiones de la tarea 1.5 (orquestador, por delegación del usuario, 2026-10-10; design.md, "Tesseract nativo sin libjpeg ni libpng"):
+- Tesseract 5.5.1 (Apache-2.0) y Leptonica 1.85.0 (BSD-2-Clause) se compilan desde sus fuentes fijadas por SHA-256 (`native/android/tesseract4android/fuentes-nativas.json`) con la configuración de compilación de Tesseract4Android 4.9.0 vendorizada y parcheada, NDK 28.2.13676358 y CMake 3.31.6. Leptonica MUST compilarse sin libjpeg (IJG) ni libpng (libpng-2.0), que no están en la lista permitida: las vistas entran a Tesseract como píxeles RGBA (4 bytes por píxel), nunca como archivo de imagen, y el modelo se carga en memoria (sin escribir en disco).
+- El bucle es el de `crearLectorMrz` de la web: intentos del plan de vistas (derecha, 90, 270 y 180 ordenadas por evidencia; TD3 por la evidencia del par de 44), recorte ampliado a 900 px y enderezado, con un presupuesto por lectura de 40 llamadas al OCR y 60 s (LMI-13) y un tope por lectura que nunca amplía el del lector (OFF-27c). La regla que decide cada intento (extracción de líneas y dígitos de control) la da `evaluarTextoMrz` del bundle (NAT-07); el nativo se detiene con un documento o 4 dígitos válidos, si no entrega el mejor intento o, si solo hubo documentos no admitidos, sus líneas.
+
 #### Scenario: Digital TD1
 - **WHEN** se lee `digital-1080p.png`
 - **THEN** `estado.contenido` es `"mrz-td1"` y `resultado.campos.nuip` es `"9999123456"`
@@ -148,8 +152,24 @@ El núcleo SHALL leer MRZ TD1 (cédula digital, tarjeta de identidad) y TD3 (pas
 - **WHEN** se calcula el SHA-256 del `mrz.traineddata` empaquetado en el AAR y en el XCFramework
 - **THEN** coincide con el de `@lector-cedula/web/assets/manifest.json`
 
+#### Scenario: Modelo alterado
+- **WHEN** el `mrz.traineddata` empaquetado no tiene el SHA-256 de `tesseract-mrz` en `models/manifest.json`
+- **THEN** la compilación falla y, en ejecución, Tesseract no se crea (el modelo no llega al motor)
+
+#### Scenario: Plan de vistas igual que la web
+- **WHEN** se generan las vistas que recibe el OCR para tarjetas sintéticas TD1 y TD3 derechas, de pie (90 y 270) y al revés
+- **THEN** giro, método, caja y huella de cada vista son iguales a los de `packages/capture`, y la primera vista es la que pone la MRZ derecha y abajo
+
+#### Scenario: Tope de llamadas al OCR
+- **WHEN** ninguna vista da una lectura con el lector por omisión
+- **THEN** el bucle se detiene tras 40 llamadas al OCR o 60 s, y un tope por lectura menor lo acota sin ampliarlo nunca
+
+#### Scenario: Sin libjpeg ni libpng
+- **WHEN** se revisan con `node tools/nativo/sin-jpeg-png.mjs` el AAR de release, la biblioteca del host y `dependencias-resueltas.txt`
+- **THEN** no hay bibliotecas `libjpeg*`, `libpng*` ni símbolos o mensajes propios de libjpeg o libpng, y un AAR que los contenga hace fallar el control
+
 ### Requirement: NAT-07 Reglas en un único bundle JS
-`@lector-cedula/nucleo-js` SHALL ser un único IIFE ES2020 sin DOM ni E/S que expone `globalThis.LectorCedulaNucleo` (`version`, `procesarPdf417`, `procesarMrz`, `transicion`, `crearEstado`, `validarOpciones`, síncronos, JSON), construido por importación desde `packages/parsers`, `packages/capture/src/lectura` y `packages/web`. El código Kotlin y Swift MUST NOT contener reglas de campos (NUIP, fechas, RH, sexo, DIVIPOL, checksums, edad). Motores: Hermes, WebView, QuickJS y JavaScriptCore.
+`@lector-cedula/nucleo-js` SHALL ser un único IIFE ES2020 sin DOM ni E/S que expone `globalThis.LectorCedulaNucleo` (`version`, `procesarPdf417`, `procesarMrz`, `transicion`, `crearEstado`, `validarOpciones`, síncronos, JSON; además `validarUrlSubida`, `decidirEnvio`, `mensajeError` y, desde la tarea 1.5, `evaluarTextoMrz(texto, { fechaReferencia, formato })`, que resume el texto OCR de una vista como el bucle web: `{ ok: true, lineas, digitosValidos, documento }` o `{ ok: false, error, lineas }`), construido por importación desde `packages/parsers`, `packages/capture/src/lectura` y `packages/web`. El código Kotlin y Swift MUST NOT contener reglas de campos (NUIP, fechas, RH, sexo, DIVIPOL, checksums, edad). Motores: Hermes, WebView, QuickJS y JavaScriptCore.
 
 #### Scenario: Sin globals de navegador
 - **WHEN** se evalúa el bundle con `node:vm` en un contexto sin `window`, `document`, `fetch` ni `XMLHttpRequest`
@@ -158,6 +178,10 @@ El núcleo SHALL leer MRZ TD1 (cédula digital, tarjeta de identidad) y TD3 (pas
 #### Scenario: Igualdad entre motores
 - **WHEN** se llama `procesarPdf417` y `procesarMrz` con los bytes y líneas de todos los fixtures sintéticos en Node, QuickJS (JUnit) y JavaScriptCore (XCTest)
 - **THEN** las tres salidas JSON son idénticas byte a byte
+
+#### Scenario: Evaluación de una vista MRZ
+- **WHEN** se llama `evaluarTextoMrz` con el texto OCR de las 3 líneas TD1 de `PERSONA_BASE` con espacios, minúsculas y líneas en blanco, y `fechaReferencia` `2026-10-09`
+- **THEN** devuelve `{ ok: true, lineas, digitosValidos: 4, documento: false }` con las 3 líneas, igual que el paso del bucle de `crearLectorMrz` de la web, y nunca lanza
 
 #### Scenario: Sin reglas en nativo
 - **WHEN** se analizan las fuentes `native/**/*.kt` y `native/**/*.swift`
