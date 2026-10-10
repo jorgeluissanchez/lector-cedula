@@ -51,7 +51,7 @@ describe("SDK-29 Núcleo sin UI y presupuesto", { timeout: 60_000 }, () => {
     const datos = JSON.parse(r.salida.trim().split("\n").pop() as string) as { accesos: string[]; fase: string; exportes: string[] };
     expect(datos.accesos).toStrictEqual([]);
     expect(datos.fase).toBe("inicio");
-    expect(datos.exportes).toStrictEqual(["ESTADO_INICIAL", "NOMBRE_CACHE", "TRANSICIONES", "VERSION", "crearLector", "leerDocumento", "precargarMotor"]);
+    expect(datos.exportes).toStrictEqual(["ESTADO_INICIAL", "NOMBRE_CACHE", "TRANSICIONES", "UMBRALES_FRONT", "VERSION", "crearLector", "decidirFront", "leerDocumento", "precargarMotor"]);
   });
 
   it("SDK-29 Presupuesto del núcleo: la compilación real cabe en 30 720 B", async () => {

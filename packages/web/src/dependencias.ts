@@ -98,9 +98,11 @@ export function abrirWorkerLector(m: MotorCargado): ClienteLector {
   return crearClienteLector(w);
 }
 
-export function crearDependencias(opciones: OpcionesLector): DependenciasLector {
+export function crearDependencias(opciones: OpcionesLector, modo: { readonly ligero: boolean } = { ligero: false }): DependenciasLector {
   const recursos = opciones.recursos ?? recursosPorOmision();
-  const motor = (): Promise<MotorCargado> => motorMemorizado(recursos, entornoNavegador());
+  // SDK-56: en el modo back ligero solo se cargan los recursos sin `pesado` (Worker de calidad).
+  const motor = (): Promise<MotorCargado> => motorMemorizado(recursos, entornoNavegador(), { soloLigeros: modo.ligero });
+  const conImagen = opciones.sesion !== undefined || (opciones.backend !== undefined && opciones.modo !== "front");
   let cliente: ClienteCalidad | null = null;
   let lectorWorker: ClienteLector | null = null;
 
@@ -153,7 +155,7 @@ export function crearDependencias(opciones: OpcionesLector): DependenciasLector 
         completo.pixeles.fill(0);
         return null;
       }
-      const copia = opciones.sesion === undefined ? null : copiaEnvio(completo);
+      const copia = conImagen ? copiaEnvio(completo) : null;
       const frames: FrameLectura[] = [];
       const bufers: Uint8ClampedArray[] = [completo.pixeles, ...(copia === null ? [] : [copia.pixeles])];
       await conCeroAnteError(bufers, async () => {

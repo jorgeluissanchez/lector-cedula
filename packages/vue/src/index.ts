@@ -32,6 +32,8 @@ export function useLectorCedula(opciones: OpcionesLector = {}, avanzado: Avanzad
     c.suscribir((e) => {
       estado.value = e;
     });
+    // SDK-49: con `autoIniciar`, la cámara se abre al montar con el vídeo vinculado (nunca en SSR).
+    if (opciones.autoIniciar === true && videoRef.value !== null) void c.iniciar(videoRef.value);
   });
   onBeforeUnmount(() => {
     // destruir() también vacía los suscriptores (SDK-30); onBeforeUnmount siempre sigue a onMounted.

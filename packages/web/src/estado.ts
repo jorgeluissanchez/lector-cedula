@@ -14,6 +14,13 @@ export const ESTADO_INICIAL: EstadoLector = congelar({
   resultado: null,
   error: null,
   envio: null,
+  verificacion: null,
+  rechazo: null,
+  intentosVerificacion: null,
+  modo: null,
+  validacion: null,
+  frontActivo: null,
+  modoMotivo: null,
 });
 
 function congelarProfundo<T>(v: T): T {

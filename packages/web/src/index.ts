@@ -4,6 +4,7 @@ import type { EntradaLectura, OpcionesLeerDocumento } from "./lectura-headless.j
 import type { ResultadoPresentacion } from "./tipos.js";
 
 export { crearLector } from "./controlador.js";
+export { decidirFront, UMBRALES_FRONT } from "./decidir-front.js";
 export { TRANSICIONES } from "./maquina.js";
 export { ESTADO_INICIAL } from "./estado.js";
 export { NOMBRE_CACHE } from "./cargador.js";

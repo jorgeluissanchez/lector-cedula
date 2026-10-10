@@ -5,6 +5,15 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
-  "include": ["src"],
-  "references": [{ "path": "../capture" }]
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../capture"
+    },
+    {
+      "path": "../protocolo"
+    }
+  ]
 }

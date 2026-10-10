@@ -28,6 +28,7 @@
     "prepack": "node scripts/construir-assets.mjs --solo-avisos"
   },
   "dependencies": {
-    "@lector-cedula/capture": "0.0.0"
+    "@lector-cedula/capture": "0.0.0",
+    "@lector-cedula/protocolo": "0.1.0"
   }
 }

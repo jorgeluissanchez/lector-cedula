@@ -25,4 +25,16 @@ describe("SDK-33 SSR", () => {
     expect(html).toContain('data-fase="inicio"');
     expect(creados).toBe(0);
   });
+
+  it("SDK-49 Render en servidor con autoIniciar", async () => {
+    const app = createSSRApp(
+      defineComponent({
+        setup() {
+          const l = useLectorCedula({ autoIniciar: true, backend: "/api/cedula" });
+          return () => h("div", { "data-fase": l.estado.value.fase }, [h("video", { ref: l.videoRef })]);
+        },
+      }),
+    );
+    expect(await renderToString(app)).toContain('data-fase="inicio"');
+  });
 });

@@ -111,13 +111,19 @@ async function obtenerRecurso(entorno: EntornoCargador, cache: CacheMinima | nul
   return { datos, nuevo: true };
 }
 
-export async function cargarMotor(recursos: string, entorno: EntornoCargador): Promise<MotorCargado> {
+/** SDK-56: `soloLigeros` omite los recursos marcados `pesado` (modo back ligero). */
+export interface OpcionesCarga {
+  readonly soloLigeros?: boolean;
+}
+
+export async function cargarMotor(recursos: string, entorno: EntornoCargador, o: OpcionesCarga = {}): Promise<MotorCargado> {
   const base = baseRecursos(recursos);
   const cache = await abrirCache(entorno);
   const urlManifiesto = `${base}manifest.json`;
   const { m, datos: datosManifiesto } = await obtenerManifiesto(entorno, cache, urlManifiesto);
   const verificados: { e: EntradaRecurso; url: string; datos: ArrayBuffer; nuevo: boolean }[] = [];
   for (const e of m.recursos) {
+    if (o.soloLigeros === true && e.pesado === true) continue;
     const url = `${base}${e.archivo}`;
     verificados.push({ e, url, ...(await obtenerRecurso(entorno, cache, url, e)) });
   }
@@ -138,13 +144,14 @@ export async function cargarMotor(recursos: string, entorno: EntornoCargador): P
 const memoria = new Map<string, Promise<MotorCargado>>();
 
 /** Carga memorizada por URL base: tras resolver, ninguna lectura vuelve a pedir recursos (SDK-07). */
-export function motorMemorizado(recursos: string, entorno: EntornoCargador): Promise<MotorCargado> {
+export function motorMemorizado(recursos: string, entorno: EntornoCargador, o: OpcionesCarga = {}): Promise<MotorCargado> {
   const base = baseRecursos(recursos);
-  let p = memoria.get(base);
+  const clave = o.soloLigeros === true ? `${base}#ligero` : base;
+  let p = memoria.get(clave);
   if (p === undefined) {
-    p = cargarMotor(base, entorno);
-    memoria.set(base, p);
-    p.catch(() => memoria.delete(base));
+    p = cargarMotor(base, entorno, o);
+    memoria.set(clave, p);
+    p.catch(() => memoria.delete(clave));
   }
   return p;
 }

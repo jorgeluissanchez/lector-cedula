@@ -37,6 +37,8 @@ export function useLectorCedula(opciones: OpcionesLector = {}, avanzado: Avanzad
     const { opciones: o, avanzado: a } = ultimo.current as { opciones: OpcionesLector; avanzado: AvanzadoLector };
     const c = (a.crear ?? crearLector)(o, a.deps);
     fijar(c);
+    // SDK-49: con `autoIniciar`, la cámara se abre al vincular el vídeo (efecto: solo en el navegador).
+    if (o.autoIniciar === true && videoRef.current !== null) void c.iniciar(videoRef.current);
     return () => c.destruir();
   }, [clave]);
   const suscribir = useCallback((fn: () => void) => (ctl === null ? nada : ctl.suscribir(fn)), [ctl]);

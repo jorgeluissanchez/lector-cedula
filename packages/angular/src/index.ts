@@ -28,6 +28,7 @@ export function injectLectorCedula(opciones: OpcionesLector = {}, avanzado: Avan
   const destruccion = inject(DestroyRef);
   const estado = signal<EstadoLector>(ESTADO_INICIAL);
   let elemento: HTMLVideoElement | null = null;
+  let autoIniciado = false;
   const ctl = navegador ? (avanzado.crear ?? crearLector)(opciones, avanzado.deps) : null;
   if (ctl !== null) {
     estado.set(ctl.obtenerEstado());
@@ -38,6 +39,11 @@ export function injectLectorCedula(opciones: OpcionesLector = {}, avanzado: Avan
   return {
     video(el) {
       elemento = el instanceof ElementRef ? (el.nativeElement as HTMLVideoElement) : (el ?? null);
+      // SDK-49: con `autoIniciar`, la cámara se abre al vincular el vídeo, una sola vez y solo en el navegador.
+      if (ctl !== null && elemento !== null && opciones.autoIniciar === true && !autoIniciado) {
+        autoIniciado = true;
+        void ctl.iniciar(elemento);
+      }
     },
     estado: estado.asReadonly(),
     async iniciar() {

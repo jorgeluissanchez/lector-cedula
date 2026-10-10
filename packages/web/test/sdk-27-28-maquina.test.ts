@@ -10,9 +10,11 @@ const LISTA_SPEC = [
   "inicio>permiso", "permiso>activo", "permiso>error", "activo>listo", "listo>activo", "listo>leyendo", "activo>leyendo",
   "leyendo>resultado", "leyendo>activo", "leyendo>error", "activo>error", "listo>error", "permiso>inicio", "activo>inicio", "listo>inicio", "leyendo>inicio",
   "resultado>permiso", "error>permiso",
+  // Backend propio (SDK-46, SDK-47, SDK-54, SDK-56).
+  "leyendo>verificando", "activo>verificando", "listo>verificando", "verificando>resultado", "verificando>activo", "verificando>error", "verificando>inicio",
 ];
 
-const FASES: FaseLector[] = ["inicio", "permiso", "activo", "listo", "leyendo", "resultado", "error"];
+const FASES: FaseLector[] = ["inicio", "permiso", "activo", "listo", "leyendo", "verificando", "resultado", "error"];
 
 const frame = fc.record({
   score: fc.integer({ min: -10, max: 120 }),

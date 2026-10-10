@@ -22,4 +22,12 @@ describe("SDK-31 Render en servidor", () => {
     expect(html).toContain('data-fase="inicio"');
     expect(creados).toBe(0);
   });
+
+  it("SDK-49 Render en servidor con autoIniciar", () => {
+    function Prueba() {
+      const l = useLectorCedula({ autoIniciar: true, backend: "/api/cedula" });
+      return createElement("div", { "data-fase": l.estado.fase }, createElement("video", { ref: l.videoRef }));
+    }
+    expect(renderToString(createElement(Prueba))).toContain('data-fase="inicio"');
+  });
 });

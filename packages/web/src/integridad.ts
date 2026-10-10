@@ -9,6 +9,8 @@ export interface EntradaRecurso {
   /** 64 caracteres hexadecimales en minúsculas. */
   readonly sha256: string;
   readonly tipo: string;
+  /** SDK-56: parte del motor pesado (no se descarga en el modo back ligero). */
+  readonly pesado?: boolean;
 }
 
 export interface ManifiestoRecursos {
@@ -45,6 +47,7 @@ export function leerManifiesto(v: unknown): ManifiestoRecursos | null {
     if (typeof e.sha256 !== "string" || !HEX64.test(e.sha256)) return null;
     if (typeof e.bytes !== "number" || !Number.isInteger(e.bytes) || e.bytes < 0) return null;
     if (typeof e.tipo !== "string") return null;
+    if (e.pesado !== undefined && typeof e.pesado !== "boolean") return null;
   }
   return { version, recursos: recursos as EntradaRecurso[] };
 }

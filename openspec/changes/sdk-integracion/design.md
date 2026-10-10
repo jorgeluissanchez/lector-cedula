@@ -147,6 +147,8 @@ Comandos nuevos:
 
 `PRESUPUESTO_BACK`: meta 300 KiB gzip; la tarea B.6 mide el valor real con el ejemplo y lo fija aquí (valor medido + 10 %, nunca por encima de 300 KiB sin decisión humana).
 
+**`PRESUPUESTO_BACK` = 23 732 B gzip** (B.6, 2026-10-09): medido 21 574 B (JS del núcleo, dependencias por omisión y cliente del protocolo empaquetados con esbuild 14 011 B; Worker de calidad 6 894 B; `manifest.json` 669 B) + 10 %. Constante en `packages/web/scripts/tamano-back.mjs`, que mide con `--fixture <archivo>` y sale con 1 por encima; `TB` delega en ese script.
+
 | Requisito | Tipo de prueba | Herramienta | Comando | Umbral |
 |---|---|---|---|---|
 | SDK-18 | Análisis estático (grafo de `cliente.ts`) | Vitest | `U` | 0 importaciones del motor |
@@ -174,13 +176,13 @@ Comandos nuevos:
 | SDK-56 | Unitaria (sin `leyendo`, lector no invocado) | Vitest | `UB` | 1/1 |
 | SDK-56 | E2E de red (sin recursos pesados) | Playwright | `EB(modo-back-red)` | 0 recursos `pesado`; bytes <= `PRESUPUESTO_BACK` |
 | SDK-56 | Presupuesto con fixture que falla | script | `TB` | árbol real pasa; fixture sale con 1 |
-| SDK-57 | Unitaria (tabla de 8 casos literal) | Vitest | `UB` | 8/8 filas con `toStrictEqual` |
-| SDK-57 | Propiedad (totalidad, sin back sin backend) | fast-check | `UB` | numRuns >= 1000, proporción de casos con backend > 50 % medida con `fc.statistics` |
-| SDK-57 | Mutación de `decidir-modo.ts` | Stryker | `M` | >= 85 % |
-| SDK-58 | Unitaria (cola en memoria, `online`, vencimiento) | Vitest | `UB` | 3/3 escenarios |
+| SDK-57 | Unitaria (tabla de 8 casos literal de `decidirFront` y 4 escenarios del núcleo) | Vitest | `UB` | 8/8 filas con `toStrictEqual` |
+| SDK-57 | Propiedad (totalidad, `usarFront` si y solo si `potente`) | fast-check | `UB` | numRuns >= 1000, casos débiles y potentes > 10 % cada uno medidos con `fc.statistics` |
+| SDK-57 | Mutación de `decidir-front.ts` | Stryker | `M` | >= 85 % |
+| SDK-58 | Unitaria (cola en memoria, `en-espera`, `online`, vencimiento, front ligero) | Vitest | `UB` | 4/4 escenarios |
 | SDK-58 | Privacidad (sin persistencia) | Vitest browser + Playwright | `B`, `EB(modos)` | 0 datos en IndexedDB, `localStorage`, Cache Storage |
 | SDK-59 | Unitaria (Accept y JSON único) | Vitest | `UB` | 2/2 escenarios |
-| SDK-60 | E2E de 4 modos y streaming on/off | Playwright | `EB(modos)` | matriz completa verde en Chromium y Pixel 7 |
+| SDK-60 | E2E de front, back, front-back estricta y front-back auto (potente y débil), streaming on/off | Playwright | `EB(modos)` | matriz completa verde en Chromium y Pixel 7 |
 
 ## Decisiones del orquestador por delegación del usuario (2026-10-08)
 
@@ -298,3 +300,15 @@ Decisiones del redactor por delegación (el usuario puede revertirlas):
 1. `PRESUPUESTO_BACK`: meta de 300 KiB gzip; el valor final lo fija la medición de B.6 más un 10 %.
 2. Rechazos `menor-de-edad` y `documento-no-admitido` terminan en `error` sin reintento; el resto (`no-coincide`, `fraude`, `ilegible`) vuelve a `activo`.
 3. Umbrales de `auto`: memoria menor de 4 GB, menos de 4 núcleos, sin WASM SIMD, o `saveData`/2g cuentan como débil; señales no expuestas por el navegador no cuentan como débiles.
+
+## Corrección del usuario, 2026-10-09 (modos y validación)
+
+Prevalece sobre la decisión 6 de "Decisiones del usuario, 2026-10-09 (modelo backend propio)" y sobre el punto 3 de "Decisiones del orquestador por delegación del usuario (2026-10-09, modos)". Trasladada a la spec (SDK-55 a SDK-58, SDK-60 y convenciones).
+
+1. `modo: "front" | "back" | "front-back"`; ya no existe `modo: "auto"`. Por omisión `front-back` con `backend` y `front` sin él.
+2. En `front-back` (doble validación) el back SIEMPRE valida, sin excepción.
+3. Nueva opción `validacion: "estricta" | "auto"` solo para `front-back` (por omisión `estricta`): `estricta` = el front siempre lee localmente y el back valida; `auto` = el front lee solo si `decidirFront(dispositivo, umbrales)` lo permite (mismas señales y umbrales que antes); si no, captura como el modo back ligero y el back valida.
+4. `decidirModo` pasa a `decidirFront(dispositivo, umbrales): { usarFront, motivo }` (`packages/web/src/decidir-front.ts`). La red ya no es una entrada: la falta de red se resuelve con la cola.
+5. Cola sin red (SDK-58) en `front-back`: la fase queda en `verificando` con etapa `en-espera` y el resultado nunca es confiable hasta que el back responde; vencida, `error` `cola-vencida`. En `front` no aplica; en `back` la falta de red es `backend-no-disponible`.
+6. El estado expone `modo`, `validacion`, `frontActivo` y `modoMotivo`.
+7. Decisión del implementador por delegación: los motivos terminales `menor-de-edad` y `documento-no-admitido` llevan a `error` con código `verificacion-rechazada` (el mismo del tope agotado) y `estado.rechazo.motivo` indica cuál; SDK-47 y SDK-53 enmendados.

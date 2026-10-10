@@ -2,12 +2,17 @@
  * Tipos públicos del núcleo headless (sdk-integracion, SDK-27, SDK-28, SDK-38). Sin código: solo contratos.
  */
 import type { FrameLectura, ResultadoLectura } from "@lector-cedula/capture";
+import type { EtapaIntermedia, Rechazo } from "@lector-cedula/protocolo";
+import type { DispositivoLector, UmbralesAuto } from "./decidir-front.js";
+
+export type { DispositivoLector, MotivoFront, UmbralesAuto, DecisionFront } from "./decidir-front.js";
+export type { MotivoRechazo } from "@lector-cedula/protocolo";
 
 type LecturaCorrecta = Extract<ResultadoLectura, { ok: true }>;
 export type CamposDocumento = LecturaCorrecta["campos"];
 export type TipoDocumento = LecturaCorrecta["tipoDocumento"];
 
-export type FaseLector = "inicio" | "permiso" | "activo" | "listo" | "leyendo" | "resultado" | "error";
+export type FaseLector = "inicio" | "permiso" | "activo" | "listo" | "leyendo" | "verificando" | "resultado" | "error";
 
 export type MotivoCalidad = "oscuro" | "sobreexpuesto" | "reflejo" | "desenfocado" | "acerca";
 
@@ -32,12 +37,12 @@ export interface GuiaLector {
   readonly normalizada: Rectangulo;
 }
 
-/** Resultado de presentación: nunca de confianza (SDK-22). */
+/** Resultado de presentación; `confiable: true` solo tras el evento final `ok` del backend propio (SDK-28, SDK-46). */
 export interface ResultadoPresentacion {
   readonly tipo: TipoDocumento;
   readonly campos: CamposDocumento;
   readonly warnings: readonly string[];
-  readonly confiable: false;
+  readonly confiable: boolean;
   readonly validacion_id: string | null;
 }
 
@@ -52,13 +57,39 @@ export type CodigoError =
   | "lectura-fallida"
   | "menor-de-edad"
   | "documento-no-admitido"
-  | "calidad-error";
+  | "calidad-error"
+  | "verificacion-rechazada"
+  | "backend-no-disponible"
+  | "backend-rechazo-http"
+  | "backend-tiempo-agotado"
+  | "protocolo-invalido"
+  | "cola-vencida"
+  | "autoinicio-fallido";
 
 export interface ErrorLector {
   readonly codigo: CodigoError;
   readonly mensaje: string;
   readonly opcion?: string;
+  /** Con `autoinicio-fallido`: el código del fallo de la cámara (SDK-49). */
+  readonly causa?: CodigoError;
 }
+
+/** SDK-46: etapa de la verificación en el backend propio; `en-espera` mientras no hay red (SDK-58). */
+export interface VerificacionLector {
+  readonly etapa: "en-espera" | EtapaIntermedia;
+  readonly progreso: number | null;
+}
+
+/** SDK-47: rechazo del backend (o local, `menor-de-edad`); `diferencias` solo con rutas de campo. */
+export type RechazoLector = Rechazo;
+
+export interface IntentosVerificacion {
+  readonly usados: number;
+  readonly maximo: number;
+}
+
+export type ModoLector = "front" | "back" | "front-back";
+export type ValidacionLector = "estricta" | "auto";
 
 export type CodigoEnvio = "servidor-no-disponible" | "subida-fallida" | "sesion-invalida" | "sesion-vencida" | "menor-no-enviado";
 
@@ -77,11 +108,44 @@ export interface EstadoLector {
   readonly resultado: ResultadoPresentacion | null;
   readonly error: ErrorLector | null;
   readonly envio: EnvioLector | null;
+  readonly verificacion: VerificacionLector | null;
+  readonly rechazo: RechazoLector | null;
+  readonly intentosVerificacion: IntentosVerificacion | null;
+  /** SDK-55: modo efectivo, validación (solo `front-back`), si el motor local lee y el motivo de la decisión. */
+  readonly modo: ModoLector | null;
+  readonly validacion: ValidacionLector | null;
+  readonly frontActivo: boolean | null;
+  readonly modoMotivo: string | null;
 }
 
 export type Idioma = "es" | "en";
 
 export interface OpcionesLector {
+  /**
+   * Endpoint del backend propio (SDK-45): ruta relativa, mismo origen, `https:` u `http://localhost`. Excluyente con
+   * `servidor`/`sesion`. Antes de enviar, el integrador debe obtener la autorización del titular (Ley 1581 de 2012).
+   */
+  readonly backend?: string;
+  /** Cabeceras propias de la petición al backend (objeto o función, también async). */
+  readonly encabezadosBackend?: Readonly<Record<string, string>> | (() => Readonly<Record<string, string>> | Promise<Readonly<Record<string, string>>>);
+  /** SDK-55: por omisión `front-back` con `backend` y `front` sin él. */
+  readonly modo?: ModoLector;
+  /** SDK-55, SDK-57: solo con `front-back`; por omisión `estricta`. */
+  readonly validacion?: ValidacionLector;
+  /** SDK-57: umbrales de `decidirFront` con `validacion: "auto"`. */
+  readonly umbralesAuto?: UmbralesAuto;
+  /** SDK-59: NDJSON en vivo (por omisión) o un único JSON. */
+  readonly streaming?: boolean;
+  /** SDK-58: vencimiento de la cola sin red (por omisión 600 000 ms). */
+  readonly tiempoColaMs?: number;
+  /** SDK-47: entero 1..10, por omisión 3. */
+  readonly intentosVerificacion?: number;
+  /** SDK-54: por omisión 30 000 ms. */
+  readonly tiempoLimiteMs?: number;
+  /** SDK-54: por omisión 15 000 ms. */
+  readonly inactividadMs?: number;
+  /** SDK-49: lo usan los adaptadores; en el núcleo, el fallo de cámara del primer `iniciar` vuelve a `inicio`. */
+  readonly autoIniciar?: boolean;
   /** `https://...` o `http://localhost`. Opcional: sin él no hay ninguna petición fuera del origen (SDK-37). */
   readonly servidor?: string;
   /**
@@ -143,7 +207,7 @@ export interface CalidadInyectada {
 export interface CapturaLector {
   readonly frames: readonly FrameLectura[];
   readonly pista: "pdf417" | "mrz" | null;
-  /** Imagen codificada para el envío opcional (solo con `sesion`). */
+  /** Imagen codificada para el envío (con `sesion` o `backend`). */
   readonly imagen?: () => Promise<Blob>;
   liberar(): void;
 }
@@ -163,6 +227,14 @@ export interface DependenciasLector {
   /** Programa el siguiente ciclo de análisis; devuelve la cancelación. */
   programar(fn: () => void): () => void;
   ahora(): number;
-  /** `fetch` para el envío opcional. */
+  /** `fetch` para el envío opcional y el backend propio. */
   fetch?: typeof fetch;
+  /** SDK-57: señales del dispositivo (por omisión, las del navegador). */
+  senales?(): DispositivoLector;
+  /** SDK-58: estado de la red (por omisión `navigator.onLine`). */
+  enLinea?(): boolean;
+  /** SDK-58: avisa al volver la red (por omisión el evento `online`); devuelve la cancelación. */
+  alConectar?(fn: () => void): () => void;
+  /** Temporizador (por omisión `setTimeout`); reloj falso en pruebas. */
+  temporizar?(fn: () => void, ms: number): () => void;
 }
