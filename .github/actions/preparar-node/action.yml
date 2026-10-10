@@ -1,0 +1,29 @@
+# Prepara el árbol de trabajo en CI como lo tiene un desarrollador antes de `npm run check`: dependencias, Chromium de
+# Playwright (las pruebas que renderizan fixtures sintéticos lo lanzan), modelo MRZ verificado por SHA-256
+# (`npm run modelos:mrz`, models/tesseract/ está en .gitignore), paquetes compilados (`tsc -b`) y assets de
+# @lector-cedula/web (dist/assets con manifest.json). Nada de esto cambia el producto: solo reproduce el entorno local.
+name: preparar-node
+description: npm ci, Chromium de Playwright, modelo MRZ, tsc -b y assets de @lector-cedula/web
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: npm
+    - name: Dependencias
+      shell: bash
+      run: npm ci
+    - name: Chromium de Playwright
+      shell: bash
+      run: npx playwright install --with-deps chromium
+    - name: Modelo MRZ (descarga verificada)
+      shell: bash
+      run: npm run modelos:mrz && npm run modelos:mrz -- --verificar
+    - name: Compilar paquetes
+      shell: bash
+      run: npx tsc -b
+    - name: Assets de @lector-cedula/web
+      shell: bash
+      run: node packages/web/scripts/construir-assets.mjs

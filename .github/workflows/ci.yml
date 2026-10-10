@@ -13,11 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
+      - name: Entorno de pruebas (dependencias, Chromium, modelo MRZ, tsc -b, assets web)
+        uses: ./.github/actions/preparar-node
       - name: Puerta completa (tipos, lint, pruebas, licencias, privacidad, evals)
         run: npm run check
       - name: Reporte de evals
@@ -30,13 +27,11 @@ jobs:
 
   mutacion:
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
+      - name: Entorno de pruebas (dependencias, Chromium, modelo MRZ, tsc -b, assets web)
+        uses: ./.github/actions/preparar-node
       - name: Pruebas de mutación (Stryker, break 85)
         run: npm run test:mutacion
       - name: Reporte de mutación
@@ -47,18 +42,18 @@ jobs:
           path: reports/mutation/
           if-no-files-found: ignore
 
+  # Las pruebas del servidor corren en la misma imagen que en local (`docker compose -f server/compose.yaml run --rm
+  # pruebas`): necesitan Node, los parsers compilados, el lector y los montajes /srv/fixtures_sinteticos y
+  # /srv/docs/decisiones de compose.yaml. Con uv directo en el runner esas rutas no existen.
   servidor:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - run: uv sync --locked
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run pytest -q
+      - name: Ruff y pytest en Docker (server/compose.yaml, servicio pruebas)
+        run: docker compose -f server/compose.yaml run --rm pruebas
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - name: Licencias Python (lista negra)
-        working-directory: .
         run: node tools/licencia-check.mjs --pip $(sed -n '/^dependencies/,/]/p' server/pyproject.toml | grep -oE '"[a-zA-Z0-9_.-]+' | tr -d '"')
