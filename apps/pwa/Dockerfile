@@ -10,8 +10,8 @@ RUN npm ci --ignore-scripts
 # Para una instancia propia: --build-arg VITE_DEMO=false.
 ARG VITE_DEMO=true
 ENV VITE_DEMO=${VITE_DEMO}
-# El modelo MRZ se descarga con verificación SHA-256 (models/manifest.json); compilar parsers antes que la PWA.
-RUN npm run modelos:mrz && npx tsc -b packages/parsers && npm run build -w @lector-cedula/pwa
+# El modelo MRZ se descarga con verificación SHA-256 (models/manifest.json); compilar parsers y protocolo (sus exports apuntan a dist) antes que la PWA.
+RUN npm run modelos:mrz && npx tsc -b packages/parsers packages/protocolo && npm run build -w @lector-cedula/pwa
 
 FROM nginx:1.29-alpine
 COPY apps/pwa/nginx.conf /etc/nginx/conf.d/default.conf
