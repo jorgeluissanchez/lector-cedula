@@ -72,11 +72,15 @@ describe("CAL-07 Score y motivo", { timeout: 60_000 }, () => {
   });
 
   it("CAL-07 Desenfoque fuerte rechaza el frame", () => {
-    for (const veces of [2, 3]) {
+    for (const veces of [3, 4]) {
       const r = analizar(desenfocar(tablero(128, 128, 60, 190), veces));
-      expect(r.score).toBeLessThan(70);
-      expect(r.motivo).toBe("desenfocado");
+      expect([veces, r.score, r.motivo]).toStrictEqual([veces, 0, "desenfocado"]);
     }
+    // Recalibración de CAL-08 (laplacianoNitido 35): dos pasadas dejan una varianza de 61,4, ya nítida.
+    const dos = analizar(desenfocar(tablero(128, 128, 60, 190), 2));
+    expect(dos.metricas?.nitidez.varianza).toBeGreaterThan(61);
+    expect(dos.metricas?.nitidez.varianza).toBeLessThan(62);
+    expect([dos.score, dos.motivo]).toStrictEqual([100, null]);
   });
 
   it("CAL-06 Guía como cuadrilátero", () => {

@@ -28,8 +28,10 @@ class CalidadGoldenNat03Test : StringSpec({
         (escenas.count { !it.startsWith("{tarjeta=null") } * 4 > escenas.size) shouldBe true
         listOf(
             "contenido=pdf417", "contenido=mrz-td1", "motivo=oscuro", "motivo=reflejo", "motivo=desenfocado", "motivo=sobreexpuesto",
-            "motivo=null", "guiado=[70, null]", "guiado=[69, acerca]",
+            "motivo=null", "guiado=[69, acerca]",
         ).forEach { marca -> escenas.any { marca in it } shouldBe true }
+        // OFF-25 (recalibración del 2026-10-10): con presencia, un frame sobre el umbral conserva su score y motivo null.
+        escenas.any { Regex("guiado=\\[(7\\d|8\\d|9\\d|100), null\\]").containsMatchIn(it) } shouldBe true
         g.getValue("mrz").any { it.endsWith("true, false]") } shouldBe true
         g.getValue("mrz").any { it.endsWith("false, true]") } shouldBe true
         g.getValue("tarjeta").any { it.endsWith("true, true]") } shouldBe true

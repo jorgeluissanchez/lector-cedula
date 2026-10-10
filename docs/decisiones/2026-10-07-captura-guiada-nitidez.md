@@ -2,6 +2,8 @@
 
 Fecha: 2026-10-07. Cambio: `pwa-lectura-offline` (tarea 5.6).
 
+**Sustituida el 2026-10-10** por `2026-10-10-recalibracion-nitidez.md` (tarea 5.8): se elimina la captura guiada y se recalibran los umbrales de nitidez de CAL-08. Las mediciones de abajo siguen siendo la base de esa recalibración.
+
 ## Problema
 
 En un Android real (Chrome, túnel HTTPS), una cédula digital bien encuadrada dejaba la PWA en `activo` con "Desenfocado, mantén la cámara quieta". El subscore de nitidez de CAL-03 (`rampa(varianza, 40, 200)`) exige una varianza del Laplaciano >= 152 en el frame de análisis de 640 px para llegar a 70. Los vídeos sintéticos dan de 1000 a 6500.

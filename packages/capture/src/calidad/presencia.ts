@@ -39,11 +39,6 @@ const ENERGIA_FILA_SUAVE = 0.5;
 const FRACCION_BLOQUES_SUAVE = 0.08;
 /** Distancia en píxeles de la diferencia que detecta los bordes de la tarjeta: tolera un borde desenfocado. */
 const PASO_BORDE = 2;
-/**
- * OFF-25: varianza del Laplaciano por debajo de la cual el frame se descarta aunque haya cédula (desenfoque extremo o
- * movimiento). Calibración en docs/decisiones/2026-10-07-captura-guiada-nitidez.md.
- */
-export const LAPLACIANO_MINIMO_GUIADO = 12;
 
 export interface Rect {
   readonly x: number;
@@ -232,17 +227,11 @@ export function aplicarPresencia(r: ResultadoCalidad, presente: boolean, umbralL
 }
 
 /**
- * OFF-22 y OFF-25 en un resultado del Worker de calidad. `presencia` se invoca solo si hace falta (cuesta decenas de ms):
- * - score >= umbral: sin presencia, `aplicarPresencia` (score umbral - 1, motivo `acerca`).
- * - Solo la nitidez por debajo del umbral y varianza >= `minimo`: con presencia, score = umbral y motivo `null`
- *   (captura guiada); sin ella, motivo `acerca` con el mismo score.
- * - En otro caso (otra limitación o desenfoque extremo), el resultado no cambia.
+ * OFF-22 y OFF-25 en un resultado del Worker de calidad: la presencia es una condición adicional, nunca un sustituto.
+ * Solo se evalúa (cuesta decenas de ms) si el score de CAL-07 ya llega a `umbralListo`; sin cédula, score umbral - 1 y
+ * motivo `acerca` (`aplicarPresencia`). Por debajo del umbral el resultado no cambia: nitidez, exposición y reflejo
+ * siguen bloqueando (recalibración del 2026-10-10, docs/decisiones/2026-10-10-recalibracion-nitidez.md).
  */
-export function evaluarConPresencia(r: ResultadoCalidad, presencia: () => boolean, umbralListo: number, minimo = LAPLACIANO_MINIMO_GUIADO): ResultadoCalidad {
-  if (r.score >= umbralListo) return aplicarPresencia(r, presencia(), umbralListo);
-  const m = r.metricas;
-  if (r.motivo !== "desenfocado" || m === null || m.nitidez.varianza < minimo) return r;
-  const otros = [m.reflejo.subscore, m.exposicion.subscoreOscuro, m.exposicion.subscoreSobreexpuesto, m.tamano?.subscore ?? 100];
-  if (otros.some((s) => s < umbralListo)) return r;
-  return presencia() ? { ...r, score: umbralListo, motivo: null } : { ...r, motivo: "acerca" };
+export function evaluarConPresencia(r: ResultadoCalidad, presencia: () => boolean, umbralListo: number): ResultadoCalidad {
+  return r.score >= umbralListo ? aplicarPresencia(r, presencia(), umbralListo) : r;
 }

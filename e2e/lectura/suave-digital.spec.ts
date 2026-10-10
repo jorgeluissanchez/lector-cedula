@@ -1,5 +1,6 @@
 // OFF-25 "Vídeos suaves en E2E" (pwa-lectura-offline): una cédula bien encuadrada con la nitidez de la cámara de un
-// celular real (varianza del Laplaciano < 152) llega a listo y a resultado por la captura guiada.
+// celular real (varianza del Laplaciano entre 27 y 152) supera los umbrales recalibrados de CAL-08 y llega a listo y a
+// resultado sin ninguna elevación del score (tarea 5.8).
 import { expect, test } from "@playwright/test";
 import { conVideo, esperarPantalla, historial, iniciarCamara, registrarHistorial } from "./ayudas";
 

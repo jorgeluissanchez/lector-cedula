@@ -123,35 +123,29 @@ class PresenciaUnidadNat04Test : StringSpec({
         Presencia.aplicarPresencia(ResultadoCalidad(69, Motivo.REFLEJO, m), false, 70) shouldBe ResultadoCalidad(69, Motivo.REFLEJO, m)
     }
 
-    "NAT-04 evaluarConPresencia (OFF-25): solo desenfocado con varianza >= mínimo y el resto >= umbral consulta la presencia" {
+    "NAT-04 evaluarConPresencia (OFF-25): la presencia solo se consulta con score >= umbral y nunca eleva el score" {
         fun met(varianza: Double, reflejo: Int = 100, oscuro: Int = 100, sobre: Int = 100, tamano: Int? = null) =
             MetricasCalidad(MetricaNitidez(varianza, 10), MetricaReflejo(0.0, 0.0, reflejo), MetricaExposicion(100.0, 0.0, oscuro, sobre), tamano?.let { MetricaTamano(0.5, it) })
         var llamadas = 0
-        fun eval(r: ResultadoCalidad, presente: Boolean): ResultadoCalidad = Presencia.evaluarConPresencia(r, { llamadas++; presente }, u.umbralListo, u.laplacianoMinimoGuiado)
         fun consulta(r: ResultadoCalidad, presente: Boolean): Pair<ResultadoCalidad, Int> {
             llamadas = 0
-            return eval(r, presente) to llamadas
+            return Presencia.evaluarConPresencia(r, { llamadas++; presente }, u.umbralListo) to llamadas
         }
         val listo = ResultadoCalidad(70, null, met(500.0))
         consulta(listo, false) shouldBe (ResultadoCalidad(69, Motivo.ACERCA, met(500.0)) to 1)
         consulta(listo, true) shouldBe (listo to 1)
-        val minimo = u.laplacianoMinimoGuiado
-        val borroso = ResultadoCalidad(40, Motivo.DESENFOCADO, met(minimo))
-        consulta(borroso, true) shouldBe (ResultadoCalidad(70, null, met(minimo)) to 1)
-        consulta(borroso, false) shouldBe (ResultadoCalidad(40, Motivo.ACERCA, met(minimo)) to 1)
-        // Sin consultar: varianza bajo el mínimo, otro motivo, sin métricas u otro subscore bajo el umbral.
+        val nitido = ResultadoCalidad(90, null, met(500.0))
+        consulta(nitido, true) shouldBe (nitido to 1)
+        // Por debajo del umbral nunca se consulta ni cambia: desenfocado (aunque haya documento), reflejo, oscuro, sin métricas.
         for (r in listOf(
-            ResultadoCalidad(40, Motivo.DESENFOCADO, met(minimo - 0.001)),
-            ResultadoCalidad(40, Motivo.OSCURO, met(minimo)),
+            ResultadoCalidad(69, Motivo.DESENFOCADO, met(26.0)),
+            ResultadoCalidad(40, Motivo.DESENFOCADO, met(12.0)),
+            ResultadoCalidad(10, Motivo.REFLEJO, met(500.0, reflejo = 10)),
+            ResultadoCalidad(40, Motivo.OSCURO, met(500.0, oscuro = 40)),
             ResultadoCalidad(0, Motivo.DESENFOCADO, null),
-            ResultadoCalidad(40, Motivo.DESENFOCADO, met(minimo, reflejo = 69)),
-            ResultadoCalidad(40, Motivo.DESENFOCADO, met(minimo, oscuro = 69)),
-            ResultadoCalidad(40, Motivo.DESENFOCADO, met(minimo, sobre = 69)),
-            ResultadoCalidad(40, Motivo.DESENFOCADO, met(minimo, tamano = 69)),
-        )) consulta(r, true) shouldBe (r to 0)
-        // Subscores justo en el umbral sí consultan.
-        for (m in listOf(met(minimo, reflejo = 70), met(minimo, oscuro = 70), met(minimo, sobre = 70), met(minimo, tamano = 70))) {
-            consulta(ResultadoCalidad(40, Motivo.DESENFOCADO, m), true) shouldBe (ResultadoCalidad(70, null, m) to 1)
+        )) {
+            consulta(r, true) shouldBe (r to 0)
+            consulta(r, false) shouldBe (r to 0)
         }
     }
 })

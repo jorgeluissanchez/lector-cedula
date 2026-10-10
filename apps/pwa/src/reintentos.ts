@@ -1,5 +1,5 @@
 /**
- * OFF-26: reintento silencioso de la lectura. Una captura guiada (OFF-25) puede no leerse; ante `no-encontrado`,
+ * OFF-26: reintento silencioso de la lectura. Una captura suave que pasa los filtros (OFF-25) puede no leerse; ante `no-encontrado`,
  * `no-valido` o `tiempo-agotado` se vuelve a la cámara hasta 3 lecturas o 20 000 ms desde el inicio de la primera.
  */
 import { clasificarErrorLectura, type ResultadoLectura } from "@lector-cedula/capture";

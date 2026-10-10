@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { crearConfiguracionUmbrales, UMBRALES_POR_DEFECTO, validarUmbrales, type Umbrales } from "../src/calidad/umbrales.js";
 
 const DEFECTO_LITERAL = {
-  laplacianoDesenfocado: 40,
-  laplacianoNitido: 200,
+  laplacianoDesenfocado: 8,
+  laplacianoNitido: 35,
   luminanciaSaturada: 250,
   fraccionSaturadaMax: 0.05,
   componenteSaturadoMax: 0.02,
@@ -37,7 +37,7 @@ describe("CAL-08 Umbrales calibrables", { timeout: 60_000 }, () => {
 
   it("CAL-08 Configuración inválida", () => {
     const config = crearConfiguracionUmbrales();
-    expect(config.configurar({ umbralListo: 101, framesConsecutivos: 0, laplacianoNitido: 30, extra: 1 })).toStrictEqual({
+    expect(config.configurar({ umbralListo: 101, framesConsecutivos: 0, laplacianoNitido: 5, extra: 1 })).toStrictEqual({
       ok: false,
       codigo: "umbrales-invalidos",
       campos: ["extra", "framesConsecutivos", "laplacianoNitido", "umbralListo"],
@@ -69,8 +69,8 @@ describe("CAL-08 Umbrales calibrables", { timeout: 60_000 }, () => {
       fraccionOscuraMax: [0.0001, 1],
       ratioMinimo: [0.0001, 0.29],
       ratioOk: [0.11, 1],
-      laplacianoDesenfocado: [0, 199.5],
-      laplacianoNitido: [40.5, 1e9],
+      laplacianoDesenfocado: [0, 34.5],
+      laplacianoNitido: [8.5, 1e9],
       umbralListo: [0, 100],
       framesConsecutivos: [1, 30],
       intervaloMinimoMs: [100, 150.5, 200],
@@ -103,8 +103,8 @@ describe("CAL-08 Umbrales calibrables", { timeout: 60_000 }, () => {
   });
 
   it("CAL-08 Reglas de validez: relaciones de orden tras combinar con los vigentes", () => {
-    expect(campos({ laplacianoDesenfocado: 200 })).toStrictEqual(["laplacianoDesenfocado"]);
-    expect(campos({ laplacianoNitido: 40 })).toStrictEqual(["laplacianoNitido"]);
+    expect(campos({ laplacianoDesenfocado: 35 })).toStrictEqual(["laplacianoDesenfocado"]);
+    expect(campos({ laplacianoNitido: 8 })).toStrictEqual(["laplacianoNitido"]);
     expect(campos({ laplacianoDesenfocado: 300, laplacianoNitido: 400 })).toBe("ok");
     expect(campos({ laplacianoDesenfocado: 400, laplacianoNitido: 300 })).toStrictEqual(["laplacianoDesenfocado", "laplacianoNitido"]);
     expect(campos({ mediaNegra: 60 })).toStrictEqual(["mediaNegra"]);
@@ -117,7 +117,7 @@ describe("CAL-08 Umbrales calibrables", { timeout: 60_000 }, () => {
     expect(campos({ ratioOk: 0.1 })).toStrictEqual(["ratioOk"]);
     expect(campos({ ratioMinimo: 0.5, ratioOk: 0.9 })).toBe("ok");
     // La relación de nitidez no arrastra campos ajenos: un fallo de orden lista solo los de su relación presentes.
-    expect(campos({ laplacianoNitido: 30, umbralListo: 50 })).toStrictEqual(["laplacianoNitido"]);
+    expect(campos({ laplacianoNitido: 5, umbralListo: 50 })).toStrictEqual(["laplacianoNitido"]);
     // Un campo inválido por rango y su relación: se lista una sola vez.
     expect(campos({ laplacianoDesenfocado: -5, laplacianoNitido: -10 })).toStrictEqual(["laplacianoDesenfocado", "laplacianoNitido"]);
     // La relación se evalúa con los vigentes, no con los valores por defecto.

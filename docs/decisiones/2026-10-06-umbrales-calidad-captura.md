@@ -12,8 +12,8 @@ Los valores de esta tabla se eligieron por razonamiento sobre el frame de 640 px
 
 | Umbral | Valor | Métrica y efecto | Origen del valor provisional |
 |---|---|---|---|
-| `laplacianoDesenfocado` | 40 | Nitidez: varianza del Laplaciano en o por debajo da subscore 0 | Orden de magnitud habitual (decenas) para texto desenfocado en imágenes de 8 bits de unos 640 px; a calibrar |
-| `laplacianoNitido` | 200 | Nitidez: varianza en o por encima da subscore 100 | Ídem; el texto impreso nítido suele dar cientos o miles |
+| `laplacianoDesenfocado` | 8 | Nitidez: varianza del Laplaciano en o por debajo da subscore 0 | Recalibrado el 2026-10-10 (antes 40) con mediciones de fotos reales y escenas sintéticas: `2026-10-10-recalibracion-nitidez.md` |
+| `laplacianoNitido` | 35 | Nitidez: varianza en o por encima da subscore 100; el score 70 queda en 27 | Recalibrado el 2026-10-10 (antes 200): ídem |
 | `luminanciaSaturada` | 250 | Reflejo: un píxel con Y >= 250 cuenta como saturado | Receta de glare-score (MIT) y paper arXiv 1911.05189; fijado en la petición de la Fase 2 |
 | `fraccionSaturadaMax` | 0,05 | Reflejo: 5 % de M saturado lleva el subscore a 0 | Un reflejo que cubre el 5 % del documento tapa varios campos |
 | `componenteSaturadoMax` | 0,02 | Reflejo: un componente saturado del 2 % de M lleva el subscore a 0 | Un brillo compacto del 2 % puede tapar una fila del PDF417 |

@@ -9,7 +9,7 @@ import { existsSync, openSync, readFileSync, readSync, closeSync } from "node:fs
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { detectarPresencia, evaluarConPresencia, LAPLACIANO_MINIMO_GUIADO } from "../../capture/src/calidad/presencia.js";
+import { detectarPresencia, evaluarConPresencia } from "../../capture/src/calidad/presencia.js";
 import { dimensionesAnalisis } from "../../capture/src/calidad/reduccion.js";
 import { analizarFrame } from "../../capture/src/calidad/score.js";
 import type { FrameAnalisis } from "../../capture/src/calidad/tipos.js";
@@ -177,7 +177,6 @@ function evaluarTs(nombre: string): FilaVolcado {
       return p.presente;
     },
     UMBRALES_POR_DEFECTO.umbralListo,
-    LAPLACIANO_MINIMO_GUIADO,
   );
   return { fixture: nombre, score: res.score, motivo: res.motivo, contenido };
 }

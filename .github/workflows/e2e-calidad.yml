@@ -1,0 +1,65 @@
+# E2E de captura y lectura afectados por la calidad (pwa-lectura-offline, tarea 5.8: recalibración de CAL-08 y OFF-25).
+# ci.yml no corre Playwright; este workflow corre solo los specs que dependen del score de calidad, en Chromium de
+# escritorio y con un worker, cuando cambian la calidad, la PWA o esos specs. Vídeos sintéticos generados con ffmpeg en
+# Docker (`npm run e2e:videos`); ningún dato real.
+name: e2e-calidad
+
+on:
+  pull_request:
+    paths:
+      - "packages/capture/src/calidad/**"
+      - "packages/capture/src/navegador/**"
+      - "apps/pwa/src/**"
+      - "e2e/lectura/**"
+      - "e2e/captura/**"
+      - "e2e/videos/**"
+      - "playwright.config.ts"
+      - ".github/workflows/e2e-calidad.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-calidad-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      E2E_SIN_SERVIDORES: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Entorno de pruebas (dependencias, Chromium, modelo MRZ, tsc -b, assets web)
+        uses: ./.github/actions/preparar-node
+      - name: Eval MRZ sobre imagen (0 lecturas falsas; tarea 5.8)
+        run: npm run eval:mrz-imagen
+      - name: Vídeos sintéticos (ffmpeg en Docker)
+        run: npm run e2e:videos
+      - name: Compilar la PWA y servirla en 4173
+        run: |
+          npm run build -w apps/pwa
+          nohup npm run preview -w apps/pwa -- --port 4173 --strictPort > preview.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://localhost:4173 > /dev/null && exit 0; sleep 2; done
+          cat preview.log
+          exit 1
+      - name: Lectura (vídeos suaves, desenfocada, sin documento, nítidas y errores)
+        run: >-
+          npx playwright test
+          e2e/lectura/suave-amarilla.spec.ts e2e/lectura/suave-digital.spec.ts e2e/lectura/desenfocada.spec.ts
+          e2e/lectura/sin-documento.spec.ts e2e/lectura/lectura.spec.ts e2e/lectura/lectura-digital.spec.ts
+          e2e/lectura/errores.spec.ts
+          --project=lectura-chromium --workers=1
+      - name: Captura (CAL-11 y feedback por vídeo)
+        run: npx playwright test e2e/captura/calidad.spec.ts --project="captura-*-escritorio" --workers=1
+      - name: Informe de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-calidad-${{ github.sha }}
+          path: |
+            reports/playwright/
+            test-results/
+          if-no-files-found: ignore

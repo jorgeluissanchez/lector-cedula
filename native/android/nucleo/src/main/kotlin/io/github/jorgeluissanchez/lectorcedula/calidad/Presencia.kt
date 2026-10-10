@@ -10,7 +10,7 @@ import kotlin.math.min
 /**
  * Presencia de documento antes de `listo` (OFF-22, OFF-25) en Kotlin (sdk-nativo, NAT-04). Puerto literal de
  * `packages/capture/src/calidad/presencia.ts`: tarjeta ID-1 por bordes rectos y contenido PDF417 o MRZ (TD1, TD3).
- * Las constantes de calibración son las de la fuente; `laplacianoMinimoGuiado` llega en [Umbrales] (JSON generado).
+ * Las constantes de calibración son las de la fuente.
  */
 object Presencia {
     data class Rect(val x: Int, val y: Int, val ancho: Int, val alto: Int)
@@ -208,13 +208,10 @@ object Presencia {
         return r.copy(score = umbralListo - 1, motivo = Motivo.ACERCA)
     }
 
-    /** OFF-22 y OFF-25: `presencia` se invoca solo si hace falta (ver la fuente TS). */
-    fun evaluarConPresencia(r: ResultadoCalidad, presencia: () -> Boolean, umbralListo: Int, minimo: Double): ResultadoCalidad {
-        if (r.score >= umbralListo) return aplicarPresencia(r, presencia(), umbralListo)
-        val m = r.metricas
-        if (r.motivo != Motivo.DESENFOCADO || m == null || m.nitidez.varianza < minimo) return r
-        val otros = listOf(m.reflejo.subscore, m.exposicion.subscoreOscuro, m.exposicion.subscoreSobreexpuesto, m.tamano?.subscore ?: 100)
-        if (otros.any { it < umbralListo }) return r
-        return if (presencia()) r.copy(score = umbralListo, motivo = null) else r.copy(motivo = Motivo.ACERCA)
-    }
+    /**
+     * OFF-22 y OFF-25: la presencia es una condición adicional, nunca un sustituto. Solo se evalúa si el score ya llega a
+     * `umbralListo`; por debajo el resultado no cambia (recalibración del 2026-10-10, ver la fuente TS).
+     */
+    fun evaluarConPresencia(r: ResultadoCalidad, presencia: () -> Boolean, umbralListo: Int): ResultadoCalidad =
+        if (r.score >= umbralListo) aplicarPresencia(r, presencia(), umbralListo) else r
 }

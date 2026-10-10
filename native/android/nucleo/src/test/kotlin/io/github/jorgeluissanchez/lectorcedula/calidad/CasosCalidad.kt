@@ -30,7 +30,7 @@ object CasosCalidad {
 
     private fun texto(e: JsonElement?): String? = (e as? JsonPrimitive)?.takeIf { it != JsonNull }?.content
 
-    // --- Escenas completas: CAL-07, presencia y evaluación guiada (como el Worker web) ---
+    // --- Escenas completas: CAL-07, presencia y evaluación con presencia (como el Worker web; clave `guiado` por compatibilidad) ---
 
     /** Escena y fuente: una de cada cuatro con guía propia del integrador (SDK-61), otra con fuente modelo (CAL-06). */
     fun escena(semilla: Long): Pair<FrameAnalisis, Boolean> {
@@ -69,7 +69,7 @@ object CasosCalidad {
                         m.tamano?.ratio, m.tamano?.subscore?.toDouble(),
                     )
                 }
-                val g = Presencia.evaluarConPresencia(c, { p.presente }, u.umbralListo, u.laplacianoMinimoGuiado)
+                val g = Presencia.evaluarConPresencia(c, { p.presente }, u.umbralListo)
                 salida["guiado"] = listOf(g.score, g.motivo?.codigo)
             }
         }

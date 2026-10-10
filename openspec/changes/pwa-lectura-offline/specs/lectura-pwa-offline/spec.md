@@ -301,7 +301,7 @@ Antes de abrir la cámara, `inicio` MUST mostrar el aviso de privacidad corto y 
 - **THEN** 0 violaciones con impacto `serious` o `critical`
 
 ### Requirement: OFF-22 Presencia de documento antes de listo
-El Worker de calidad de la PWA MUST impedir `listo` si en la guía no hay una tarjeta con proporción ID-1 (horizontal o vertical, tolerancia 20 %) y contenido de cédula (patrón PDF417 o franja MRZ con evidencia LMI-14): en ese caso el score queda por debajo del umbral con motivo `acerca` ("Acerca la cédula"). La búsqueda solo corre en frames que ya superan el umbral o cuyo único subscore por debajo del umbral es la nitidez con la varianza del Laplaciano >= `LAPLACIANO_MINIMO_GUIADO` (OFF-25). El contenido PDF417 se reconoce por el patrón nítido (bloques de 8x8 con bordes verticales fuertes) o, si no hay MRZ, por el patrón suave: al menos el 8 % de bloques de 8x8 con borde vertical medio >= 1,5, 1,5 veces más energía horizontal que vertical y todas sus filas de píxeles con al menos la mitad de la energía horizontal media (sobrevive a desenfoque, ruido y JPEG; los renglones de texto dejan filas vacías). Los bordes de la tarjeta se buscan con diferencias a 2 píxeles para tolerar un borde desenfocado. Reporte del usuario del 2026-10-07: la captura se disparaba con cualquier escena nítida.
+El Worker de calidad de la PWA MUST impedir `listo` si en la guía no hay una tarjeta con proporción ID-1 (horizontal o vertical, tolerancia 20 %) y contenido de cédula (patrón PDF417 o franja MRZ con evidencia LMI-14): en ese caso el score queda por debajo del umbral con motivo `acerca` ("Acerca la cédula"). La búsqueda solo corre en frames que ya superan el umbral (OFF-25). El contenido PDF417 se reconoce por el patrón nítido (bloques de 8x8 con bordes verticales fuertes) o, si no hay MRZ, por el patrón suave: al menos el 8 % de bloques de 8x8 con borde vertical medio >= 1,5, 1,5 veces más energía horizontal que vertical y todas sus filas de píxeles con al menos la mitad de la energía horizontal media (sobrevive a desenfoque, ruido y JPEG; los renglones de texto dejan filas vacías). Los bordes de la tarjeta se buscan con diferencias a 2 píxeles para tolerar un borde desenfocado. Reporte del usuario del 2026-10-07: la captura se disparaba con cualquier escena nítida.
 
 #### Scenario: Escenas sin cédula
 - **WHEN** se evalúa la presencia en frames de análisis de 640x360 nítidos de una cara dibujada, una pared, una hoja en blanco con proporción ID-1 y una hoja con renglones de texto
@@ -353,24 +353,44 @@ El lector MUST admitir solo cédulas de ciudadanía de mayores de edad; la tarje
 - **WHEN** se parsean líneas MRZ sintéticas cuyo código de documento no es `IC` (p. ej. `IT` o `TI`)
 - **THEN** el parser devuelve `{ ok: false, motivo: "no-es-cedula-digital" }`
 
-### Requirement: OFF-25 Captura guiada por la presencia de la cédula
-Con la presencia activada (OFF-22), el Worker de calidad MUST dar `score` = `umbralListo` y `motivo` `null` a un frame cuyo único subscore bajo el umbral es la nitidez, con varianza del Laplaciano >= `LAPLACIANO_MINIMO_GUIADO` (12) y presencia de cédula; sin presencia, motivo `acerca`; con varianza < 12, `desenfocado`, el único caso que muestra "Desenfocado". CAL-11 no cambia. Motivo: reporte del 2026-10-07 en Android real; calibración en `docs/decisiones/2026-10-07-captura-guiada-nitidez.md`.
+### Requirement: OFF-25 Filtros de calidad estrictos con la presencia como condición adicional
+Con la presencia activada (OFF-22), el Worker de calidad MUST devolver el resultado de CAL-07, con los umbrales recalibrados de CAL-08 (`laplacianoDesenfocado` 8, `laplacianoNitido` 35: el score 70 queda en una varianza del Laplaciano de 27), sin elevar nunca el score: nitidez (`desenfocado`, que también recoge el movimiento), exposición (`oscuro`, `sobreexpuesto`) y reflejo (`reflejo`) bloquean `listo` aunque haya cédula. La presencia es una condición adicional, nunca un sustituto: solo se evalúa en frames con score >= `umbralListo` y, sin cédula, da `acerca` con score `umbralListo - 1` (OFF-22). Sustituye a la captura guiada del 2026-10-07, que daba `score` = `umbralListo` a un frame con presencia cuyo único límite era la nitidez (decisión del usuario del 2026-10-07; mediciones en `docs/decisiones/2026-10-10-recalibracion-nitidez.md`). CAL-11 no cambia. Las escenas degradadas son las de OFF-22: cédulas de `PERSONA_BASE` en la guía con desenfoque gaussiano de sigma en píxeles del frame de análisis, ruido +-4 y JPEG de calidad 50.
 
-#### Scenario: Cédulas degradadas a nivel de celular real
-- **WHEN** el Worker de calidad con presencia analiza la amarilla (contraste 20 %, sigma 1), la digital (sigma 1,5) y la digital girada 90 grados (sigma 1) degradadas como en OFF-22, cuya varianza está entre `LAPLACIANO_MINIMO_GUIADO` y 152
-- **THEN** cada resultado tiene `score` 70 y `motivo` `null`, y sin la presencia activada el motivo es `desenfocado` con `score` < 70
+#### Scenario: Cédula suave como la de un celular real dispara
+- **WHEN** el Worker de calidad analiza, con y sin presencia, la digital (sigma 1,5), la digital girada 90 grados (sigma 1), la amarilla (sigma 1,5) y la amarilla con contraste al 20 % (sigma 0,75), cuya varianza está entre 27 y 152
+- **THEN** cada resultado tiene `score` >= 70 y `motivo` `null`
+
+#### Scenario: Cédula más suave que el umbral no dispara
+- **WHEN** el Worker de calidad con presencia analiza la amarilla con contraste al 20 % (sigma 1), la digital (sigma 2) y la digital (sigma 3,5), cuya varianza es < 27
+- **THEN** cada resultado tiene `score` < 70 y `motivo` `desenfocado`, aunque la tarjeta esté en la guía
+
+#### Scenario: Escena movida
+- **WHEN** el Worker de calidad con presencia analiza la digital con un desenfoque de movimiento diagonal de 9 px (media de 9 píxeles a lo largo de la diagonal) y, aparte, horizontal de 15 px, en ambos casos seguido de sigma 1, ruido +-4 y JPEG 50
+- **THEN** cada resultado tiene `score` < 70 y `motivo` `desenfocado`
+
+#### Scenario: Reflejo fuerte sobre la MRZ
+- **WHEN** el Worker de calidad con presencia analiza la digital nítida y la digital con sigma 1,5 con un bloque de luminancia 255 en [70..570]x[262..336] del frame de análisis, que cubre la franja MRZ
+- **THEN** cada resultado tiene `score` < 70 y `motivo` `reflejo`
+
+#### Scenario: Escena oscura y escena sobreexpuesta
+- **WHEN** el Worker de calidad con presencia analiza la digital y la amarilla con cada canal multiplicado por 0,1 y, aparte, con cada canal `v` sustituido por `245 + round(v · 0,04)`
+- **THEN** con 0,1 cada resultado tiene `score` < 70 y `motivo` `oscuro`; con la sobreexposición, `score` < 70 y `motivo` `sobreexpuesto`
 
 #### Scenario: Escenas sin cédula siguen sin disparar
 - **WHEN** el Worker de calidad con presencia analiza la cara, la pared, la hoja en blanco y la hoja con texto, nítidas y degradadas con sigma 1
-- **THEN** ningún resultado llega a 70 y ninguno con varianza >= `LAPLACIANO_MINIMO_GUIADO` tiene motivo `desenfocado`
+- **THEN** ningún resultado llega a 70, y cada uno cuyo score de CAL-07 sin presencia es >= 70 tiene `score` 69 y `motivo` `acerca`
 
-#### Scenario: Desenfoque extremo
-- **WHEN** el Worker de calidad con presencia analiza la digital degradada con sigma 3,5 (varianza < `LAPLACIANO_MINIMO_GUIADO`)
-- **THEN** el resultado tiene `score` < 70 y `motivo` `desenfocado`
+#### Scenario: La presencia no se evalúa por debajo del umbral
+- **WHEN** se aplica la evaluación con presencia a un resultado con `score` 69 y motivo `desenfocado`, a otro con `score` 10 y motivo `reflejo`, y a uno con `score` 90 y motivo `null`, con una presencia que cuenta sus llamadas
+- **THEN** los dos primeros se devuelven sin cambios y sin llamar a la presencia; el tercero llama a la presencia una vez y, sin cédula, queda con `score` 69 y motivo `acerca`
 
 #### Scenario: Vídeos suaves en E2E
-- **WHEN** se pulsa "Iniciar cámara" con `amarilla-suave-1080p` (contraste de la tarjeta al 20 %, `gblur` sigma 2,5 y ruido) o `digital-suave-1080p` (`gblur` sigma 5 y ruido), cuya varianza en el frame de análisis es < 152
+- **WHEN** se pulsa "Iniciar cámara" con `amarilla-suave-1080p` (contraste de la tarjeta al 20 %, `gblur` sigma 2,5 y ruido) o `digital-suave-1080p` (`gblur` sigma 5 y ruido), cuya varianza en el frame de análisis está entre 27 y 152
 - **THEN** el historial de pantallas contiene `listo` y `data-pantalla` llega a `resultado`
+
+#### Scenario: Vídeos que no deben disparar en E2E
+- **WHEN** se pulsa "Iniciar cámara" con `desenfocada-1080p` (varianza < 8) y, aparte, con `sin-documento-1080p`
+- **THEN** `listo` no aparece en el historial de pantallas; el feedback es "Desenfocado, mantén la cámara quieta" con `desenfocada-1080p` y "Acerca la cédula" con `sin-documento-1080p`
 
 ### Requirement: OFF-26 Reintento silencioso de la lectura
 Si la lectura falla con `no-encontrado`, `no-valido` o `tiempo-agotado` (OFF-13), la PWA MUST volver a `activo` sin mostrar el error y capturar otro frame, hasta 3 lecturas o 20 000 ms desde el inicio de la primera; agotado el tope, muestra `error-lectura` con el último código. `menor-de-edad` y `motor` se muestran sin reintento. Nunca hay más de una lectura en curso. Los botones de la PWA reinician la cuenta.

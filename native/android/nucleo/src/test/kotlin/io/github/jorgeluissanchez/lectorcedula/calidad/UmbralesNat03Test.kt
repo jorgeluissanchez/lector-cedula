@@ -15,9 +15,11 @@ class UmbralesNat03Test : StringSpec({
     "NAT-03 Umbrales por omisión: los del JSON generado, campo a campo" {
         val u = Umbrales.POR_DEFECTO
         u shouldBe Umbrales.desdeJson(json)
-        listOf(u.laplacianoDesenfocado, u.laplacianoNitido, u.luminanciaSaturada, u.fraccionSaturadaMax, u.componenteSaturadoMax) shouldBe listOf(40.0, 200.0, 250.0, 0.05, 0.02)
+        listOf(u.laplacianoDesenfocado, u.laplacianoNitido, u.luminanciaSaturada, u.fraccionSaturadaMax, u.componenteSaturadoMax) shouldBe listOf(8.0, 35.0, 250.0, 0.05, 0.02)
         listOf(u.luminanciaOscura, u.fraccionOscuraMax, u.mediaNegra, u.mediaOscuraOk, u.mediaClaraOk, u.mediaBlanca) shouldBe listOf(5.0, 0.25, 20.0, 60.0, 200.0, 240.0)
-        listOf(u.ratioMinimo, u.ratioOk, u.intervaloMinimoMs, u.laplacianoMinimoGuiado) shouldBe listOf(0.1, 0.3, 100.0, 12.0)
+        listOf(u.ratioMinimo, u.ratioOk, u.intervaloMinimoMs) shouldBe listOf(0.1, 0.3, 100.0)
+        // Recalibración del 2026-10-10 (OFF-25): sin captura guiada, el JSON ya no trae laplacianoMinimoGuiado.
+        json.contains("laplacianoMinimoGuiado") shouldBe false
         listOf(u.umbralListo, u.framesConsecutivos) shouldBe listOf(70, 3)
     }
 

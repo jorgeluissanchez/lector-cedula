@@ -1,4 +1,5 @@
-// OFF-22 "Vídeo sin cédula en E2E" (pwa-lectura-offline): una cara dibujada y una pared nítidas nunca llevan a listo.
+// OFF-22 "Vídeo sin cédula en E2E" y OFF-25 "Vídeos que no deben disparar en E2E" (sin-documento-1080p; pwa-lectura-offline):
+// una cara dibujada y una pared nítidas nunca llevan a listo, aunque superen los umbrales recalibrados de CAL-08.
 import { expect, test } from "@playwright/test";
 import { conVideo, historial, iniciarCamara, registrarHistorial } from "./ayudas";
 
