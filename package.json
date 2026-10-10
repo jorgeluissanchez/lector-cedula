@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:browser": "vitest run --config vitest.browser.config.ts",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p packages/nucleo-js",
     "lint": "eslint .",
     "eval": "node evals/runners/eval-campo.mjs",
     "eval:quick": "node evals/runners/eval-campo.mjs --quick",
@@ -25,7 +25,7 @@
     "check:privacidad": "node tools/privacidad-check.mjs",
     "divipol:generar": "node tools/divipol/generar-divipol.mjs",
     "divipol:verificar": "node tools/divipol/generar-divipol.mjs --verificar",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:licencias && npm run check:privacidad && npm run eval:quick",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:licencias && npm run check:privacidad && npm run check:tamano-nativo && npm run eval:quick",
     "test:mutacion": "stryker run",
     "check:completo": "npm run check && npm run test:mutacion",
     "test:e2e": "playwright test",
@@ -40,7 +40,9 @@
     "test:webkit": "node tools/visual.mjs --webkit",
     "fraude:sinteticos": "tsc -b && node tools/fraude/generar-sinteticos.mjs",
     "eval:fraude": "tsc -b && node evals/runners/fraude/eval-fraude.mjs",
-    "check:tamano-sdk": "node tools/tamano-sdk.mjs"
+    "check:tamano-sdk": "node tools/tamano-sdk.mjs",
+    "check:tamano-nativo": "node tools/tamano-nativo.mjs",
+    "nucleo:construir": "node packages/nucleo-js/scripts/construir.mjs"
   },
   "devDependencies": {
     "@angular/common": "21.2.25",

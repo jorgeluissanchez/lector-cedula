@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lector-cedula.example/protocolo-ndjson.schema.json",
+  "title": "Evento del protocolo NDJSON de @lector-cedula/servidor (MOT-20, MOT-22, MOT-25)",
+  "definitions": {
+    "motivo": {
+      "enum": [
+        "no-coincide",
+        "fraude",
+        "ilegible",
+        "menor-de-edad",
+        "documento-no-admitido",
+        "demasiado-grande",
+        "tiempo-agotado",
+        "ocupado",
+        "error-interno"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "etapa": {
+          "enum": [
+            "recibido",
+            "leyendo",
+            "fraude",
+            "comparando"
+          ]
+        },
+        "progreso": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "etapa"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "etapa": {
+          "const": "resultado"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "documento": {
+          "type": "object",
+          "properties": {
+            "campos": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "campos"
+          ]
+        },
+        "riesgo": {},
+        "rechazo": {
+          "type": "object",
+          "properties": {
+            "motivo": {
+              "$ref": "#/definitions/motivo"
+            },
+            "diferencias": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "motivo"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "etapa",
+        "ok"
+      ],
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "ok": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "documento"
+        ],
+        "not": {
+          "required": [
+            "rechazo"
+          ]
+        }
+      },
+      "else": {
+        "required": [
+          "rechazo"
+        ],
+        "not": {
+          "required": [
+            "documento"
+          ]
+        }
+      }
+    }
+  ]
+}

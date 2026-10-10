@@ -5,12 +5,6 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    {
-      "path": "../protocolo"
-    }
-  ]
+  "include": ["src"],
+  "references": [{ "path": "../protocolo" }, { "path": "../capture" }, { "path": "../fraud" }, { "path": "../parsers" }]
 }

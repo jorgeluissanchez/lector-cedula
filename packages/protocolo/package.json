@@ -1,0 +1,14 @@
+{
+  "name": "@lector-cedula/protocolo",
+  "version": "0.1.0",
+  "description": "Protocolo NDJSON/JSON entre el front (@lector-cedula/web, opción backend) y el back (@lector-cedula/servidor): tipos, constantes y validador puro. Sin dependencias (motor-backend-embebido, MOT-20).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./protocolo-ndjson.schema.json": "./protocolo-ndjson.schema.json"
+  },
+  "files": ["dist", "protocolo-ndjson.schema.json"],
+  "scripts": { "build": "tsc -b", "test": "vitest run" }
+}

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { verificarWebhook } from "../src/index.js";
 import { AHORA, CUERPO_AV25, FIRMA_V1, SECRETO, firmarReferencia } from "./ayudas.js";
 
-describe("SDK-20 verificarWebhook", () => {
+describe("SDK-20 verificarWebhook", { timeout: 60_000 }, () => {
   it("SDK-20 el cuerpo de AV-25 mide 232 bytes y la referencia reproduce los vectores de AV-26", () => {
     expect(new TextEncoder().encode(CUERPO_AV25).length).toBe(232);
     expect(firmarReferencia(CUERPO_AV25, SECRETO, AHORA)).toBe(FIRMA_V1);

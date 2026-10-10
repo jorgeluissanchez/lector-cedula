@@ -17,7 +17,7 @@ Convenciones (aplican a todos los escenarios):
 ## ADDED Requirements
 
 ### Requirement: MOT-01 API Node en proceso
-`@lector-cedula/servidor` SHALL exportar `crearMotor(opciones?)` que devuelve `{ leerDocumento(imagen: Uint8Array | Buffer, opciones?): Promise<RESULTADO>, cerrar(): Promise<void> }` y un atajo `leerDocumento(imagen, opciones?)` que usa un motor compartido perezoso. La imagen MAY ser PNG, JPEG o WebP. `resultado.confiable` MUST ser `false`.
+`@lector-cedula/motor` (paquete aparte, decisión del orquestador del 2026-10-09: `@lector-cedula/servidor` queda ligero y lo carga como `peerDependency` opcional) SHALL exportar `crearMotor(opciones?)` que devuelve `{ leerDocumento(imagen: Uint8Array | Buffer, opciones?): Promise<RESULTADO>, cerrar(): Promise<void> }` y un atajo `leerDocumento(imagen, opciones?)` que usa un motor compartido perezoso. La imagen MAY ser PNG, JPEG o WebP. `resultado.confiable` MUST ser `false`.
 
 #### Scenario: Cédula amarilla
 - **WHEN** se llama `leerDocumento(readFileSync("amarilla-1080p.png"))`
@@ -50,7 +50,7 @@ Para toda imagen, la salida de `leerDocumento` (Node, Java y Go) MUST ser igual,
 El motor Node MUST importar `packages/capture`, `packages/parsers`, las reglas de edad y tarjeta de identidad, otros documentos y `packages/fraud`, sin copiar su lógica. Java y Go MUST decidir todo número, fecha y regla en el bundle `@lector-cedula/nucleo-js` (NAT-07); el código Java o Go solo entrega bytes PDF417 crudos y líneas MRZ crudas.
 
 #### Scenario: Sin reglas duplicadas en Node
-- **WHEN** se ejecuta la prueba estática sobre `packages/servidor/src/motor`
+- **WHEN** se ejecuta la prueba estática sobre `packages/motor/src`
 - **THEN** no hay ninguna definición de checksum MRZ, tabla DIVIPOL ni cálculo de edad (búsqueda de los identificadores `digitoVerificador`, `DIVIPOL`, `calcularEdad` definidos fuera de import da 0 coincidencias)
 
 #### Scenario: Sin decisiones nativas en Java y Go
@@ -144,7 +144,7 @@ El resultado SHALL incluir `riesgo` de `packages/fraud` igual al de la CLI. `opc
 - **THEN** el primero trae `riesgo` igual a `CLI(...).riesgo` y el segundo `riesgo` `null` con los demás campos iguales
 
 ### Requirement: MOT-10 Comparación con el cliente
-`@lector-cedula/servidor` SHALL exportar `compararConCliente(servidor: RESULTADO, cliente: unknown)` que devuelve `{ coincide: boolean, diferencias: string[] }` donde `diferencias` lista solo rutas de campo (sin valores). Campos comparados: `tipo`, `campos.nuip`, `campos.apellidos`, `campos.nombres`, `campos.fecha_nacimiento`, `campos.sexo`, `campos.rh`, `campos.fecha_expedicion`. Un `cliente` que no valida el esquema MUST dar `coincide: false` y `diferencias: ["cliente-invalido"]`.
+`@lector-cedula/servidor` SHALL exportar `compararConCliente(servidor: RESULTADO, cliente: unknown)` que devuelve `{ coincide: boolean, diferencias: string[] }` donde `diferencias` lista solo rutas de campo (sin valores). Campos comparados (nombres de `CamposDocumento`, OD-22a, la salida común del front y del motor): `tipo` (el `tipo` de `ResultadoPresentacion` del SDK web o el `tipoDocumento` de `ResultadoLectura`, contra el `tipoDocumento` del servidor), `campos.nuip`, `campos.apellidos`, `campos.nombres`, `campos.fechaNacimiento`, `campos.sexo` y `campos.rh`. `null` y ausente son iguales; un valor no primitivo nunca coincide. (Ningún lector produce fecha de expedición, así que no se compara.) Un `cliente` que no valida el esquema MUST dar `coincide: false` y `diferencias: ["cliente-invalido"]`.
 
 #### Scenario: Coinciden
 - **WHEN** se compara el resultado del servidor de `amarilla-1080p.png` con el resultado del SDK web del mismo fixture
@@ -267,7 +267,7 @@ Las dependencias de producción del motor en Node, Java y Go MUST estar en la li
 - **THEN** cada uno contiene `THIRD_PARTY_NOTICES` con las entradas `tesseract`, `leptonica`, `zxing` y `mrz.traineddata`
 
 ### Requirement: MOT-19 crearLectorServidor
-`@lector-cedula/servidor` SHALL exportar `crearLectorServidor({ alConfirmar, limites?, fraude?, comparar? })` que devuelve `{ manejar(req: Request): Promise<Response>, express(), nest(), next(), fastify(), cerrar() }`. Corre el motor en proceso (`crearMotor`, pool de `worker_threads`, MOT-04) en el servidor de la empresa que integra la librería; MUST NOT contactar ningún servidor del autor ni otra red (MOT-06).
+`@lector-cedula/servidor` SHALL exportar `crearLectorServidor({ alConfirmar, limites?, fraude?, comparar? })` que devuelve `{ manejar(req: Request): Promise<Response>, express(), nest(), next(), fastify(), cerrar() }`. Corre el motor en proceso (`crearMotor` de `@lector-cedula/motor`, peerDependency opcional, o un `motor` inyectado en las opciones; pool de `worker_threads`, MOT-04) en el servidor de la empresa que integra la librería; MUST NOT contactar ningún servidor del autor ni otra red (MOT-06).
 
 #### Scenario: Manejador estándar
 - **WHEN** se llama `manejar(new Request("http://localhost/api/cedula", { method: "POST", body: <multipart con imagen amarilla-1080p.png y cliente> }))`
@@ -283,10 +283,22 @@ Las dependencias de producción del motor en Node, Java y Go MUST estar en la li
 
 #### Scenario: Método no permitido
 - **WHEN** se envía `GET` al manejador
-- **THEN** responde 405 sin invocar el motor
+- **THEN** responde 405 con `Allow: POST` sin invocar el motor
+
+#### Scenario: Sin lectura local del cliente (modo front-back con dispositivo débil)
+- **WHEN** el multipart trae solo `imagen` (sin `cliente`) o el binario llega sin `X-Lector-Cliente`
+- **THEN** el manejador valida igual: la lista de `etapa` es `["recibido", "leyendo", "fraude", "resultado"]` (sin `comparando`), el final es `ok: true` y `alConfirmar` se llama 1 vez con `contexto.comparacion` `null`
+
+#### Scenario: Petición mal formada
+- **WHEN** el `Content-Type` no es `multipart/form-data`, `image/*` ni `application/octet-stream`, o el cuerpo no trae imagen
+- **THEN** responde 415 (tipo no admitido) o 400 (sin imagen, multipart roto) con un único JSON `{"etapa":"resultado","ok":false,"rechazo":{"motivo":"ilegible"}}` y `Cache-Control: no-store`, sin invocar el motor
+
+#### Scenario: Sin motor instalado
+- **WHEN** `crearLectorServidor` se llama sin `motor` y `@lector-cedula/motor` no está instalado
+- **THEN** lanza `ErrorServidor` con `codigo` `"motor-no-instalado"` y un mensaje que incluye `npm install @lector-cedula/motor`
 
 ### Requirement: MOT-20 Protocolo NDJSON en vivo
-La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, terminado en salto de línea) con eventos `{ etapa: "recibido"|"leyendo"|"fraude"|"comparando", progreso? }` en ese orden (`fraude` se omite con `fraude: false`, `comparando` sin cliente) y exactamente un evento final `{ etapa: "resultado", ok, documento?, riesgo?, rechazo? }`. Cada evento SHALL enviarse en cuanto ocurre (sin búfer). Java y Go (MOT-24) MUST emitir el mismo protocolo.
+La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, terminado en salto de línea) con eventos `{ etapa: "recibido"|"leyendo"|"fraude"|"comparando", progreso? }` en ese orden (`fraude` se omite con `fraude: false`, `comparando` sin cliente) y exactamente un evento final `{ etapa: "resultado", ok, documento?, riesgo?, rechazo? }`. `comparando` se omite cuando el front no envía su lectura local (modo `front-back` con dispositivo débil) o con `comparar: false`. El final `ok: true` lleva `documento` (la lectura del servidor en camelCase, con `tipoDocumento`, `campos` obligatorio, `warnings` y `confiable: true`) y `riesgo` (`null` con `fraude: false`); el final `ok: false` lleva solo `rechazo`. Los tipos y el esquema viven en `@lector-cedula/protocolo` (sin dependencias), que importan el front y el back. Cada evento SHALL enviarse en cuanto ocurre (sin búfer). Java y Go (MOT-24) MUST emitir el mismo protocolo.
 
 #### Scenario: Orden de eventos
 - **WHEN** se procesa `amarilla-1080p.png` con `cliente` y opciones por omisión

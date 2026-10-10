@@ -73,9 +73,9 @@ Plan B para lenguajes sin motor (PHP, .NET, Ruby) o para aislar memoria: el cont
 
 Comandos:
 
-- `UN` = `npx vitest run packages/servidor`
+- `UN` = `npx vitest run packages/servidor packages/protocolo packages/motor`
 - `UW` = `npx vitest run packages/web`
-- `MU` = `npm run test:mutacion -- --mutate "packages/servidor/src/motor/**"` (y `packages/web/src/envio.ts` en MOT-15)
+- `MU` = `npx stryker run stryker.servidor.config.mjs` (manejador y protocolo) y `npx stryker run stryker.motor.config.mjs` (motor) (y `packages/web/src/envio.ts` en MOT-15)
 - `CT` = `npm run motor:contrato` (acepta `--lenguaje java|go`)
 - `BE` = `npm run motor:bench`
 - `E2` = `npx playwright test e2e/motor`
@@ -164,7 +164,7 @@ Decididas por el usuario y trasladadas a la spec con escenarios (SDK-45 a SDK-60
 3. **Protocolo en vivo NDJSON** (`application/x-ndjson`) con `fetch` + `ReadableStream`, `AbortController`, `tiempoLimiteMs` e `inactividadMs`; sin WebSocket ni sondeo (SDK-48, SDK-54, MOT-20). Respuesta JSON única opcional con `streaming: false` / `Accept: application/json` / `?streaming=0` (SDK-59, MOT-25).
 4. **Back**: `crearLectorServidor({ alConfirmar, limites, fraude, comparar })` con `.express()`, `.nest()`, `.next()`, `.fastify()` y `.manejar(Request): Response` (MOT-19); motor en proceso con `worker_threads`; compara con el cliente (MOT-10) y llama `alConfirmar` solo si ok (MOT-21); motivos de rechazo cerrados (MOT-22); sin red, sin disco, bytes a cero (MOT-23). Java y Go emiten el mismo protocolo (MOT-24).
 5. **Modo opcional microservicio**: sesión, `hosted_url`, webhooks firmados, página alojada y `crearCliente` se conservan sin cambios y se reetiquetan como opcionales (SDK-52). Lo ya implementado (fases 1, 2 y 4) no se toca.
-6. **Ampliación del usuario: `modo: "front" | "back" | "front-back" | "auto"`** (por omisión `auto`), con `estado.modo` y `estado.modoMotivo` (SDK-55). `back` captura con análisis ligero sin descargar el motor pesado, con presupuesto `PRESUPUESTO_BACK` medido y fijado (SDK-56). `auto` decide con la función pura `decidirModo` sobre `deviceMemory`, `hardwareConcurrency`, WASM SIMD, `saveData`/`effectiveType` y micro-medición opcional, con umbrales configurables (SDK-57). Sin red: `front` y confirmación al volver la red con cola solo en memoria (SDK-58).
+6. **Modos (corrección del usuario, 2026-10-09):** `modo: "front" | "back" | "front-back"`; en `front-back` (doble validación) el back siempre corre y `validacion: "estricta" | "auto"` solo decide si el front lee localmente (con `auto` y dispositivo débil no lee ni envía `cliente`). El modo `auto` y `decidirModo` se retiraron (ver `sdk-integracion`). Para el servidor: sin `cliente` el manejador valida igual y no compara (MOT-19, escenario "Sin lectura local del cliente"). `back` captura con análisis ligero sin descargar el motor pesado (SDK-56). Sin red: `front` y confirmación al volver la red con cola solo en memoria (SDK-58).
 
 Decisiones del redactor por delegación (el usuario puede revertirlas):
 
@@ -175,13 +175,18 @@ Decisiones del redactor por delegación (el usuario puede revertirlas):
 - Menores en modo backend: rechazo local `menor-de-edad` sin red salvo `enviarMenores` (SDK-53, coherente con SDK-43).
 - `alConfirmar` que lanza da `rechazo.motivo` `error-interno` sin filtrar el mensaje (MOT-21).
 - La opción `enviarA` de la propuesta anterior se retira en favor de `backend` (MOT-15).
-- `decidirModo` trata señales ausentes (Safari sin `deviceMemory`) como no débiles; umbrales por omisión: 4 GB, 4 núcleos, SIMD requerido, `saveData` o `slow-2g`/`2g` débiles.
 - Cola sin red: una sola imagen, solo en memoria, vence a los 10 min (`tiempoColaMs`), código `cola-vencida`.
 
 ### Preguntas abiertas nuevas (2026-10-09)
 
 6. Publicación: con el motor dentro, `@lector-cedula/servidor` pesa decenas de MB (WASM y traineddata). ¿Se acepta, o se publica el motor como dependencia opcional `@lector-cedula/servidor-motor` instalada aparte?
 7. `PRESUPUESTO_BACK`: la meta de 300 KiB gzip es del redactor; se fija con la medición de la tarea B.6.
+
+## Conciliación con el front (2026-10-10)
+
+- Protocolo en camelCase como capture: `cliente = { tipo, campos }` con `fechaNacimiento`, etc.; `compararConCliente` compara `tipo` (o `tipoDocumento`) y `campos.nuip|apellidos|nombres|fechaNacimiento|sexo|rh` (MOT-10).
+- El evento final `ok: true` trae `documento` con al menos `tipoDocumento`, `campos` (obligatorio, lo exigen el validador y el esquema de `@lector-cedula/protocolo`) y `warnings`, más `confiable: true` y los campos de la lectura del servidor.
+- El lector NDJSON incremental del front vive en `packages/web/src/verificacion.ts`; `@lector-cedula/protocolo` solo tiene tipos, constantes, esquema, validador y el contrato del motor.
 
 ## Decisiones del orquestador por delegación del usuario (2026-10-09, cierre de preguntas)
 

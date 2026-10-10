@@ -1,0 +1,20 @@
+{
+  "name": "@lector-cedula/motor",
+  "version": "0.1.0",
+  "description": "Motor de lectura de la cédula colombiana en proceso para Node (PDF417, MRZ, fraude) con pool de worker_threads, límites y sin red ni disco. Lo carga @lector-cedula/servidor (cambio motor-backend-embebido).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "engines": { "node": ">=20" },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "files": ["dist", "!dist/.tsbuildinfo"],
+  "scripts": { "build": "tsc -b", "test": "vitest run" },
+  "dependencies": {
+    "@lector-cedula/capture": "0.0.0",
+    "@lector-cedula/fraud": "0.0.0",
+    "@lector-cedula/parsers": "0.0.0",
+    "@lector-cedula/protocolo": "0.1.0"
+  }
+}

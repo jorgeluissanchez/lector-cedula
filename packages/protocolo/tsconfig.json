@@ -5,12 +5,5 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    {
-      "path": "../protocolo"
-    }
-  ]
+  "include": ["src"]
 }

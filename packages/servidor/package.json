@@ -1,7 +1,7 @@
 {
   "name": "@lector-cedula/servidor",
   "version": "0.1.0",
-  "description": "SDK de backend para Node del lector de cédula: sesiones, resultados y verificación de webhooks (cambio sdk-integracion).",
+  "description": "SDK de backend para Node del lector de cédula: crearLectorServidor (protocolo NDJSON con el motor en proceso), sesiones, resultados y verificación de webhooks (cambios sdk-integracion y motor-backend-embebido).",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -38,7 +38,20 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "ajv": "6.15.0",
     "express": "^4.22.3",
-    "fastify": "^5.12.5"
+    "fastify": "^5.12.5",
+    "@lector-cedula/motor": "0.1.0"
+  },
+  "dependencies": {
+    "@lector-cedula/protocolo": "0.1.0"
+  },
+  "peerDependencies": {
+    "@lector-cedula/motor": "0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@lector-cedula/motor": {
+      "optional": true
+    }
   }
 }

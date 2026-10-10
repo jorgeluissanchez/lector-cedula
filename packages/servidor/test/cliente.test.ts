@@ -41,7 +41,19 @@ function cabecera(l: Llamada, nombre: string): string | null {
 describe("SDK-18 paquete sin dependencias", () => {
   it("SDK-18 Sin dependencias", () => {
     const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-    expect(pkg.dependencies === undefined || Object.keys(pkg.dependencies).length === 0).toBe(true);
+    // SDK-18 enmendado (motor-backend-embebido): solo dependencias @lector-cedula/*; el grafo de cliente.ts no alcanza el motor.
+    for (const dep of Object.keys(pkg.dependencies ?? {})) expect(dep.startsWith("@lector-cedula/")).toBe(true);
+    const visitados = new Set<string>();
+    const pendientes = ["cliente.ts"];
+    while (pendientes.length) {
+      const archivo = pendientes.pop() as string;
+      if (visitados.has(archivo)) continue;
+      visitados.add(archivo);
+      const texto = readFileSync(new URL(`../src/${archivo}`, import.meta.url), "utf8");
+      expect(texto).not.toContain("@lector-cedula/motor");
+      for (const [, ruta] of texto.matchAll(/from "\.\/([^"]+)\.js"/gu)) pendientes.push(`${ruta}.ts`);
+    }
+    expect([...visitados].some((a) => a.startsWith("lector/") || a.startsWith("motor/"))).toBe(false);
     expect(pkg.name).toBe("@lector-cedula/servidor");
     expect(pkg.license).toBe("MIT");
     expect(pkg.version).toBe("0.1.0");
