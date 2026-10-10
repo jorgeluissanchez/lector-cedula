@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { archivosTocados } from "../../.claude/hooks/lib.mjs";
 
-const RAIZ = "C:\\repo";
+// Rutas absolutas del sistema en curso: en Windows `C:\repo`, en el CI de Linux `/repo` (lib.mjs usa path nativo).
+const RAIZ = process.platform === "win32" ? "C:\\repo" : "/repo";
+const en = (...partes) => join(RAIZ, ...partes);
+const FUERA = process.platform === "win32" ? "C:\\otra\\x.ts" : "/otra/x.ts";
 let dir;
 
 function transcripcion(lineas) {
@@ -26,10 +29,10 @@ afterEach(() => {
 describe("archivosTocados (hooks de Stop con agentes en paralelo)", () => {
   it("recoge las rutas de Edit, Write y MultiEdit relativas a la raíz, sin duplicados (atrapa: correr toda la suite y bloquear por el trabajo de otro agente)", () => {
     const ruta = transcripcion([
-      uso("Edit", { file_path: "C:\\repo\\packages\\parsers\\src\\a.ts" }),
-      uso("Write", { file_path: "C:\\repo\\tools\\test\\b.test.mjs" }),
-      uso("MultiEdit", { file_path: "C:\\repo\\packages\\parsers\\src\\a.ts" }),
-      uso("Read", { file_path: "C:\\repo\\packages\\otro.ts" }),
+      uso("Edit", { file_path: en("packages", "parsers", "src", "a.ts") }),
+      uso("Write", { file_path: en("tools", "test", "b.test.mjs") }),
+      uso("MultiEdit", { file_path: en("packages", "parsers", "src", "a.ts") }),
+      uso("Read", { file_path: en("packages", "otro.ts") }),
     ]);
     expect(archivosTocados(ruta, RAIZ)).toStrictEqual(["packages/parsers/src/a.ts", "tools/test/b.test.mjs"]);
   });
@@ -59,11 +62,11 @@ describe("archivosTocados (hooks de Stop con agentes en paralelo)", () => {
 
   it("con soloUltimoTurno ignora lo editado antes del último mensaje del usuario (atrapa: orquestador bloqueado por archivos que tocó hace horas y hoy edita otro agente)", () => {
     const ruta = transcripcion([
-      uso("Write", { file_path: "C:\\repo\\packages\\parsers\\src\\index.ts" }),
+      uso("Write", { file_path: en("packages", "parsers", "src", "index.ts") }),
       { type: "user", message: { role: "user", content: "continua" } },
-      uso("Edit", { file_path: "C:\\repo\\tools\\test\\b.test.mjs" }),
+      uso("Edit", { file_path: en("tools", "test", "b.test.mjs") }),
       { type: "user", message: { role: "user", content: [{ type: "tool_result", content: "ok" }] } },
-      uso("Edit", { file_path: "C:\\repo\\tools\\c.mjs" }),
+      uso("Edit", { file_path: en("tools", "c.mjs") }),
     ]);
     expect(archivosTocados(ruta, RAIZ, { soloUltimoTurno: true })).toStrictEqual(["tools/test/b.test.mjs", "tools/c.mjs"]);
     expect(archivosTocados(ruta, RAIZ)).toHaveLength(3);
@@ -72,7 +75,7 @@ describe("archivosTocados (hooks de Stop con agentes en paralelo)", () => {
   it("ignora rutas fuera del repositorio y líneas que no son JSON (atrapa: transcripción parcial que rompe el hook)", () => {
     dir = mkdtempSync(join(tmpdir(), "transcripcion-"));
     const ruta = join(dir, "t.jsonl");
-    writeFileSync(ruta, `no es json\n${JSON.stringify(uso("Write", { file_path: "C:\\otra\\x.ts" }))}\n`);
+    writeFileSync(ruta, `no es json\n${JSON.stringify(uso("Write", { file_path: FUERA }))}\n`);
     expect(archivosTocados(ruta, RAIZ)).toStrictEqual([]);
   });
 
