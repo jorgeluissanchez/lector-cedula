@@ -77,8 +77,10 @@ pitest {
     // estado de las corrutinas (ResultKt) y los cuerpos de `runBlocking` e inline de quickjs-kt.
     avoidCallsTo.set(listOf("kotlin.jvm.internal", "kotlin.ResultKt"))
     excludedMethods.set(listOf("invokeSuspend"))
-    excludedClasses.set(listOf("*\$\$inlined\$*"))
+    // `-PpitExcluir=a.B*,...` resta clases a `pitClases` (fragmentos disjuntos del job `pit` de nativo-android).
+    excludedClasses.set(listOf("*\$\$inlined\$*") + ((findProperty("pitExcluir") as String?)?.split(",") ?: emptyList()))
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
-    mutationThreshold.set(85)
+    // En los fragmentos de CI (`-PpitUmbral=0`) el umbral lo aplica tools/pit-resumen.mjs sobre la suma.
+    mutationThreshold.set((findProperty("pitUmbral") as String?)?.toInt() ?: 85)
 }
