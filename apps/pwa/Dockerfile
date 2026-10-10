@@ -9,6 +9,10 @@ COPY packages/capture/package.json packages/capture/
 COPY packages/fixtures/package.json packages/fixtures/
 RUN npm ci --ignore-scripts
 COPY . .
+# mitigacion-autor (MA-04): esta imagen es la demo pública; aviso de demostración y CSP connect-src 'self'.
+# Para una instancia propia: --build-arg VITE_DEMO=false.
+ARG VITE_DEMO=true
+ENV VITE_DEMO=${VITE_DEMO}
 # El modelo MRZ se descarga con verificación SHA-256 (models/manifest.json); compilar parsers antes que la PWA.
 RUN npm run modelos:mrz && npx tsc -b packages/parsers && npm run build -w @lector-cedula/pwa
 

@@ -1,11 +1,11 @@
-# @lector-cedula/vue
+# @lector-cedula/parsers
 
-Adaptador Vue 3 del lector headless: useLectorCedula con refs, SSR-safe y sin UI (sdk-integracion, SDK-33, SDK-34).
+Parsers deterministas de la cédula colombiana: PDF417 (amarilla), MRZ TD1 (digital), DIVIPOL y validadores.
 
 ## Instalación
 
 ```sh
-npm install @lector-cedula/vue
+npm install @lector-cedula/parsers
 ```
 
 Documentación, uso y despliegue: [README del repositorio](https://github.com/jorgeluissanchez/lector-cedula/blob/main/README.md).

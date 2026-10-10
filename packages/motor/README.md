@@ -1,11 +1,11 @@
-# @lector-cedula/vue
+# @lector-cedula/motor
 
-Adaptador Vue 3 del lector headless: useLectorCedula con refs, SSR-safe y sin UI (sdk-integracion, SDK-33, SDK-34).
+Motor de lectura de la cédula colombiana en proceso para Node (PDF417, MRZ, fraude) con pool de worker_threads, límites y sin red ni disco. Lo carga @lector-cedula/servidor (cambio motor-backend-embebido).
 
 ## Instalación
 
 ```sh
-npm install @lector-cedula/vue
+npm install @lector-cedula/motor
 ```
 
 Documentación, uso y despliegue: [README del repositorio](https://github.com/jorgeluissanchez/lector-cedula/blob/main/README.md).

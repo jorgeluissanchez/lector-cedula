@@ -56,6 +56,14 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 400_000,
     },
+    // mitigacion-autor (MA-02, MA-03): build de la demo (VITE_DEMO=true) en dist-demo, sin pisar dist.
+    {
+      command: "npm run build -w apps/pwa -- --outDir dist-demo && npm run preview -w apps/pwa -- --outDir dist-demo --port 4175 --strictPort",
+      url: "http://localhost:4175",
+      reuseExistingServer: !process.env.CI,
+      timeout: 400_000,
+      env: { VITE_DEMO: "true" },
+    },
     // despliegue-produccion (DP-07): el mismo build con exactamente las cabeceras de vercel.json.
     { command: "node tools/despliegue/servir-vercel.mjs 4180", url: "http://localhost:4180", reuseExistingServer: !process.env.CI, timeout: 60_000 },
     // sdk-integracion (tarea 3.4): ejemplo headless sin servidor con los assets del paquete copiados.
@@ -86,8 +94,8 @@ export default defineConfig({
     launchOptions: { args: CAMARA },
   },
   projects: [
-    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/], use: { ...devices["Desktop Chrome"] } },
-    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/], use: { ...devices["Pixel 7"] } },
+    { name: "chromium-escritorio", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/, /demo[\\/]/], use: { ...devices["Desktop Chrome"] } },
+    { name: "android-pixel", testIgnore: [/captura\//, /lectura[\\/]/, /despliegue[\\/]/, /sdk[\\/]/, /demo[\\/]/], use: { ...devices["Pixel 7"] } },
     // sdk-integracion (tarea 3.4): núcleo headless sobre examples/vanilla; cada spec elige su vídeo.
     ...[
       { name: "sdk-chromium", dispositivo: DISPOSITIVOS.escritorio },
@@ -102,6 +110,8 @@ export default defineConfig({
     { name: "sdk-ejemplos", testDir: "e2e/sdk", testMatch: /ejemplos\.spec\.ts/, use: { ...DISPOSITIVOS.escritorio, video: "retain-on-failure", launchOptions: { args: CAMARA } } },
     ...proyectosCaptura,
     ...proyectosLectura,
+    // mitigacion-autor (MA-02, MA-03): aviso de la demo y ausencia de envíos.
+    { name: "demo-chromium", testDir: "e2e/demo", use: { ...DISPOSITIVOS.escritorio, baseURL: "http://localhost:4175", launchOptions: { args: CAMARA } } },
     // despliegue-produccion (DP-07): PWA servida con las cabeceras de producción (CSP incluida).
     { name: "despliegue-chromium", testDir: "e2e/despliegue", use: { ...DISPOSITIVOS.escritorio, baseURL: "http://localhost:4180", launchOptions: { args: CAMARA } } },
     ...(CON_WEBKIT ? [{

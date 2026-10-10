@@ -1,11 +1,11 @@
-# @lector-cedula/vue
+# @lector-cedula/protocolo
 
-Adaptador Vue 3 del lector headless: useLectorCedula con refs, SSR-safe y sin UI (sdk-integracion, SDK-33, SDK-34).
+Protocolo NDJSON/JSON entre el front (@lector-cedula/web, opción backend) y el back (@lector-cedula/servidor): tipos, constantes y validador puro. Sin dependencias (motor-backend-embebido, MOT-20).
 
 ## Instalación
 
 ```sh
-npm install @lector-cedula/vue
+npm install @lector-cedula/protocolo
 ```
 
 Documentación, uso y despliegue: [README del repositorio](https://github.com/jorgeluissanchez/lector-cedula/blob/main/README.md).

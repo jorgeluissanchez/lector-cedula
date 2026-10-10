@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
-import { leerAdmitirTi } from "./config";
+import { inyectarCspDemo, leerAdmitirTi, leerDemo } from "./config";
 import { textosAutorizacionTi, textosLegales } from "./legal-paginas";
 import { chunkDivipol, nombreRecurso, pluginPwa } from "./plugin-pwa";
 
@@ -9,6 +9,8 @@ import { chunkDivipol, nombreRecurso, pluginPwa } from "./plugin-pwa";
 // Decisión 10: `src/sw.ts` es una segunda entrada que se emite como `dist/sw.js` (alcance `/`).
 // otros-documentos (OD-30): un valor distinto de "true" o "false" (en el entorno o en .env) hace fallar la compilación.
 const ADMITIR_TI = leerAdmitirTi(process.env.VITE_ADMITIR_TI ?? loadEnv(process.env.NODE_ENV === "production" ? "production" : "development", fileURLToPath(new URL(".", import.meta.url)), "VITE_").VITE_ADMITIR_TI);
+// mitigacion-autor (MA-01, MA-03): aviso de demostración y meta CSP connect-src 'self'.
+const DEMO = leerDemo(process.env.VITE_DEMO ?? loadEnv(process.env.NODE_ENV === "production" ? "production" : "development", fileURLToPath(new URL(".", import.meta.url)), "VITE_").VITE_DEMO);
 
 export default defineConfig({
   resolve: {
@@ -23,12 +25,13 @@ export default defineConfig({
   define: {
     __TEXTOS_LEGALES__: JSON.stringify(textosLegales()),
     __ADMITIR_TI__: JSON.stringify(ADMITIR_TI),
+    __DEMO__: JSON.stringify(DEMO),
     __AUTORIZACION_TI__: JSON.stringify(textosAutorizacionTi(ADMITIR_TI)),
   },
   esbuild: { jsx: "automatic", jsxImportSource: "preact" },
   // pwa-lectura-offline (OFF-01): recursos de lectura con hash; la tabla DIVIPOL en su propio chunk del Worker lector.
   worker: { format: "es", plugins: () => [], rollupOptions: { output: { assetFileNames: nombreRecurso, chunkFileNames: "assets/[name]-[hash].js", manualChunks: chunkDivipol } } },
-  plugins: [pluginPwa({ admitirTi: ADMITIR_TI })],
+  plugins: [pluginPwa({ admitirTi: ADMITIR_TI }), { name: "csp-demo", transformIndexHtml: (html: string) => inyectarCspDemo(html, DEMO) }],
   build: {
     target: "es2022",
     sourcemap: false,

@@ -75,6 +75,14 @@ docker push registro.privado/lector-api:<versión>
 
 En Dokploy crea entonces un servicio **Docker image** con esa imagen y replica las opciones de `compose.dokploy.yaml` (solo lectura, tmpfs, memoria, healthcheck, variables).
 
+## 2b. Demo pública de la PWA en Dokploy (VITE_DEMO)
+
+La imagen `apps/pwa/Dockerfile` (contexto: raíz del repositorio) es la de la **demo pública** y declara `ARG VITE_DEMO=true`. Con `VITE_DEMO=true` la pantalla de inicio muestra, antes de la cámara, un aviso visible y no ocultable ("Demostración del software libre lector-cedula. No uses tu cédula real ni datos de terceros; usa un documento de prueba. Nada se guarda ni se envía: la lectura ocurre en tu dispositivo.") y el `index.html` lleva una CSP `connect-src 'self'` que impide cualquier envío a otro origen (contrato: `openspec/changes/mitigacion-autor/`, MA-01 a MA-04).
+
+- Demo: `docker build -f apps/pwa/Dockerfile -t lector-pwa-demo .`
+- Instancia propia (sin aviso de demo): `docker build -f apps/pwa/Dockerfile --build-arg VITE_DEMO=false -t lector-pwa .`. En Dokploy, añade `VITE_DEMO=false` en **Build Args**. Quien despliega una instancia propia es el Responsable del tratamiento (ver `docs/legal/README.md`).
+- Cualquier valor distinto de `true` o `false` hace fallar la compilación.
+
 ## 3. Después de publicar
 
 - Ejecuta el checklist del punto 0 en el celular real.

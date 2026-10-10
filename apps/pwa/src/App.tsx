@@ -34,6 +34,10 @@ const LEGAL = __TEXTOS_LEGALES__;
 declare const __ADMITIR_TI__: boolean;
 declare const __AUTORIZACION_TI__: readonly Bloque[] | null;
 const ADMITIR_TI = __ADMITIR_TI__;
+/** mitigacion-autor (MA-02): VITE_DEMO, validado al compilar. */
+declare const __DEMO__: boolean;
+export const TEXTO_DEMO =
+  "Demostración del software libre lector-cedula. No uses tu cédula real ni datos de terceros; usa un documento de prueba. Nada se guarda ni se envía: la lectura ocurre en tu dispositivo.";
 const AUTORIZACION_TI = __AUTORIZACION_TI__;
 export const TEXTO_AUTORIZACION_PENDIENTE = "Se necesita la autorización del representante legal";
 const TEXTO_ENLACE_AUTORIZACION_TI = "Autorización del representante legal";
@@ -198,6 +202,11 @@ export function App() {
         </div>
       )}
       <div class="panel">
+        {p === "inicio" && __DEMO__ && (
+          <section class="aviso-demo" role="note" aria-label="Aviso de demostración">
+            <p>{TEXTO_DEMO}</p>
+          </section>
+        )}
         {p === "inicio" && (
           <>
             <h1>Lector de cédula</h1>

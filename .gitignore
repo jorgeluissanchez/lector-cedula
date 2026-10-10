@@ -71,3 +71,4 @@ evals/reports/fraude-latest.json
 next-env.d.ts
 examples/*/public/lector-cedula/
 .stryker-tmp-*/
+apps/pwa/dist-demo/
