@@ -1,10 +1,9 @@
-# mitigacion-autor
+# mitigacion-autor Specification
 
 ## Purpose
-
 Reducir el riesgo legal del autor de la librería MIT (que no vende servicios ni aloja datos de terceros): la demo pública advierte que no se usen documentos reales y no envía nada; el repositorio declara el descargo, la responsabilidad de quien despliega y el uso aceptable; los reportes de seguridad e issues no piden datos personales.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: MA-01 Opción de compilación VITE_DEMO
 `apps/pwa/config.ts` MUST exportar `leerDemo(valor)`: ausente o vacío es `false`; `"true"` y `"false"` literales; cualquier otro valor lanza un error que nombra `VITE_DEMO`, y `vite build` falla.
@@ -18,11 +17,11 @@ Reducir el riesgo legal del autor de la librería MIT (que no vende servicios ni
 - **THEN** lanza un error cuyo mensaje contiene `VITE_DEMO`
 
 ### Requirement: MA-02 Aviso de demostración visible y no ocultable
-Con `VITE_DEMO=true`, la pantalla `inicio` MUST mostrar, antes del botón que abre la cámara y como primer contenido del panel, una región `role="note"` con nombre accesible "Aviso de demostración" y exactamente el texto: "Demostración del software libre lector-cedula. No uses tu cédula real ni datos de terceros; usa un documento de prueba. Nada se guarda ni se envía: la lectura ocurre en tu dispositivo." La región MUST NOT tener control para cerrarla ni ocultarse. Con `VITE_DEMO` ausente o `false`, el aviso MUST NOT existir.
+Con `VITE_DEMO=true`, la pantalla `inicio` MUST mostrar, antes del botón que abre la cámara y como primer contenido del panel, una región `role="note"` con nombre accesible "Aviso de demostración" y el texto literal del escenario. La región MUST NOT tener control para cerrarla ni ocultarse. Con `VITE_DEMO` ausente o `false`, el aviso MUST NOT existir.
 
 #### Scenario: Demo con aviso
 - **WHEN** se abre `/` en el build con `VITE_DEMO=true`
-- **THEN** la nota "Aviso de demostración" es visible con el texto literal, no contiene botones y precede en el documento al botón de iniciar cámara
+- **THEN** la nota "Aviso de demostración" es visible con exactamente el texto "Demostración del software libre lector-cedula. No uses tu cédula real ni datos de terceros; usa un documento de prueba. Nada se guarda ni se envía: la lectura ocurre en tu dispositivo.", no contiene botones y precede en el documento al botón de iniciar cámara
 
 #### Scenario: Build normal sin aviso
 - **WHEN** se abre `/` en el build sin `VITE_DEMO`
@@ -51,7 +50,11 @@ Con `VITE_DEMO=true`, `index.html` compilado MUST incluir `<meta http-equiv="Con
 - **THEN** el Dockerfile contiene `ARG VITE_DEMO=true` y `ENV VITE_DEMO=${VITE_DEMO}` antes del build, y la guía menciona `VITE_DEMO=false`
 
 ### Requirement: MA-05 README raíz con descargo, responsabilidad y uso aceptable
-`README.md` MUST contener las secciones `## Descargo de responsabilidad` (MIT tal cual y sin garantía; no es verificación oficial de la Registraduría; la señal de fraude no es garantía; el resultado leído en el dispositivo no es confiable por sí solo), `## Responsabilidad de quien despliega` (Responsable del tratamiento, Ley 1581 de 2012 art. 3 lit. e; llenar las plantillas de `docs/legal` y obtener la autorización), `## Uso aceptable` (prohíbe vigilancia masiva, perfilamiento y tratamiento sin autorización; menores solo con la opción y la autorización del representante), un enlace a `docs/legal/README.md` y el enlace a la demo con su aviso.
+`README.md` MUST contener las secciones `## Descargo de responsabilidad`, `## Responsabilidad de quien despliega` y `## Uso aceptable` con el contenido de los escenarios, un enlace a `docs/legal/README.md` y el enlace a la demo con su aviso.
+
+#### Scenario: Contenido de cada sección
+- **WHEN** se lee cada sección de `README.md`
+- **THEN** el descargo dice MIT tal cual y sin garantía, que no es verificación oficial de la Registraduría, que la señal de fraude no es garantía y que el resultado leído en el dispositivo no es confiable por sí solo; la responsabilidad nombra al Responsable del tratamiento (Ley 1581 de 2012 art. 3 lit. e), llenar las plantillas de `docs/legal` y obtener la autorización; el uso aceptable prohíbe vigilancia masiva, perfilamiento y tratamiento sin autorización, y admite menores solo con la opción y la autorización del representante
 
 #### Scenario: Secciones presentes
 - **WHEN** la prueba lee `README.md`
@@ -74,13 +77,3 @@ La raíz MUST tener `SECURITY.md` (reporte privado vía GitHub Security Advisori
 #### Scenario: Advertencia en plantillas
 - **WHEN** la prueba lee cada plantilla de `.github/ISSUE_TEMPLATE/`
 - **THEN** cada una contiene "No adjuntes fotos ni datos de documentos reales"
-
-## Pruebas
-
-| Tipo | Herramienta | Comando | Umbral |
-|---|---|---|---|
-| Unitaria de configuración (MA-01, MA-03 meta) | Vitest | `npx vitest run apps/pwa/test/ma-01-03-demo.test.ts` | 100 % de escenarios |
-| Documental/estructura (MA-04 a MA-07) | Vitest | `npx vitest run tools/test/mitigacion-autor.test.mjs` | 100 % de escenarios |
-| E2E + accesibilidad (MA-02, MA-03) | Playwright + @axe-core/playwright | `npx playwright test --project=demo-chromium` | 0 violaciones serious/critical; 0 peticiones salientes |
-| Privacidad | privacidad-check | `npm run check:privacidad` | verde |
-| Puerta | todo | `npm run check` | verde |

@@ -76,10 +76,10 @@ Comandos:
 - `UN` = `npx vitest run packages/servidor packages/protocolo packages/motor`
 - `UW` = `npx vitest run packages/web`
 - `MU` = `npx stryker run stryker.servidor.config.mjs` (manejador y protocolo) y `npx stryker run stryker.motor.config.mjs` (motor) (y `packages/web/src/envio.ts` en MOT-15)
-- `CT` = `npm run motor:contrato` (acepta `--lenguaje java|go`)
+- `CT` = `npm run motor:contrato` (acepta `--lenguaje java|go`; `--comparar <motor.json> <cli.json>` compara dos volcados)
 - `BE` = `npm run motor:bench`
-- `E2` = `npx playwright test e2e/motor`
-- `EX` = `npx vitest run examples/backend-express examples/backend-nest examples/backend-next`
+- `E2` = `npx playwright test --project=backend-chromium --project=backend-pixel7 --workers=1` (servidor del ejemplo Express en el puerto 4195)
+- `EX` = `npx vitest run examples/backend-express examples/backend-nest examples/backend-next` (Next se compila con `next build --webpack`)
 - `JV` = `docker compose -f motor/java/compose.yaml run --rm pruebas` (Maven, JUnit 5, PIT, `--network none`, `--read-only`)
 - `GO` = `docker compose -f motor/go/compose.yaml run --rm pruebas` (`go test -race ./...`, `--network none`, `--read-only`)
 - `SC` = `npx vitest run examples/sidecar` (estática) y `docker compose -f examples/sidecar/compose.yaml up --abort-on-container-exit humo`
@@ -89,7 +89,7 @@ Comandos:
 |---|---|---|---|---|
 | MOT-01 | Unitaria | Vitest | `UN` | 4 escenarios verdes |
 | MOT-01 | Propiedad (no lanza sin código) | fast-check | `UN` | numRuns >= 1000, 0 errores sin `codigo` |
-| MOT-01 | Fuzz de bytes | @jazzer.js/core | `npx jazzer packages/servidor/fuzz/leer.fuzz.cjs -- -max_total_time=300` | 0 caídas en 300 s |
+| MOT-01 | Fuzz de bytes (Jazzer.js descartado por el orquestador el 2026-10-10: fast-check basta) | fast-check | `UN` (`packages/motor/test/motor.test.ts`, `cabeceras.test.ts`) | numRuns >= 1000, 0 errores sin código |
 | MOT-02 | Contrato | script propio + Vitest | `CT` | 100 % igual; volcado alterado sale con 1 |
 | MOT-02 | Evals | `eval-campo` | `E` | Sin regresión frente a `baseline.json` |
 | MOT-03 | Análisis estático | Vitest (búsqueda en fuentes) | `UN`, `JV`, `GO` | 0 coincidencias |
@@ -131,7 +131,7 @@ Comandos:
 | MOT-21 | Mutación | Stryker | `MU` | >= 85 % |
 | MOT-22 | Unitaria (tabla de motivos) | Vitest | `UN` | 2/2 escenarios, 9 motivos |
 | MOT-23 | Privacidad (red, disco, búferes, eventos sin datos) | hooks `bloquear-red.mjs`, `bloquear-escrituras.mjs` + Vitest | `UN`, `P` | 0 marcas; 100 % búferes a cero |
-| MOT-23 | Seguridad (413 antes de leer todo, cuerpo truncado, multipart malformado) | Vitest + fuzz | `UN`, `npx jazzer packages/servidor/fuzz/multipart.fuzz.cjs -- -max_total_time=300` | 0 caídas en 300 s |
+| MOT-23 | Seguridad (413 antes de leer todo, cuerpo truncado, multipart malformado) | Vitest + fuzz con fast-check | `UN` | numRuns >= 1000, un único evento final, 0 excepciones |
 | MOT-24 | Contrato de protocolo Java y Go | `CT --protocolo` | `CT`, `JV`, `GO` | 100 % igual al manejador Node |
 | MOT-25 | Unitaria (Accept, `?streaming=0`) e igualdad entre protocolos | Vitest | `UN` | 3/3 escenarios; 100 % igualdad |
 

@@ -9,8 +9,8 @@ Decisión del usuario (2026-10-09, modelo backend propio): la librería tiene do
 Convenciones (aplican a todos los escenarios):
 
 - Fixtures sintéticos: `amarilla-1080p.png`, `digital-1080p.png`, `pasaporte-1080p.png` y `ti-1080p.png` (tarjeta de identidad) generados con la skill `fixture-sintetico`; `PERSONA_BASE`: NUIP `9999123456`, nombre `PRUEBA EJEMPLO FICTICIA LUZ`. Ningún dato real.
-- `CLI(x)` = salida JSON de `npm run leer-foto -- --sin-mascara x`, sin los campos volátiles `duracion_ms` y `version`.
-- `RESULTADO` = el objeto de salida v2 de la CLI (`salida-leer-foto-v2`), con `confiable: false` siempre en el motor.
+- `CLI(x)` = salida JSON de `npm run leer-foto -- --sin-mascara --resultado x` (el RESULTADO; decisión del orquestador del 2026-10-10: la CLI usa `@lector-cedula/motor` y su salida de siempre, sin `--resultado`, es un formato de presentación derivado del RESULTADO).
+- `RESULTADO` = el `ResultadoLectura` unificado de `@lector-cedula/capture` sin máscara (`tipoDocumento`, `fuente`, `campos`, `warnings`, `menorDeEdad?`, y los obsoletos `tipo`, `intento`, `resultado`) más `confiable: false` y `riesgo` (señal de `@lector-cedula/fraud` o `null`). Sin documento válido: `{ ok: false, error: { codigo, tipo?, digitosValidos? }, confiable: false, riesgo: null }` con `codigo` `sin-lectura`, `imagen-ilegible`, `pdf417-no-valido`, `mrz-no-valida`, `menor-de-edad`, `ti-mayor-de-edad` o `documento-no-admitido`.
 - `REF_SRV` = máquina de referencia de servidor: contenedor Linux x64 con 2 vCPU y 2 GiB (pregunta abierta 2 en `design.md`).
 - Sin hipótesis de formato nuevas; las de los parsers ([docs/decisiones/hipotesis-formato.md](../../../../../docs/decisiones/hipotesis-formato.md)) llegan en `warnings[]` sin cambios.
 
@@ -21,11 +21,19 @@ Convenciones (aplican a todos los escenarios):
 
 #### Scenario: Cédula amarilla
 - **WHEN** se llama `leerDocumento(readFileSync("amarilla-1080p.png"))`
-- **THEN** `resultado.tipo` es `"cedula-amarilla"`, `resultado.fuente` es `"pdf417"`, `resultado.campos.nuip` es `"9999123456"` y `resultado.confiable` es `false`
+- **THEN** `resultado.tipoDocumento` es `"cedula-ciudadania"`, `resultado.fuente` es `"pdf417"`, `resultado.campos.nuip` es `"9999123456"`, `resultado.confiable` es `false` y `resultado.riesgo` es un objeto
 
 #### Scenario: Cédula digital
 - **WHEN** se llama `leerDocumento` con `digital-1080p.png`
-- **THEN** `resultado.tipo` es `"cedula-digital"`, `resultado.fuente` es `"mrz"`, `resultado.campos.nuip` es `"9999123456"` y todos los checksums MRZ son válidos
+- **THEN** `resultado.tipoDocumento` es `"cedula-ciudadania"`, `resultado.fuente` es `"mrz-td1"`, `resultado.campos.nuip` es `"9999123456"` y `resultado.resultado.valido` es `true` (todos los checksums MRZ válidos)
+
+#### Scenario: MRZ con dígito de control inválido
+- **WHEN** se lee la digital sintética con la variante `cd-compuesto-alterado`
+- **THEN** resuelve `{ ok: false, error: { codigo: "mrz-no-valida", tipo: "mrz", digitosValidos: 3 }, confiable: false, riesgo: null }`
+
+#### Scenario: Imagen ilegible y sin documento
+- **WHEN** se leen los primeros 200 bytes de la amarilla (cabecera PNG válida, contenido roto) y un PNG blanco de 800x600
+- **THEN** el primero da `error.codigo` `"imagen-ilegible"` y el segundo `{ codigo: "sin-lectura", tipo: "mrz" }`
 
 #### Scenario: Formato no soportado
 - **WHEN** se llama `leerDocumento(new Uint8Array([0x25, 0x50, 0x44, 0x46]))` (cabecera PDF)
@@ -36,11 +44,11 @@ Convenciones (aplican a todos los escenarios):
 - **THEN** cada llamada resuelve un `RESULTADO` o rechaza con un `ErrorMotor` de código conocido; nunca un error sin `codigo` ni un proceso caído
 
 ### Requirement: MOT-02 Contrato con la CLI
-Para toda imagen, la salida de `leerDocumento` (Node, Java y Go) MUST ser igual, campo a campo, a `CLI(imagen)`.
+Para toda imagen, la salida de `leerDocumento` (Node, Java y Go) MUST ser igual, campo a campo y con `riesgo`, a `CLI(imagen)`. La CLI `leer-foto` MUST leer con `@lector-cedula/motor` (una sola implementación); su salida sin `--resultado` conserva el formato de LPI-06, LPI-08 y DC-10, derivado del RESULTADO. `--resultado` exige `--sin-mascara` (si no, código 64).
 
 #### Scenario: Igualdad en los fixtures
-- **WHEN** `npm run motor:contrato` ejecuta el motor Node sobre los 4 fixtures y los fixtures de `evals/fixtures/` de tipo imagen
-- **THEN** para el 100 % de las imágenes `JSON.stringify(motor) === JSON.stringify(CLI)` tras ordenar claves y quitar volátiles
+- **WHEN** `npm run motor:contrato` ejecuta el motor Node (pool, mismo presupuesto de OCR que la CLI) y la CLI sobre los fixtures sintéticos generados en memoria: amarilla, amarilla de 8 dígitos, amarilla con lugar desconocido, digital, digital con el dígito compuesto alterado y PNG sin documento (`evals/fixtures/` no tiene imágenes)
+- **THEN** para el 100 % de las imágenes `JSON.stringify(motor) === JSON.stringify(CLI)` tras ordenar claves, y el guion imprime `motor-contrato: 6 fixtures, 0 diferencias`
 
 #### Scenario: El contrato detecta divergencias
 - **WHEN** el comparador recibe un volcado del motor con `campos.nuip` alterado a `"9999123457"`
@@ -137,7 +145,7 @@ El motor MUST NOT escribir en consola ni en el logger inyectado ningún campo de
 - **THEN** ninguna salida contiene `9999123456`, `PRUEBA`, `FICTICIA` ni `<<`
 
 ### Requirement: MOT-09 Señal de riesgo
-El resultado SHALL incluir `riesgo` de `packages/fraud` igual al de la CLI. `opciones.fraude: false` MUST omitir el análisis y devolver `riesgo: null`.
+El resultado SHALL incluir `riesgo` de `packages/fraud` igual al de la CLI (`--resultado`). `opciones.fraude: false` MUST omitir el análisis y devolver `riesgo: null`. Entrada del fraude en el servidor (aceptada por el orquestador el 2026-10-10): la imagen completa como único frame, el cuadrilátero de la imagen entera con `cuadrilateroAproximado: true` (FRA-20 omite las señales geométricas), `cara: "reverso"`, `tipo` `amarilla` (fuente `pdf417`, con `nuip`, `fechaNacimiento` y `codigoLugar` del PDF417) o `digital` (fuente `mrz-td1`, con `lineasCorregidas`); otros documentos dan `riesgo: null`.
 
 #### Scenario: Con y sin fraude
 - **WHEN** se lee `amarilla-1080p.png` con opciones por omisión y luego con `fraude: false`
@@ -173,7 +181,7 @@ El paquete SHALL funcionar en Node 20, 22 y 24, en ESM y CommonJS, y en route ha
 - **THEN** ambos obtienen `nuip` `"9999123456"`
 
 #### Scenario: Next route handler
-- **WHEN** `examples/backend-next` construido con `next build` recibe `POST /api/cedula` con `amarilla-1080p.png` en multipart
+- **WHEN** `examples/backend-next` construido con `next build --webpack` (Turbopack empaqueta los paquetes enlazados del monorepo) recibe `POST /api/cedula` con `amarilla-1080p.png` en multipart
 - **THEN** responde 200 con `nuip` `"9999123456"`
 
 #### Scenario: Edge
@@ -336,11 +344,19 @@ La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, termi
 - **THEN** la tarea del pool se cancela, `alConfirmar` no se llama y los búferes de la imagen están a cero
 
 ### Requirement: MOT-22 Motivos de rechazo
-El evento final `ok: false` SHALL llevar `rechazo.motivo` de esta lista: `no-coincide` (MOT-10, con `diferencias`), `fraude` (riesgo `alto`, o el umbral de `fraude.rechazarDesde`), `ilegible`, `menor-de-edad` (salvo `limites.admitirMenores: true`), `documento-no-admitido` (tipo fuera de `limites.documentos`), `demasiado-grande`, `tiempo-agotado`, `ocupado` (cola llena) o `error-interno` (MOT-21).
+El evento final `ok: false` SHALL llevar `rechazo.motivo` de esta lista: `no-coincide` (MOT-10, con `diferencias`), `fraude` (solo si la empresa configura `fraude: { bloquearSi }`: un nivel `"medio"` o `"alto"`, o una función sobre la señal; por omisión el riesgo se calcula y se devuelve en el evento final y en `contexto.riesgo` pero no rechaza, coherente con FRA-04), `ilegible`, `menor-de-edad` (salvo `limites.admitirMenores: true`), `documento-no-admitido` (tipo fuera de `limites.documentos`), `demasiado-grande`, `tiempo-agotado`, `ocupado` (cola llena) o `error-interno` (MOT-21).
 
 #### Scenario: Tabla de motivos
-- **WHEN** se procesan `sin-documento-1080p.png`, `ti-1080p.png`, `pasaporte-1080p.png` con `limites.documentos: ["cedula"]`, `amarilla-1080p.png` con riesgo falso `alto`, y `amarilla-1080p.png` con la cola llena
+- **WHEN** se procesan `sin-documento-1080p.png`, `ti-1080p.png`, `pasaporte-1080p.png` con `limites.documentos: ["cedula"]`, `amarilla-1080p.png` con riesgo falso `alto` y `fraude: { bloquearSi: "alto" }`, y `amarilla-1080p.png` con la cola llena
 - **THEN** los motivos son, en orden, `"ilegible"`, `"menor-de-edad"`, `"documento-no-admitido"`, `"fraude"` y `"ocupado"`
+
+#### Scenario: Fraude no bloquea por defecto
+- **WHEN** el motor devuelve riesgo `alto` (p. ej. la amarilla sintética en grises, motivo `fotocopia`) y no hay `fraude.bloquearSi`
+- **THEN** la lista de `etapa` incluye `fraude`, el final es `ok: true` con `riesgo.nivel` `"alto"` y `alConfirmar` se llama 1 vez con `contexto.riesgo.nivel` `"alto"`
+
+#### Scenario: bloquearSi
+- **WHEN** `fraude.bloquearSi` es `"medio"`, `"alto"` o una función
+- **THEN** `"medio"` rechaza riesgo medio y alto, `"alto"` solo alto, la función recibe la señal completa y rechaza si devuelve `true`; si la función lanza, el motivo es `"error-interno"`; con `riesgo: null` no se evalúa
 
 #### Scenario: Tiempo agotado
 - **WHEN** `limites.tiempoMs` es 50 y el pool falso tarda 200 ms
