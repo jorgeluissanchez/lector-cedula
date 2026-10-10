@@ -5,7 +5,8 @@
 // - `oraculo.json`: los bytes que devuelve `decodificarPdf417Imagen` de packages/capture sobre el mismo frame de la
 //   amarilla (diferencial con la web) y la comprobación de que el QR es legible para zxing-wasm (prueba no vacía).
 // fixture-sintetico: PERSONA_BASE (NUIP 9999123456) y un QR con texto fijo; ningún dato real. Las imágenes solo existen
-// en `native/android/lector-cedula/build/generated/sinteticos-assets/sinteticos/pdf417` (ignorado por git).
+// en `native/android/lector-cedula/src/androidTest/assets/sinteticos/pdf417`, assets de las instrumentadas ignorados por
+// git (native/android/.gitignore).
 // Uso: node packages/nucleo-js/scripts/generar-fixtures-pdf417.mjs
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -18,7 +19,7 @@ import { fuentesParsers } from "./construir.mjs";
 
 const dirPaquete = fileURLToPath(new URL("..", import.meta.url));
 const raiz = resolve(dirPaquete, "..", "..");
-export const DIR_SALIDA = resolve(raiz, "native", "android", "lector-cedula", "build", "generated", "sinteticos-assets", "sinteticos", "pdf417");
+export const DIR_SALIDA = resolve(raiz, "native", "android", "lector-cedula", "src", "androidTest", "assets", "sinteticos", "pdf417");
 // `DIR_VIDEOS_SINTETICOS` permite leer los vídeos de otro checkout (p. ej. un worktree sin vídeos generados).
 const DIR_VIDEOS = process.env.DIR_VIDEOS_SINTETICOS ?? resolve(raiz, "e2e", "videos", "sinteticos");
 

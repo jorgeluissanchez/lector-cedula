@@ -117,6 +117,14 @@ El núcleo SHALL decodificar el PDF417 con zxing-cpp (binding nativo) habilitand
 - **WHEN** se captura Logcat (Android) u `OSLog` (iOS) durante la decodificación de `amarilla-1080p.png`
 - **THEN** ninguna línea contiene `9999123456` ni `PRUEBA`
 
+#### Scenario: Un intento por frame con las opciones de la web
+- **WHEN** el núcleo decodifica un frame
+- **THEN** hace una sola lectura del frame completo a resolución completa, en luminancia `aGris` (BT.601 entera con el redondeo de `Math.round`), con las opciones efectivas del intento `original` de `decodificarPdf417Imagen` (`tryHarder`, `tryRotate`, `tryInvert`, `tryDownscale`, `maxNumberOfSymbols` 1); si no hay un PDF417 válido no hay lectura de ese frame y el lector sigue con el siguiente; la luminancia y los bytes no entregados quedan a cero
+
+#### Scenario: Dependencia admitida por coordenada exacta
+- **WHEN** `privacidad-check` (OD-40) revisa `native/**/build.gradle.kts`
+- **THEN** admite `io.github.zxing-cpp:android` solo por esa coordenada exacta y sigue fallando ante cualquier otra dependencia que contenga `zxing`
+
 ### Requirement: NAT-06 MRZ nativa con Tesseract
 El núcleo SHALL leer MRZ TD1 (cédula digital, tarjeta de identidad) y TD3 (pasaporte) con Tesseract nativo y el mismo `mrz.traineddata` (BSD-3) que la web, aplicando localización de franja, enderezado y el plan de vistas y giros de `lectura-mrz-imagen` (LMI-11x, LMI-12c, LMI-14x). SHALL entregar las líneas crudas a `procesarMrz` del bundle JS. Las líneas MUST coincidir con las de `packages/capture` para los mismos fixtures.
 

@@ -25,9 +25,6 @@ android {
     testOptions {
         unitTests.all { it.useJUnitPlatform() }
     }
-
-    // NAT-05 (KI): fixtures sintéticos de packages/nucleo-js/scripts/generar-fixtures-pdf417.mjs, generados en build/.
-    sourceSets.getByName("androidTest").assets.srcDir("build/generated/sinteticos-assets")
 }
 
 dependencies {

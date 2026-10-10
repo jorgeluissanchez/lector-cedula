@@ -26,7 +26,7 @@ import java.util.Base64
  * NAT-05 con el binario real de zxing-cpp (wrapper oficial 3.1.1) en el emulador (`KI`). fixture-sintetico: frames 0 de
  * `amarilla-1080p` y de `digital-1080p` con un QR sintético sin datos, y los bytes que devuelve `decodificarPdf417Imagen`
  * de `packages/capture` sobre el mismo frame (oráculo de la web), generados en CI por
- * `packages/nucleo-js/scripts/generar-fixtures-pdf417.mjs` en `build/generated/sinteticos` (nunca en el repositorio).
+ * `packages/nucleo-js/scripts/generar-fixtures-pdf417.mjs` en `src/androidTest/assets/sinteticos` (ignorado por git).
  */
 @RunWith(AndroidJUnit4::class)
 class Pdf417ZxingNat05Test {
