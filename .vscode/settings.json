@@ -1,0 +1,16 @@
+{
+  // El proyecto Android (native/android) se compila en Docker; que VS Code no lo importe con Gradle en la máquina.
+  "java.import.gradle.enabled": false,
+  "java.gradle.buildServer.enabled": "off",
+  "java.import.exclusions": ["**/native/**", "**/node_modules/**", "**/.metadata/**", "**/archetype-resources/**", "**/META-INF/maven/**"],
+  "java.import.maven.enabled": false,
+  "java.autobuild.enabled": false,
+  "java.configuration.updateBuildConfiguration": "disabled",
+  "gradle.autoDetect": "off",
+  "sonarlint.analysisExcludesStandalone": "native/**,**/build/**,**/.gradle/**",
+  "files.watcherExclude": {
+    "**/native/android/**/build/**": true,
+    "**/native/android/.gradle/**": true,
+    "**/node_modules/**": true
+  }
+}

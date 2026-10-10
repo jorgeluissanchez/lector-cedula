@@ -49,6 +49,14 @@ Lector autoalojado de la cédula colombiana (PDF417 amarilla, MRZ digital, OCR),
 - Usa npm workspaces. Todo Python (servidor, Spec Kit CLI, entrenamiento) corre en Docker.
 - Spec Kit CLI: `docker run --rm -v "$(pwd -W):/work" -w /work ghcr.io/astral-sh/uv:python3.12-bookworm-slim uvx --from specify-cli specify <cmd>`.
 
+## Carga de la máquina (portátil de 8 núcleos y 22 GB, el usuario trabaja en ella)
+
+- Tope: CPU 70 % y RAM 80 %. `node tools/carga.mjs` mide; `node tools/carga.mjs --esperar` espera a que la CPU baje del 45 % antes de algo pesado.
+- Pesado: `npm run check` completo, `npm test` completo, Playwright, `docker build`/Gradle, Stryker, evals completas. Ligero: pruebas de un archivo, lint de un archivo, edición.
+- Turnos: o varios agentes con tareas ligeras (máximo 3), o una sola tarea pesada con todo lo demás en pausa. Nunca dos pesadas a la vez.
+- Vitest con `--maxWorkers=2` salvo que la tarea pesada sea la única en curso. No dejes daemons vivos: `--no-daemon` en Gradle y cierra servidores de prueba al terminar.
+- `.vscode/settings.json` impide que las extensiones de Java importen `native/android` con Gradle; no lo quites.
+
 ## Errores pasados
 
 Lo alimentan los revisores. Cada entrada: qué pasó y cómo evitarlo.
