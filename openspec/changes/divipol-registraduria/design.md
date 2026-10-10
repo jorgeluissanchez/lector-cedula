@@ -118,7 +118,7 @@ Registradas en `docs/decisiones/hipotesis-formato.md`, sección "DIVIPOL": D01 (
 ### 5. Equivalencia por nombres normalizados en tres etapas
 
 Algoritmo del generador (DV-16):
-1. Departamento DANE por la tabla literal de 33 pares de DV-16 (escrita a mano y revisada; no se deduce por nombre, porque "VALLE" contiene "CAUCA" en DANE y 88 significa cosas distintas).
+1. Departamento DANE por la tabla literal de 33 pares de DV-16 (escrita a mano y revisada; no se deduce por nombre, porque "VALLE" contiene "CAUCA" en DANE y 88 significa cosas distintas). Única excepción al prefijo, declarada en el escenario "Tabla literal de departamentos" de DV-16: la entrada manual `15001` (Bogotá bajo CUNDINAMARCA, departamento DANE asignado 25) resuelve a `11001` (DANE 11); ninguna otra entrada, ni otro destino para `15001`, se admite.
 2. Etapa 1: `N(nombre)` igual a `N(nom_mpio)` dentro del departamento asignado, con un único candidato.
 3. Etapa 2: `N2(nombre)` igual a `N2(nom_mpio)`, con `N2` = `N` del texto anterior al primer `(` y sin espacios.
 4. Etapa 3: `tools/divipol/equivalencias-manuales.json`, una entrada por código con `divipol`, `divipola` (o `null`) y `justificacion`. Contenido esperado (33 entradas, a revisar por un humano en el PR):
@@ -226,6 +226,7 @@ Según el principio II y la matriz de `.claude/skills/estrategia-pruebas/SKILL.m
 | DV-16 | Unitaria de `normalizar` y `normalizarSinParentesis` con los literales de la spec | Vitest | G | 5 de 5 |
 | DV-16 | Unitaria de `emparejar` con fuentes sintéticas: fila sin resolver, manual redundante, DANE repetido, DANE con 1121 filas | Vitest | G | 4 de 4 lanzan `ErrorDivipol` con el código esperado en el mensaje |
 | DV-16 | Integridad de la equivalencia generada: conteos por método, tabla de departamentos, prefijos, `11001` y `94343` dobles, `27493` sin pareja | Vitest | V | igualdad exacta con los literales de DV-16 |
+| DV-16 | Excepción de Bogotá: prefijo por departamento salvo `15001`, que es exactamente `["15001", "11001", "manual"]` (`packages/parsers/test/divipola.test.ts`); `15001` -> `05002` y `15004` -> `11001` abortan (`tools/test/divipol-lib.test.mjs`) | Vitest | V y G | 0 filas fuera de prefijo salvo `15001`; 2 de 2 `ErrorDivipol` con `05002` y `15004` en el mensaje |
 | DV-17 | Unitaria: grafo de importaciones desde `src/index.ts`; `DIVIPOLA_METADATOS`; `package.json` y avisos | Vitest | V | 0 módulos de `divipola/` alcanzados; 0 apariciones de `CC-BY-SA`; campos exactos |
 | DV-17 | Licencias del repositorio | `licencia-check` | L | código 0 |
 | DV-18 | Integración: contraste con TXT sintético de 3 líneas (Latin-1), ruta inexistente, `git status` antes y después | Vitest + `spawnSync` | I | informe JSON exacto; código 1 con la ruta; `git status --porcelain` idéntico |
@@ -255,7 +256,6 @@ Capacidad nueva, sin consumidores todavía. Orden: fuentes e instantáneas -> ge
 2. ¿La equivalencia DIVIPOLA se publica en npm dentro de `@lector-cedula/parsers` (subruta, licencia `MIT AND CC-BY-SA-4.0`) o como paquete aparte? Se decide antes de la Fase 7; mover el módulo no cambia los requisitos.
 3. ¿Se acepta la lectura conservadora del CC BY-SA (equivalencia como Material Adaptado)? Si un abogado concluye que los pares de códigos son hechos no protegidos, se puede simplificar el aislamiento en un cambio posterior.
 
-## Pendiente antes de archivar (orquestador, 2026-10-06)
+## Revisión humana
 
-- DV-16, escenario "Tabla literal de departamentos": contradice DV-15 y la decisión 5 para `15001 -> 11001` (Cundinamarca es DANE 25, Bogotá 11). La implementación lo trata como una única excepción documentada y probada. Corregir el escenario para declarar esa excepción.
 - La tabla manual de 33 equivalencias (`tools/divipol/equivalencias-manuales.json`) fue revisada y aprobada por el usuario el 2026-10-07, con la corrección de Mapiripana.

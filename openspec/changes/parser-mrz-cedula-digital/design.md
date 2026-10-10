@@ -2,7 +2,7 @@
 
 ## Context
 
-Motivación: ver `proposal.md`. Requisitos: `specs/mrz-cedula-digital/spec.md` (MZ-01 a MZ-22).
+Motivación: ver `proposal.md`. Requisitos: `specs/mrz-cedula-digital/spec.md` (MZ-01 a MZ-23; MZ-23, apellidos obligatorios, se añadió el 2026-10-07 por un hallazgo del verificador).
 
 Estado actual, observado el 2026-10-06:
 
@@ -62,7 +62,7 @@ export interface DigitoControl { estado: EstadoDigitoControl; leido: string; cal
 export interface CorreccionOcr { linea: 1 | 2 | 3; columna: number; original: string; corregido: string }
 export type CodigoErrorCampoMrz =
   | "serial-invalido" | "fecha-nacimiento-invalida" | "sexo-invalido" | "fecha-vencimiento-invalida"
-  | "nacionalidad-invalida" | "nuip-invalido" | "nombre-no-alfabetico";
+  | "nacionalidad-invalida" | "nuip-invalido" | "nombre-no-alfabetico" | "apellidos-vacios";   // apellidos-vacios: MZ-23, siempre al final
 export interface CamposMrzCedulaDigital {
   serial: string | null;
   codigoLugarMrz: string | null;              // 5 cifras DIVIPOL crudas; expedición o nacimiento sin decidir (M03)
@@ -229,6 +229,7 @@ Según el principio II y la matriz de `.claude/skills/estrategia-pruebas/SKILL.m
 | MZ-18 | Unitaria: tres combinaciones de `warnings` | Vitest | V | 3 de 3 literales |
 | MZ-19 | Unitaria: claves de `campos` sin RH ni QR; exports sin `qr` | Vitest | V | 0 coincidencias de `/^rh$/i`, `/grupoSanguineo/i` y `/qr/i` |
 | MZ-20 | Unitaria: ejemplo de Eitol y forma de `back-ccd.png` | Vitest | V | 2 de 2 literales |
+| MZ-23 | Unitaria: L3 solo de relleno, L3 que empieza por `<<`, junto con la cifra en el nombre; caso negativo de apellido de una letra | Vitest | `npx vitest run packages/parsers/test/mrz-cedula-digital.test.ts -t MZ-23` (incluido en V) | 4 de 4: `[apellidos, nombres, errores, valido]` exactos de la spec; `["nombre-no-alfabetico", "apellidos-vacios"]` en ese orden; `X<<ANA` da `valido: true` |
 | MZ-21 | Unitaria: `PERSONA_BASE` del generador | Vitest | V | `toStrictEqual` de `campos` |
 | MZ-21 | Propiedad de ida y vuelta | fast-check + `@lector-cedula/fixtures` | V | numRuns >= 1000; 0 fallos; descarte < 50 %; vacuidad: cada categoría de MZ-21 >= 5 % |
 | MZ-21 | Propiedad: variantes `cd-*` y `ocr-b` del generador | fast-check + `@lector-cedula/fixtures` | V | numRuns >= 1000 cada una; 0 fallos; vacuidad: cada variante >= 15 % |

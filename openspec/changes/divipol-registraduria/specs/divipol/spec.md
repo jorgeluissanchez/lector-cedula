@@ -260,7 +260,7 @@ Al leer `localities.py`, el generador MUST aplicar solo estas transformaciones a
 - **THEN** ninguna llamada lanza y ambas llamadas devuelven resultados iguales (`toStrictEqual`)
 
 ### Requirement: DV-16 Construcción de la equivalencia por nombres normalizados
-El generador MUST emparejar cada fila municipal con DIVIPOLA en tres etapas excluyentes: nombre exacto normalizado, nombre normalizado sin paréntesis y sin espacios, y tabla manual revisada. Solo SHALL aceptar candidatos del departamento DANE que la tabla literal de departamentos asigna, y con un único candidato.
+El generador MUST emparejar cada fila municipal con DIVIPOLA en tres etapas excluyentes: nombre exacto normalizado, nombre normalizado sin paréntesis y sin espacios, y tabla manual revisada. Solo SHALL aceptar candidatos del departamento DANE que la tabla literal de departamentos asigna, y con un único candidato. Única excepción: la entrada manual `15001` SHALL resolver a `11001` (DV-15).
 
 #### Scenario: Normalización de nombres
 - **WHEN** se normalizan `"MEDELLÍN"`, `"Piendamó - Tunía"` y `"BOGOTA, D.C."` (NFD, quitar U+0300 a U+036F, mayúsculas, todo carácter fuera de `A`-`Z` y `0`-`9` a espacio, colapsar y recortar)
@@ -272,7 +272,11 @@ El generador MUST emparejar cada fila municipal con DIVIPOLA en tres etapas excl
 
 #### Scenario: Tabla literal de departamentos
 - **WHEN** el generador asigna el departamento DANE de cada departamento DIVIPOL
-- **THEN** usa exactamente: 01-05, 03-08, 05-13, 07-15, 09-17, 11-19, 12-20, 13-23, 15-25, 16-11, 17-27, 19-41, 21-47, 23-52, 24-66, 25-54, 26-63, 27-68, 28-70, 29-73, 31-76, 40-81, 44-18, 46-85, 48-44, 50-94, 52-50, 54-95, 56-88, 60-91, 64-86, 68-97, 72-99, y 88 sin equivalente; y todo `divipola` generado empieza por el código DANE asignado a su departamento
+- **THEN** usa exactamente: 01-05, 03-08, 05-13, 07-15, 09-17, 11-19, 12-20, 13-23, 15-25, 16-11, 17-27, 19-41, 21-47, 23-52, 24-66, 25-54, 26-63, 27-68, 28-70, 29-73, 31-76, 40-81, 44-18, 46-85, 48-44, 50-94, 52-50, 54-95, 56-88, 60-91, 64-86, 68-97, 72-99, y 88 sin equivalente; todo `divipola` generado empieza por el código DANE asignado a su departamento, con una única excepción literal: la fila `15001` (departamento DIVIPOL 15, asignado a DANE 25) tiene `divipola` `"11001"` (prefijo 11) y método `manual`, es decir, la entrada `["15001", "11001", "manual"]`; ninguna otra fila sale del prefijo de su departamento
+
+#### Scenario: Excepción de Bogotá con otro destino
+- **WHEN** la tabla manual contiene `15001` -> `05002` (código DANE existente fuera de `11001`), o `15004` -> `11001` (otra fila del departamento DIVIPOL 15 que intenta usar la excepción)
+- **THEN** el emparejamiento lanza `ErrorDivipol` (el generador termina con código 1) y el mensaje contiene `05002` en el primer caso y `15004` en el segundo
 
 #### Scenario: Conteo por método sobre las fuentes fijadas
 - **WHEN** se genera la equivalencia con las instantáneas fijadas
