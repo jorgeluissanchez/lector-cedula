@@ -35,7 +35,7 @@ class GoldenMrzNat06Test : StringSpec({
     "NAT-06 Golden: candidatos, proyección y evidencia TD1 (LMI-01, LMI-11, LMI-14a)" {
         val l = PlanMrz.localizarConEvidencia(t1)
         l.candidatos.size shouldBe 48
-        l.candidatos.take(5).map(cand) shouldBe listOf(
+        l.candidatos.take(5).map { cand(it) } shouldBe listOf(
             "proyeccion:24,268,543,68",
             "recorte-inferior:0,227,600,151",
             "imagen-completa:0,0,600,378",
@@ -45,7 +45,7 @@ class GoldenMrzNat06Test : StringSpec({
         l.evidencia shouldBe 0.798941798941799
         l.ventanasMrz shouldBe 6
         val g = PlanMrz.localizarConEvidencia(PlanMrz.girar(t1, 90))
-        g.candidatos.take(3).map(cand) shouldBe listOf("proyeccion:43,511,66,55", "recorte-inferior:0,360,378,240", "imagen-completa:0,0,378,600")
+        g.candidatos.take(3).map { cand(it) } shouldBe listOf("proyeccion:43,511,66,55", "recorte-inferior:0,360,378,240", "imagen-completa:0,0,378,600")
         g.evidencia shouldBe null
         g.ventanasMrz shouldBe 0
     }
