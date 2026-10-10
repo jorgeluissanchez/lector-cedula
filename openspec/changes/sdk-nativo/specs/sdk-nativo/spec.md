@@ -165,7 +165,7 @@ Decisiones de la tarea 1.5 (orquestador, por delegación del usuario, 2026-10-10
 - **THEN** el bucle se detiene tras 40 llamadas al OCR o 60 s, y un tope por lectura menor lo acota sin ampliarlo nunca
 
 #### Scenario: Sin libjpeg ni libpng
-- **WHEN** se revisan con `node tools/nativo/sin-jpeg-png.mjs` el AAR de release, la biblioteca del host y `dependencias-resueltas.txt`
+- **WHEN** se revisan con `node tools/nativo/sin-jpeg-png.mjs` el AAR de release del OCR nativo (`tesseract4android`, que `lector-cedula` empaqueta), la biblioteca del host y `dependencias-resueltas.txt`
 - **THEN** no hay bibliotecas `libjpeg*`, `libpng*` ni símbolos o mensajes propios de libjpeg o libpng, y un AAR que los contenga hace fallar el control
 
 ### Requirement: NAT-07 Reglas en un único bundle JS

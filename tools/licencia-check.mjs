@@ -309,9 +309,10 @@ export function revisarLicenciasNativas(raiz) {
       for (const d of dependenciasDeGradle(contenido)) deps.push({ origen: rel(r), tipo: "gradle", ...d });
     }
   }
-  const vendorizadas = archivosNativos(dirNativo, (r) => r.endsWith("fuentes-nativas.json")).flatMap((r) =>
-    evaluarFuentesVendorizadas(rel(r), leerJson(r), registro),
-  );
+  // archivosNativos también devuelve los informes de build/: aquí solo cuentan los manifiestos de fuentes.
+  const vendorizadas = archivosNativos(dirNativo, (r) => r.endsWith("fuentes-nativas.json"))
+    .filter((r) => r.endsWith("fuentes-nativas.json"))
+    .flatMap((r) => evaluarFuentesVendorizadas(rel(r), leerJson(r), registro));
   return [...evaluarDependenciasNativas(deps, registro), ...vendorizadas];
 }
 

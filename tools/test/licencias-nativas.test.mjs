@@ -202,6 +202,9 @@ describe("NAT-16 Fuentes C/C++ vendorizadas (tarea 1.5)", { timeout: 60_000 }, (
     const ruta = join(raiz, "native", "android", "tesseract4android", "fuentes-nativas.json");
     writeFileSync(ruta, JSON.stringify({ fuentes: [...m.fuentes, { nombre: "libpng", licencia: "libpng-2.0", url: "https://x/libpng.tar.gz", sha256: "b".repeat(64) }] }));
     try {
+      // Un informe de build/ junto a los manifiestos no se lee como JSON (fallo real del CI, run 38073109919).
+      mkdirSync(join(raiz, "native", "android", "lector-cedula", "build"), { recursive: true });
+      writeFileSync(join(raiz, "native", "android", "lector-cedula", "build", "dependencias-resueltas.txt"), "releaseRuntimeClasspath\n+--- org.jetbrains.kotlin:kotlin-stdlib:2.4.10\n");
       expect(revisarLicenciasNativas(raiz).some((x) => x.includes("libpng"))).toBe(true);
     } finally {
       rmSync(raiz, { recursive: true, force: true });
