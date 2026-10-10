@@ -60,6 +60,15 @@ describe("NAT-17 Workflows nativos", () => {
     expect(t).toContain("./gradlew --no-daemon testDebugUnitTest");
   });
 
+  it("NAT-05 Android: las instrumentadas (KI) corren en el emulador con los fixtures sintéticos generados antes", () => {
+    const t = leer("nativo-android.yml");
+    const fixtures = t.indexOf("node packages/nucleo-js/scripts/generar-fixtures-pdf417.mjs");
+    const ki = t.indexOf("./gradlew --no-daemon :lector-cedula:connectedDebugAndroidTest");
+    expect(fixtures).toBeGreaterThan(0);
+    expect(ki).toBeGreaterThan(fixtures);
+    expect(t.indexOf("npm run e2e:videos")).toBeLessThan(fixtures);
+  });
+
   it("NAT-17 iOS: macos-15 y el bundle en JavaScriptCore", () => {
     const t = leer("nativo-ios.yml");
     expect(t).toMatch(/runs-on:\s*macos-15/u);

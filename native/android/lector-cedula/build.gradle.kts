@@ -11,6 +11,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
@@ -24,10 +25,18 @@ android {
     testOptions {
         unitTests.all { it.useJUnitPlatform() }
     }
+
+    // NAT-05 (KI): fixtures sintéticos de packages/nucleo-js/scripts/generar-fixtures-pdf417.mjs, generados en build/.
+    sourceSets.getByName("androidTest").assets.srcDir("build/generated/sinteticos-assets")
 }
 
 dependencies {
     api(project(":nucleo"))
+    // NAT-05 (tarea 1.4): wrapper oficial de zxing-cpp, solo con el formato PDF417 (revisor-licencias, 2026-10-10).
+    implementation("io.github.zxing-cpp:android:3.1.1")
+    // KI: instrumentadas en el emulador (AndroidX Test, Apache-2.0; JUnit 4 transitiva, EPL-1.0, solo prueba).
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
 
 // NAT-16: informe de lo que se distribuye en el AAR para check:licencias (`build/dependencias-resueltas.txt`).
