@@ -40,6 +40,23 @@ const OFF11_PATRON = /\b(localStorage|sessionStorage|indexedDB)\b|\bdocument\.co
 const OFF11_MENSAJE = "OFF-11: almacenamiento del navegador (localStorage, sessionStorage, indexedDB, document.cookie) prohibido en la PWA y la captura";
 
 /**
+ * NAT-13 (sdk-nativo): el núcleo nativo (Kotlin y Swift fuera de pruebas) no persiste imágenes, frames ni resultados
+ * (disco, caché, SharedPreferences, DataStore, UserDefaults, galería) ni escribe en logs; sin excepción privacidad-ok.
+ */
+const NATIVO_RUTAS = /^native\/.*\.(kt|swift)$/;
+const NATIVO_PRUEBA = /(^|\/)(test|androidTest|testFixtures|Tests|[A-Za-z]+Tests)\//;
+const NATIVO_REGLAS = [
+  [/\b(getSharedPreferences|SharedPreferences|EncryptedSharedPreferences|dataStore|DataStore|openFileOutput|FileOutputStream|MediaStore|cacheDir|filesDir|externalCacheDir|writeBytes|writeText|RandomAccessFile)\b|\.compress\(\s*Bitmap\.CompressFormat/,
+    "NAT-13: persistencia en el núcleo nativo (archivos, caché, SharedPreferences, DataStore o galería)"],
+  [/\b(UserDefaults|NSUserDefaults|PHPhotoLibrary|UIImageWriteToSavedPhotosAlbum|NSKeyedArchiver)\b|\.write\(\s*to:|FileManager\.default\.createFile|\.createFile\(atPath:/,
+    "NAT-13: persistencia en el núcleo nativo (archivos, UserDefaults o galería)"],
+  [/\bLog\.(v|d|i|w|e|wtf)\(|\bprintln\(|(^|[^.\w])print\(|\bNSLog\(|\bos_log\(|\bLogger\(|\bTimber\./,
+    "NAT-13: log en el núcleo nativo (puede filtrar datos del documento)"],
+];
+/** NAT-13: el manifiesto de la librería Android no declara INTERNET (lo añade el integrador si usa `servidor`). */
+const MANIFIESTO_LIBRERIA = /^native\/android\/.*\/src\/main\/AndroidManifest\.xml$/;
+
+/**
  * Revisa un archivo y devuelve hallazgos.
  * @param {string} ruta ruta relativa con '/'
  * @param {string|null} contenido texto del archivo, o null si es binario
@@ -66,7 +83,20 @@ export function revisarArchivo(ruta, contenido) {
   const testMarcado = ES_TEST.test(r) && contenido.includes("fixture-sintetico");
   const lineas = contenido.split(/\r?\n/);
   const off11 = OFF11_RUTAS.test(r) && !ES_TEST.test(r);
+  const nativo = NATIVO_RUTAS.test(r) && !NATIVO_PRUEBA.test(r);
+  const manifiesto = MANIFIESTO_LIBRERIA.test(r);
   lineas.forEach((texto, i) => {
+    if (manifiesto && /android\.permission\.INTERNET\b/.test(texto)) {
+      hallazgos.push({ ruta: r, linea: i + 1, mensaje: "NAT-13: el manifiesto de la librería no declara android.permission.INTERNET" });
+      return;
+    }
+    if (nativo) {
+      const regla = NATIVO_REGLAS.find(([patron]) => patron.test(texto));
+      if (regla) {
+        hallazgos.push({ ruta: r, linea: i + 1, mensaje: regla[1] });
+        return;
+      }
+    }
     if (off11 && OFF11_PATRON.test(texto)) {
       hallazgos.push({ ruta: r, linea: i + 1, mensaje: OFF11_MENSAJE });
       return;

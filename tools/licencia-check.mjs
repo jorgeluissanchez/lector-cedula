@@ -168,6 +168,120 @@ export function revisarTarballWeb(raiz) {
   }
 }
 
+// NAT-16 (sdk-nativo): dependencias nativas. Gradle y SwiftPM no publican la licencia en un campo como npm, así que cada
+// dependencia directa (build.gradle.kts), resuelta (informe `gradle dependencies` en build/) o fijada (Package.resolved)
+// se busca en el registro `native/licencias-nativas.json`, mantenido con revisor-licencias.
+export const REGISTRO_NATIVO = "native/licencias-nativas.json";
+
+/** Configuraciones de Gradle que no llegan al artefacto publicado. */
+const CONFIGURACIONES_PRUEBA = /^(test|androidTest|testFixtures|kapt[A-Z]?.*Test|pitest|lint|detekt|ktlint)/;
+/** Configuraciones que no se distribuyen pero se usan al compilar (herramientas). */
+const CONFIGURACIONES_HERRAMIENTA = /^(compileOnly|annotationProcessor|kapt|ksp|classpath|plugin)$/;
+
+/** `[{ configuracion, coordenada }]` de las dependencias declaradas como cadena `grupo:artefacto[:versión]`. */
+export function dependenciasDeGradle(contenido) {
+  const deps = [];
+  for (const linea of String(contenido).split(/\r?\n/)) {
+    const sinComentario = linea.replace(/\/\/.*$/, "");
+    const m = /^\s*([A-Za-z][A-Za-z0-9]*)\s*\(\s*(?:(?:platform|enforcedPlatform)\s*\(\s*)?"([^":\s]+):([^":\s]+)(?::[^"]*)?"/.exec(sinComentario);
+    if (m) deps.push({ configuracion: m[1], coordenada: `${m[2]}:${m[3]}` });
+  }
+  return deps;
+}
+
+/** Coordenadas `grupo:artefacto` únicas del informe de texto de `gradle dependencies`. */
+export function coordenadasDeInformeGradle(texto) {
+  const vistas = new Set();
+  for (const linea of String(texto).split(/\r?\n/)) {
+    const m = /^[\s|+\\-]*[+\\]---\s+([^\s:()]+):([^\s:()]+):\S+/.exec(linea);
+    if (m) vistas.add(`${m[1]}:${m[2]}`);
+  }
+  return [...vistas];
+}
+
+/** Identidades de los pins de un `Package.resolved` (v1, v2 o v3), o `null` si no es JSON válido. */
+export function dependenciasDeSwiftPm(contenido) {
+  try {
+    const j = JSON.parse(contenido);
+    const pins = j.pins ?? j.object?.pins ?? [];
+    return pins.map((p) => String(p.identity ?? p.package ?? "").toLowerCase()).filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+function ambitoDe(configuracion) {
+  if (CONFIGURACIONES_PRUEBA.test(configuracion)) return "prueba";
+  if (CONFIGURACIONES_HERRAMIENTA.test(configuracion)) return "herramienta";
+  return "produccion";
+}
+
+/**
+ * Infracciones de `[{ origen, tipo: "gradle"|"swiftpm", configuracion, coordenada }]` frente al registro
+ * `{ gradle: { coord: { licencia, ambito, justificacion? } }, swiftpm: {...} }`. Producción: licencia permitida.
+ * Prueba o herramienta: licencia permitida o, si no, entrada registrada con ese ámbito y justificación.
+ */
+export function evaluarDependenciasNativas(deps, registro) {
+  const errores = [];
+  for (const d of deps) {
+    const nombre = d.coordenada.split(":").at(-1);
+    const porNombre = evaluarNombre(nombre);
+    if (!porNombre.ok) {
+      errores.push(`${d.origen}: ${d.coordenada}: ${porNombre.motivo}`);
+      continue;
+    }
+    const entrada = registro?.[d.tipo]?.[d.coordenada];
+    if (entrada === undefined) {
+      errores.push(`${d.origen}: ${d.coordenada} (${d.configuracion}) sin licencia registrada en ${REGISTRO_NATIVO}`);
+      continue;
+    }
+    if (evaluarLicencia(entrada.licencia).ok) continue;
+    const ambito = d.tipo === "swiftpm" ? "produccion" : ambitoDe(d.configuracion);
+    if (ambito === "produccion") {
+      errores.push(`${d.origen}: ${d.coordenada} (${d.configuracion}): ${entrada.licencia} no permitida en producción`);
+    } else if (entrada.ambito !== ambito && !(ambito === "herramienta" && entrada.ambito === "prueba")) {
+      errores.push(`${d.origen}: ${d.coordenada} (${d.configuracion}): ${entrada.licencia} registrada como ${entrada.ambito ?? "?"}, usada como ${ambito}`);
+    } else if (typeof entrada.justificacion !== "string" || entrada.justificacion.trim() === "") {
+      errores.push(`${d.origen}: ${d.coordenada}: ${entrada.licencia} fuera de la lista exige una justificación en ${REGISTRO_NATIVO}`);
+    }
+  }
+  return errores;
+}
+
+function archivosNativos(dir, filtro) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    if (e.name === "node_modules" || e.name === ".gradle" || e.name === ".build" || e.name.startsWith(".")) return [];
+    const ruta = join(dir, e.name);
+    if (e.isDirectory()) return e.name === "build" ? archivosNativos(ruta, (r) => r.endsWith("dependencias-resueltas.txt")) : archivosNativos(ruta, filtro);
+    return filtro(ruta) ? [ruta] : [];
+  });
+}
+
+/** Revisa `native/` bajo `raiz`: build.gradle.kts, informes resueltos de producción y Package.resolved. */
+export function revisarLicenciasNativas(raiz) {
+  const dirNativo = join(raiz, "native");
+  if (!existsSync(dirNativo)) return [];
+  const rutaRegistro = join(raiz, REGISTRO_NATIVO);
+  const registro = existsSync(rutaRegistro) ? leerJson(rutaRegistro) : {};
+  const rel = (r) => relative(raiz, r).split(sep).join("/");
+  const deps = [];
+  for (const r of archivosNativos(dirNativo, (r) => r.endsWith(".gradle.kts") || r.endsWith("Package.resolved"))) {
+    const contenido = readFileSync(r, "utf8");
+    if (r.endsWith("dependencias-resueltas.txt")) {
+      // Informe de `releaseRuntimeClasspath`: todo lo resuelto se distribuye en el AAR.
+      for (const c of coordenadasDeInformeGradle(contenido)) deps.push({ origen: rel(r), tipo: "gradle", configuracion: "releaseRuntimeClasspath", coordenada: c });
+    } else if (r.endsWith("Package.resolved")) {
+      const pins = dependenciasDeSwiftPm(contenido);
+      if (pins === null) deps.push({ origen: rel(r), tipo: "swiftpm", configuracion: "produccion", coordenada: "Package.resolved ilegible" });
+      else for (const p of pins) deps.push({ origen: rel(r), tipo: "swiftpm", configuracion: "produccion", coordenada: p });
+    } else {
+      for (const d of dependenciasDeGradle(contenido)) deps.push({ origen: rel(r), tipo: "gradle", ...d });
+    }
+  }
+  return evaluarDependenciasNativas(deps, registro);
+}
+
 function leerJson(ruta) {
   return JSON.parse(readFileSync(ruta, "utf8"));
 }
@@ -248,8 +362,13 @@ function main(argv) {
     errores = argv.slice(1).map(revisarPaqueteRemoto).filter(Boolean);
   } else if (argv[0] === "--pip") {
     errores = argv.slice(1).map((n) => evaluarNombre(n.split(/[=<>~!]/)[0])).filter((r) => !r.ok).map((r) => r.motivo);
+  } else if (argv[0] === "--solo-nativo") {
+    // NAT-16: solo las dependencias nativas, opcionalmente de otra raíz (`--raiz <dir>`, para fixtures).
+    const i = argv.indexOf("--raiz");
+    errores = revisarLicenciasNativas(i >= 0 ? resolve(argv[i + 1]) : raiz);
   } else {
     errores = revisarDependenciasProduccion(raiz);
+    errores.push(...revisarLicenciasNativas(raiz));
     errores.push(...revisarAvisosCcBySa(raiz));
     errores.push(...revisarTarballWeb(raiz));
     const manifiesto = join(raiz, "models", "manifest.json");

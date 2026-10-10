@@ -1,0 +1,20 @@
+{
+  "descripcion": "Registro de licencias de las dependencias nativas (sdk-nativo, NAT-16). check:licencias lo usa para build.gradle.kts, build/dependencias-resueltas.txt y Package.resolved. Toda entrada nueva pasa por revisor-licencias. ambito: produccion (se distribuye en el AAR o el paquete SwiftPM), prueba (solo pruebas) o herramienta (solo compilación). Una licencia fuera de la lista solo se admite fuera de producción y con justificacion.",
+  "gradle": {
+    "org.jetbrains.kotlin:kotlin-stdlib": { "licencia": "Apache-2.0", "ambito": "produccion", "fuente": "https://github.com/JetBrains/kotlin/blob/master/license/LICENSE.txt" },
+    "org.jetbrains:annotations": { "licencia": "Apache-2.0", "ambito": "produccion", "fuente": "https://github.com/JetBrains/java-annotations/blob/master/LICENSE.txt" },
+    "io.kotest:kotest-runner-junit5": { "licencia": "Apache-2.0", "ambito": "prueba", "fuente": "https://github.com/kotest/kotest/blob/master/LICENSE" },
+    "io.kotest:kotest-assertions-core": { "licencia": "Apache-2.0", "ambito": "prueba", "fuente": "https://github.com/kotest/kotest/blob/master/LICENSE" },
+    "io.kotest:kotest-extensions-pitest": { "licencia": "Apache-2.0", "ambito": "prueba", "fuente": "https://github.com/kotest/kotest/blob/master/LICENSE" },
+    "org.junit.platform:junit-platform-engine": { "licencia": "EPL-2.0", "ambito": "prueba", "fuente": "https://github.com/junit-team/junit-framework/blob/main/LICENSE.md", "justificacion": "Dependencia transitiva de kotest-runner-junit5 (motor de pruebas de Gradle). Solo se usa al ejecutar pruebas en la JVM; no se distribuye en el AAR. Decisión 3 del orquestador: no se declaran JUnit 5 ni jqwik como dependencias directas." }
+  },
+  "swiftpm": {},
+  "herramientas": [
+    { "nombre": "Android Gradle Plugin (com.android.library 9.4.1)", "licencia": "Apache-2.0", "fuente": "https://android.googlesource.com/platform/tools/base/+/refs/heads/main/LICENSE" },
+    { "nombre": "gradle-pitest-plugin para Android (pl.droidsonroids.pitest 0.2.27)", "licencia": "Apache-2.0", "fuente": "https://github.com/koral--/gradle-pitest-plugin/blob/master/LICENSE" },
+    { "nombre": "PIT (org.pitest)", "licencia": "Apache-2.0", "fuente": "https://github.com/hcoles/pitest/blob/master/LICENSE" },
+    { "nombre": "Gradle 9.8.1", "licencia": "Apache-2.0", "fuente": "https://github.com/gradle/gradle/blob/master/LICENSE" },
+    { "nombre": "Eclipse Temurin 21 (imagen docker/android-sdk)", "licencia": "GPL-2.0-with-classpath-exception", "fuente": "https://adoptium.net/docs/faq/", "justificacion": "Solo herramienta de compilación; no se redistribuye." },
+    { "nombre": "Android SDK command-line tools, platform android-35, build-tools 35.0.1, NDK 28.2.13676358, CMake 3.31.6", "licencia": "Android-SDK-License-Agreement", "fuente": "https://developer.android.com/studio/terms", "justificacion": "Solo herramienta de compilación dentro de docker/android-sdk; fuera de la lista permitida: pendiente de revisor-licencias y de aceptación humana de los términos (docs/investigacion/07-bindings-nativos.md)." }
+  ]
+}

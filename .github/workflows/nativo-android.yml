@@ -1,0 +1,83 @@
+# SDK nativo Android (sdk-nativo, tarea 0.4; design.md, decisión 8). Sin secretos y sin publicar nada: solo compila,
+# prueba y guarda informes como artefactos del propio run. Actions fijadas por SHA (lección de CVE-2026-33634).
+# Requiere confirmación humana: habilitar Actions en el repositorio.
+name: nativo-android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "native/**"
+      - "packages/nucleo-js/**"
+      - "docker/android-sdk/**"
+      - ".github/workflows/nativo-android.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - "packages/nucleo-js/**"
+      - "docker/android-sdk/**"
+      - ".github/workflows/nativo-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nativo-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # KJ: pruebas JVM en la misma imagen Docker que se usa en local.
+  jvm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Imagen del SDK de Android (acepta la Android SDK License; ver docker/android-sdk/Dockerfile)
+        run: docker build --build-arg ACEPTO_LICENCIA_ANDROID_SDK=si -t lector-android-sdk docker/android-sdk
+      - name: Pruebas JVM (KJ) e informe de dependencias del AAR
+        run: docker run --rm -v "$PWD:/work" -w /work/native/android lector-android-sdk ./gradlew --no-daemon testDebugUnitTest :lector-cedula:informeDependencias
+      - name: Licencias nativas (NAT-16)
+        run: node tools/licencia-check.mjs --solo-nativo
+      - name: Informes de pruebas
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nativo-android-jvm-${{ github.sha }}
+          path: native/android/lector-cedula/build/reports/
+          if-no-files-found: ignore
+
+  # Emulador con KVM (no hay KVM anidado en Docker Desktop sobre Windows). Job trivial de la fase 0: arranca el
+  # emulador API 34 x86_64 en modo avión y comprueba que responde; las instrumentadas (KI) y el humo (KH) llegan en la fase 1.
+  emulador:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Habilitar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Emulador API 34 x86_64 sin red
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -camera-back emulated
+          script: |
+            adb shell settings put global airplane_mode_on 1
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "34"

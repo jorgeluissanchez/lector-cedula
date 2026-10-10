@@ -1,0 +1,50 @@
+# SDK nativo iOS (sdk-nativo, tarea 0.4; design.md, decisión 8). macOS 15 con Xcode y simulador; sin secretos y sin
+# publicar nada. Job trivial de la fase 0: comprueba la cadena de herramientas y que el bundle nucleo-js corre en
+# JavaScriptCore del sistema (`jsc`). Las pruebas XCTest (SX, SH) llegan en la fase 3.
+# Requiere confirmación humana: habilitar Actions y los runners macOS en el repositorio.
+name: nativo-ios
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "native/**"
+      - "packages/nucleo-js/**"
+      - ".github/workflows/nativo-ios.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - "packages/nucleo-js/**"
+      - ".github/workflows/nativo-ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nativo-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  herramientas:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Xcode, Swift y simuladores
+        run: |
+          xcodebuild -version
+          swift --version
+          xcrun simctl list runtimes | grep -q iOS
+      - name: Bundle nucleo-js en JavaScriptCore del sistema
+        run: |
+          npm ci --ignore-scripts
+          node packages/nucleo-js/scripts/construir.mjs --salida "$RUNNER_TEMP/nucleo.js"
+          JSC=/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc
+          printf 'print(typeof window + "," + typeof fetch + "," + LectorCedulaNucleo.version + "," + LectorCedulaNucleo.crearEstado().fase);\n' > "$RUNNER_TEMP/prueba.js"
+          test "$("$JSC" "$RUNNER_TEMP/nucleo.js" "$RUNNER_TEMP/prueba.js")" = "undefined,undefined,0.1.0,inicio"

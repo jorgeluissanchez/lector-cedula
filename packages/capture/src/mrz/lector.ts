@@ -2,11 +2,12 @@
 // Encadena localizar -> recortar y ampliar -> OCR (Tesseract.js 7.0.0 + mrz.traineddata) -> extraer -> parsear.
 // Privacidad (principio III): la imagen vive solo en memoria; sin red, sin caché en disco ni IndexedDB, sin consola.
 // Tesseract.js se carga con import() diferido en la primera lectura (LMI-09).
-import { type CamposMrzTd1, clasificarDocumento, parsearMrzCedulaDigital, type ResultadoClasificacion, type ResultadoMrzCedulaDigital } from "@lector-cedula/parsers";
+import { type CamposMrzTd1, type ResultadoClasificacion, type ResultadoMrzCedulaDigital } from "@lector-cedula/parsers";
 import { decodificarPixeles, type DecodificadorPixeles, type Pixeles } from "../pdf417/pixeles.js";
 import { enderezar } from "./enderezar.js";
 import { codificarPng, crearWorkerTesseract, opcionesWorker } from "./entorno.js";
 import { extraerLineasMrz, extraerLineasTd3 } from "./extraer.js";
+import { fechaReferenciaValida, interpretarLineasMrz } from "./interpretar.js";
 import {
   esPixelesRgba,
   evidenciaTd3,
@@ -74,6 +75,8 @@ export type ErrorLectorMrz =
 /** Método del candidato que leyó la MRZ; con sufijo `@90`, `@180` o `@270` si se leyó sobre la imagen girada (LMI-12, LMI-12c). */
 export type IntentoMrz = MetodoLocalizacion | `${MetodoLocalizacion}@${Giro}`;
 
+export { fechaReferenciaValida, interpretarLineasMrz };
+
 export type ResultadoParserMrz = Extract<ResultadoMrzCedulaDigital, { ok: true }>;
 
 /** OD-21: formato de la MRZ que se busca; sin él, `"td1"`. */
@@ -100,14 +103,6 @@ export interface LectorMrz {
   terminar(): Promise<void>;
 }
 
-/** `AAAA-MM-DD` existente con año 2000 a 2099 (el mismo dominio que acepta el parser). */
-export function fechaReferenciaValida(opciones: unknown): string | null {
-  if (typeof opciones !== "object" || opciones === null) return null;
-  const f: unknown = (opciones as { fechaReferencia?: unknown }).fechaReferencia;
-  const d = new Date(`${String(f)}T00:00:00Z`);
-  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== f) return null;
-  return f.startsWith("20") ? f : null;
-}
 
 /** Recorta `caja` y la amplía (bilineal) hasta `ANCHO_MINIMO_OCR` px de ancho si es más estrecha. */
 export function recortarYAmpliar(p: PixelesRgba, caja: CajaMrz): Pixeles {
@@ -250,11 +245,6 @@ const ceder = (): Promise<void> => new Promise((resolver) => setTimeout(resolver
 
 const enteroPositivo = (x: number | undefined, defecto: number): number => (Number.isInteger(x) && (x as number) > 0 ? (x as number) : defecto);
 
-function contarValidos(r: ResultadoParserMrz): number {
-  const d = r.digitosControl;
-  return [d.serial, d.nacimiento, d.vencimiento, d.compuesto].filter((x) => x.estado === "valido").length;
-}
-
 /** Crea un lector MRZ con un único worker, creado en la primera lectura y reutilizado (LMI-02). */
 export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
   const crearWorker = opciones.crearWorker ?? crearWorkerTesseract;
@@ -324,24 +314,14 @@ export function crearLectorMrz(opciones: OpcionesLectorMrz): LectorMrz {
         .then((r) => r.data.text)
         .catch(() => "");
       const intento = `${candidato.metodo}${giro === 0 ? "" : `@${giro}`}` as IntentoMrz;
-      if (formato === "td3") {
-        // OD-21: el parser TD3 rechaza cualquier dígito de control inválido; un pasaporte clasificado tiene los 5 válidos.
-        const doc = clasificarDocumento(extraerLineasTd3(texto), { fechaReferencia: fecha });
-        if (doc.ok && doc.tipoDocumento === "pasaporte") return { ok: true, intento, digitosValidos: 5, documento: doc };
+      const lectura = interpretarLineasMrz(formato === "td3" ? extraerLineasTd3(texto) : extraerLineasMrz(texto), formato, fecha, intento);
+      if (!lectura.ok) {
+        if (lectura.error === "documento-no-admitido") noAdmitido ??= lectura;
         continue;
       }
-      const lineas = extraerLineasMrz(texto);
-      const resultado = parsearMrzCedulaDigital(lineas, { fechaReferencia: fecha });
-      if (!resultado.ok) {
-        // OD-11 y OD-11b: si no es la cédula digital, el TD1 genérico (todos sus dígitos válidos) puede ser una CE o una TI por MRZ.
-        const doc = clasificarDocumento(lineas, { fechaReferencia: fecha });
-        if (doc.ok && doc.tipoDocumento === "cedula-extranjeria") return { ok: true, intento, digitosValidos: 4, documento: { ...doc, tipoDocumento: "cedula-extranjeria" } };
-        if (!doc.ok && doc.error === "documento-no-admitido" && doc.warnings !== undefined) noAdmitido ??= { ok: false, error: doc.error, warnings: doc.warnings };
-        continue;
-      }
-      const digitosValidos = contarValidos(resultado);
-      if (mejor === null || digitosValidos > mejor.digitosValidos) mejor = { intento, digitosValidos, resultado };
-      if (digitosValidos === 4) return { ok: true, ...mejor };
+      if ("documento" in lectura) return lectura;
+      if (mejor === null || lectura.digitosValidos > mejor.digitosValidos) mejor = lectura;
+      if (lectura.digitosValidos === 4) return { ok: true, ...mejor };
     }
     if (mejor !== null) return { ok: true, ...mejor };
     return noAdmitido ?? { ok: false, error: "mrz-no-encontrada" };

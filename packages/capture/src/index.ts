@@ -68,12 +68,15 @@ export {
   type Pixeles,
   type ResultadoPdf417Imagen,
 } from "./pdf417/decodificar.js";
+// motor-backend-embebido (MOT-03): el motor de servidor decodifica una vez y reutiliza los píxeles (lectura y fraude).
+export { decodificarPixeles } from "./pdf417/pixeles.js";
 
 // Lectura de la MRZ TD1 desde imagen (cambio leer-mrz-desde-imagen). Tesseract.js se carga solo al leer (LMI-09).
 export { extraerLineasMrz } from "./mrz/extraer.js";
 export { localizarFranjaMrz, type CajaMrz, type CandidatoMrz, type MetodoLocalizacion, type PixelesRgba } from "./mrz/localizar.js";
 export {
   crearLectorMrz,
+  interpretarLineasMrz,
   MAX_LLAMADAS_OCR,
   planIntentosMrz,
   TIEMPO_LIMITE_MS,
@@ -92,7 +95,7 @@ export { iniciarCamara, RESTRICCIONES_CAMARA, type Camara, type Medios } from ".
 // Lectura en el dispositivo (cambio pwa-lectura-offline): máscara, orquestación PDF417 -> MRZ y errores.
 export type { CamposDocumento, DependenciasLectura, ErrorLectura, FuenteLectura, OpcionesLectura, PistaLectura, ResultadoLectura, TipoDocumento, TipoLectura } from "./lectura/tipos.js";
 export { enmascararCamposMrz, enmascararCamposPdf417, enmascararNombre, enmascararResultadoMrz, enmascararUltimos2 } from "./lectura/mascara.js";
-export { leerDocumento } from "./lectura/leer.js";
+export { interpretarMrz, interpretarPdf417, leerDocumento, type DependenciasInterpretacion, type Paso as PasoLectura } from "./lectura/leer.js";
 export { crearLectorCodigosPdf417 } from "./lectura/codigos.js";
 export { AVISO_LUGAR_NO_RESUELTO, conLugarNacimiento } from "./lectura/lugar.js";
 export { clasificarErrorLectura, TEXTOS_ERROR_LECTURA, type CodigoErrorLectura } from "./lectura/errores.js";

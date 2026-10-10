@@ -1,0 +1,19 @@
+{
+  "name": "@lector-cedula/nucleo-js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Motor de reglas del SDK nativo (sdk-nativo, NAT-07): un único IIFE ES2020 sin DOM ni E/S con parsers, edad, máscara y la máquina de estados de @lector-cedula/web, para QuickJS, JavaScriptCore, Hermes y WebView.",
+  "license": "MIT AND CC-BY-SA-4.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/nucleo.js"
+  },
+  "files": [
+    "dist/nucleo.js",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "node scripts/construir.mjs"
+  }
+}
