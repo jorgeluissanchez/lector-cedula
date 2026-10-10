@@ -37,6 +37,64 @@ async function codigo(p: Promise<unknown>): Promise<string> {
 
 const FECHA = { fechaReferencia: "2026-10-09" };
 
+type Bufer = Uint8Array | Uint8ClampedArray;
+const CLAVE_REGISTRO = Symbol.for("@lector-cedula/motor.registroBuferes");
+
+/**
+ * Registro de `__registroBuferes` con dos avisos (sin esperas por tiempo): `pixelesRegistrados` cuando la lectura
+ * registra su búfer de píxeles (la imagen ya se decodificó) y `pixelesACero` cuando ese búfer recibe `fill(0)` (la
+ * lectura terminó su limpieza).
+ */
+function instalarRegistro(): { registro: Bufer[]; pixelesRegistrados: Promise<void>; pixelesACero: Promise<void>; quitar: () => void } {
+  const registro: Bufer[] = [];
+  let alRegistrar = (): void => {};
+  let alPonerACero = (): void => {};
+  const pixelesRegistrados = new Promise<void>((r) => (alRegistrar = r));
+  const pixelesACero = new Promise<void>((r) => (alPonerACero = r));
+  const push = registro.push.bind(registro);
+  registro.push = (...bs: Bufer[]): number => {
+    for (const b of bs) {
+      if (!(b instanceof Uint8ClampedArray)) continue;
+      const fill = b.fill.bind(b);
+      Object.defineProperty(b, "fill", {
+        value: (...a: Parameters<Uint8ClampedArray["fill"]>) => {
+          const r = fill(...a);
+          if (a[0] === 0) alPonerACero();
+          return r;
+        },
+      });
+      alRegistrar();
+    }
+    return push(...bs);
+  };
+  (globalThis as Record<symbol, unknown>)[CLAVE_REGISTRO] = registro;
+  return { registro, pixelesRegistrados, pixelesACero, quitar: () => Reflect.deleteProperty(globalThis, CLAVE_REGISTRO) };
+}
+
+/**
+ * Reloj inyectado para el tiempo máximo del hilo principal: `llamar` corre con `setTimeout` interceptado (el motor arma
+ * su temporizador de forma síncrona dentro de `leerDocumento`) y `agotar()` dispara ese temporizador cuando la prueba
+ * decide. Así el orden entre "la lectura decodificó" y "se agotó el tiempo" no depende de la carga de la máquina.
+ */
+function conRelojInyectado<T>(llamar: () => T): { valor: T; demoras: number[]; agotar: () => void } {
+  const original = globalThis.setTimeout;
+  const capturados: (() => void)[] = [];
+  const demoras: number[] = [];
+  globalThis.setTimeout = ((fn: () => void, ms?: number) => {
+    capturados.push(fn);
+    demoras.push(ms ?? 0);
+    // Un temporizador real que nunca dispara, para que el clearTimeout del motor reciba un identificador válido.
+    return original(() => {}, 2_147_483_647).unref();
+  }) as unknown as typeof setTimeout;
+  let valor: T;
+  try {
+    valor = llamar();
+  } finally {
+    globalThis.setTimeout = original;
+  }
+  return { valor, demoras, agotar: () => capturados.forEach((fn) => fn()) };
+}
+
 describe("motor real", { timeout: 180_000 }, () => {
   it("MOT-01 Cédula amarilla", async () => {
     const m = await motor({ hilos: 1 });
@@ -169,53 +227,54 @@ describe("motor real", { timeout: 180_000 }, () => {
   });
 
   it("MOT-07 Copias a cero: tras una lectura y tras una que rechaza con tiempo-agotado (__registroBuferes)", async () => {
-    const clave = Symbol.for("@lector-cedula/motor.registroBuferes");
-    const registro: (Uint8Array | Uint8ClampedArray)[] = [];
-    (globalThis as Record<symbol, unknown>)[clave] = registro;
+    const m = await motor({ hilos: 0 });
+    const lectura = instalarRegistro();
     try {
-      const m = await motor({ hilos: 0 });
       await m.leerDocumento(A, FECHA);
-      expect(registro.length).toBeGreaterThanOrEqual(2);
-      for (const b of registro) expect(b.every((x) => x === 0)).toBe(true);
-      registro.length = 0;
-      expect(await codigo(m.leerDocumento(D, { ...FECHA, tiempoMaximoMs: 1 }))).toBe("tiempo-agotado");
-      expect(registro.length).toBeGreaterThanOrEqual(1);
-      // La lectura abortada termina en segundo plano en el hilo principal y pone a cero sus píxeles al acabar.
-      try {
-        await expect.poll(() => registro.length >= 2 && registro.every((b) => b.every((x) => x === 0)), { timeout: 30_000, interval: 200 }).toBe(true);
-      } catch (e) {
-        console.log(`DIAG-MOT07 longitud=${registro.length} tipos=${registro.map((b) => b.constructor.name).join(",")} ceros=${registro.map((b) => b.every((x) => x === 0)).join(",")}`);
-        throw e;
-      }
+      expect(lectura.registro.length).toBeGreaterThanOrEqual(2);
+      for (const b of lectura.registro) expect(b.every((x) => x === 0)).toBe(true);
     } finally {
-      Reflect.deleteProperty(globalThis, clave);
+      lectura.quitar();
+    }
+    // Tiempo agotado después de decodificar: el tiempo se agota solo cuando la lectura ya registró sus píxeles. Con un
+    // temporizador real de 1 ms ese orden dependía de la carga (antes de leer la copia, decodificarPixeles espera un
+    // import dinámico) y, si el tiempo se agotaba antes, nunca aparecían píxeles y la espera de 2 búferes no acababa.
+    const agotado = instalarRegistro();
+    try {
+      const { valor, demoras, agotar } = conRelojInyectado(() => codigo(m.leerDocumento(D, { ...FECHA, tiempoMaximoMs: 1 })));
+      expect(demoras).toStrictEqual([1]);
+      await agotado.pixelesRegistrados;
+      agotar();
+      expect(await valor).toBe("tiempo-agotado");
+      // La copia interna queda a cero en cuanto se rechaza.
+      const copias = agotado.registro.filter((b) => b instanceof Uint8Array);
+      expect(copias).toHaveLength(1);
+      expect(copias[0]?.every((x) => x === 0)).toBe(true);
+      // La lectura abandonada sigue en segundo plano en el hilo principal y pone a cero sus píxeles al acabar.
+      await agotado.pixelesACero;
+      expect(agotado.registro.length).toBeGreaterThanOrEqual(2);
+      for (const b of agotado.registro) expect(b.every((x) => x === 0)).toBe(true);
+    } finally {
+      agotado.quitar();
     }
   });
 
-  it("DIAG-MOT07 forzado: el tiempo se agota antes de que la decodificación lea la copia", async () => {
-    const clave = Symbol.for("@lector-cedula/motor.registroBuferes");
-    const registro: (Uint8Array | Uint8ClampedArray)[] = [];
-    (globalThis as Record<symbol, unknown>)[clave] = registro;
-    const capturados: (() => void)[] = [];
-    const original = globalThis.setTimeout;
+  it("MOT-07 Copias a cero: el tiempo se agota antes de decodificar y la copia queda a cero al rechazar", async () => {
+    const m = await motor({ hilos: 0 });
+    // Primera lectura fuera del registro: crea el lector MRZ del hilo principal antes de interceptar setTimeout.
+    await m.leerDocumento(A, { ...FECHA, fraude: false });
+    const agotado = instalarRegistro();
     try {
-      const m = await motor({ hilos: 0 });
-      await m.leerDocumento(A, FECHA);
-      registro.length = 0;
-      globalThis.setTimeout = ((fn: () => void) => {
-        capturados.push(fn);
-        return original(() => {}, 1);
-      }) as unknown as typeof setTimeout;
-      const p = codigo(m.leerDocumento(D, { ...FECHA, tiempoMaximoMs: 1 }));
-      globalThis.setTimeout = original;
-      console.log(`DIAG-FORZADO capturados=${capturados.length}`);
-      capturados[0]?.();
-      console.log(`DIAG-FORZADO codigo=${await p}`);
-      await new Promise((r) => original(r, 20_000));
-      console.log(`DIAG-FORZADO longitud=${registro.length} tipos=${registro.map((b) => b.constructor.name).join(",")} ceros=${registro.map((b) => b.every((x) => x === 0)).join(",")}`);
+      const { valor, demoras, agotar } = conRelojInyectado(() => codigo(m.leerDocumento(D, { ...FECHA, tiempoMaximoMs: 1 })));
+      expect(demoras).toStrictEqual([1]);
+      agotar();
+      expect(await valor).toBe("tiempo-agotado");
+      // Es el orden que dejaba colgada la versión anterior de la prueba: al rechazar aún no hay píxeles (la decodificación
+      // espera un import dinámico antes de leer la copia) y la copia ya está a cero.
+      expect(agotado.registro).toHaveLength(1);
+      expect(agotado.registro[0]?.every((x) => x === 0)).toBe(true);
     } finally {
-      globalThis.setTimeout = original;
-      Reflect.deleteProperty(globalThis, clave);
+      agotado.quitar();
     }
   });
 

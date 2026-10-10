@@ -1,4 +1,5 @@
-# TEMPORAL (rama ci/mot-07): repite MOT-07 "Copias a cero" 20 veces bajo carga de CPU. Se quita antes del PR.
+# TEMPORAL (rama ci/mot-07): repite las pruebas de MOT-07 "Copias a cero" 20 veces bajo carga de CPU y corre la
+# puerta completa. Se quita antes del PR.
 name: mot07-temporal
 
 on:
@@ -12,38 +13,42 @@ permissions:
 jobs:
   repetir:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Entorno de pruebas
         uses: ./.github/actions/preparar-node
-      - name: MOT-07 x20 con carga (4 procesos de CPU y 2 corridas en paralelo)
+      - name: MOT-07 Copias a cero x20 con carga (4 procesos de CPU y 2 corridas en paralelo)
         shell: bash
         run: |
           carga=()
           for i in 1 2 3 4; do (while :; do :; done) & carga+=($!); done
-          fallos=0
           correr() {
-            NODE_ENV=test npx vitest run packages/motor/test/motor.test.ts -t "MOT-07 Copias a cero" --maxWorkers=1 > "salida-$1.txt" 2>&1
+            npx vitest run packages/motor/test/motor.test.ts -t "MOT-07 Copias a cero" --maxWorkers=1 > "salida-$1.txt" 2>&1
             echo $? > "codigo-$1.txt"
           }
-          npx vitest run packages/motor/test/motor.test.ts -t "DIAG-MOT07 forzado" --maxWorkers=1 2>&1 | grep -E "DIAG-FORZADO|✓|×" || true
-          correr() {
-            npx vitest run packages/motor/test/motor.test.ts packages/motor/test/privacidad.test.ts packages/motor/test/fraude-entrada.test.ts -t "^(?!DIAG)" > "salida-$1.txt" 2>&1
-            echo $? > "codigo-$1.txt"
-          }
-          for ronda in $(seq 1 6); do
+          for ronda in $(seq 1 10); do
             correr "$ronda-a" & pa=$!
             correr "$ronda-b" & pb=$!
             wait $pa $pb || true
           done
+          kill "${carga[@]}" 2>/dev/null || true
+          fallos=0
           for f in codigo-*.txt; do
             n=${f#codigo-}; n=${n%.txt}
             c=$(cat "$f")
-            echo "corrida $n: codigo $c"
-            grep -h "DIAG-MOT07" "salida-$n.txt" || true
-            if [ "$c" != "0" ]; then fallos=$((fallos+1)); grep -hE "FAIL|Error|×" "salida-$n.txt" | head -5; fi
+            echo "corrida $n: codigo $c $(grep -hoE 'Tests +[0-9]+ (passed|failed)[^)]*' "salida-$n.txt" | tr -d '\033' | head -1)"
+            if [ "$c" != "0" ]; then fallos=$((fallos+1)); grep -hE "FAIL|Error|×" "salida-$n.txt" | head -10; fi
           done
-          echo "fallos: $fallos de $(ls codigo-*.txt | wc -l)"
-          kill "${carga[@]}" 2>/dev/null || true
-          test "$fallos" = "0"
+          total=$(ls codigo-*.txt | wc -l)
+          echo "fallos: $fallos de $total"
+          test "$fallos" = "0" && test "$total" = "20"
+
+  puerta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Entorno de pruebas
+        uses: ./.github/actions/preparar-node
+      - name: Puerta completa
+        run: npm run check
