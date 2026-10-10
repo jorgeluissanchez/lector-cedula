@@ -11,6 +11,8 @@ import { lectorReal } from "./sintetica.js";
 import { frameVideoAmarilla } from "./sintetica-video.js";
 
 const F = generarPdf417(PERSONA_BASE, { semilla: 1 });
+/** Reloj fijo: el presupuesto de 15 s de LPI-12 (lo prueba localizar.test.ts) no corta los intentos aunque la máquina vaya lenta. */
+const RELOJ_FIJO = { ahora: () => 0 };
 let lector: DecodificadorPdf417;
 
 beforeAll(async () => {
@@ -21,9 +23,9 @@ describe("OFF-28 Realce del PDF417 en frames de vídeo", { timeout: 120_000 }, (
   it("OFF-28 Frame de vídeo degradado: sin realce no se lee, con realce sí", async () => {
     for (const [sigma, calidadJpeg] of [[1.3, 60], [1.2, 45]] as const) {
       const p = await frameVideoAmarilla(F.bytes, { modulo: 2, sigma, calidadJpeg, giro: 1 });
-      const sin = await crearDecodificador({ readBarcodes: lector })(p);
+      const sin = await crearDecodificador({ readBarcodes: lector, ...RELOJ_FIJO })(p);
       expect(sin, `sigma ${sigma}`).toStrictEqual({ ok: false, error: "pdf417-no-encontrado" });
-      const con = await crearDecodificador({ readBarcodes: lector, realce: true })(p);
+      const con = await crearDecodificador({ readBarcodes: lector, realce: true, ...RELOJ_FIJO })(p);
       expect(con.ok, `sigma ${sigma}`).toBe(true);
       if (con.ok) {
         expect(con.bytes).toStrictEqual(F.bytes);

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import config, { AREAS } from "../../stryker.config.mjs";
+import { FACTOR_TIMEOUT, ajustarRegistro } from "../stryker/vitest-instrumentado.mjs";
 
 const RAIZ = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -51,5 +52,29 @@ describe("áreas de mutación", { timeout: 60_000 }, () => {
     const mala = leer("no-existe");
     expect(mala.status).not.toBe(0);
     expect(mala.stderr).toMatch(/STRYKER_AREA desconocida: no-existe/u);
+  });
+});
+
+describe("fachada de vitest para Stryker (tools/stryker/vitest-instrumentado.mjs)", () => {
+  const fn = () => {};
+
+  it("omite por nombre las pruebas de rendimiento y escala su timeout (atrapa: aserciones de reloj sobre código instrumentado)", () => {
+    expect(ajustarRegistro(["OD-20 Rendimiento: el coste (< 250 ms)", fn], true)).toStrictEqual(["OD-20 Rendimiento: el coste (< 250 ms)", { skip: true }, fn]);
+    expect(ajustarRegistro(["OFF-22 Rápido: < 20 ms", fn, 1000], true)).toStrictEqual(["OFF-22 Rápido: < 20 ms", { timeout: 1000 * FACTOR_TIMEOUT, skip: true }, fn]);
+    expect(ajustarRegistro(["X Rendimiento: y", { timeout: 2 }, fn], true)).toStrictEqual(["X Rendimiento: y", { timeout: 2 * FACTOR_TIMEOUT, skip: true }, fn]);
+  });
+
+  it("no omite pruebas cuyo nombre solo menciona tiempo ni los describe con ese nombre", () => {
+    expect(ajustarRegistro(["CAL-10 Análisis rápido", fn], true)).toStrictEqual(["CAL-10 Análisis rápido", fn]);
+    expect(ajustarRegistro(["LPI-12 Corte por tiempo", fn], true)).toStrictEqual(["LPI-12 Corte por tiempo", fn]);
+    expect(ajustarRegistro(["OD-20 Rendimiento: grupo", fn], false)).toStrictEqual(["OD-20 Rendimiento: grupo", fn]);
+  });
+
+  it("multiplica los timeouts explícitos de describe e it en sus tres formas y deja el resto igual", () => {
+    expect(ajustarRegistro(["d", { timeout: 60_000 }, fn], false)).toStrictEqual(["d", { timeout: 60_000 * FACTOR_TIMEOUT }, fn]);
+    expect(ajustarRegistro(["t", fn, 5000], true)).toStrictEqual(["t", fn, 5000 * FACTOR_TIMEOUT]);
+    expect(ajustarRegistro(["t", fn, { timeout: 7, retry: 1 }], true)).toStrictEqual(["t", fn, { timeout: 7 * FACTOR_TIMEOUT, retry: 1 }]);
+    expect(ajustarRegistro(["t", { retry: 2 }, fn], true)).toStrictEqual(["t", { retry: 2 }, fn]);
+    expect(ajustarRegistro(["t", fn], true)).toStrictEqual(["t", fn]);
   });
 });
