@@ -20,7 +20,11 @@ Convenciones: `F = generarPdf417(PERSONA_BASE, { semilla: 1 })` de `@lector-cedu
 - **THEN** los bytes devueltos son iguales al payload codificado y contienen 0xD1 en la posición `rangos.primerApellido[0] + 2`
 
 ### Requirement: LPI-02 Opciones del lector y reintentos
-Cada intento MUST llamar a `readBarcodes` con `formats: ["PDF417"]`, `tryHarder: true`, `tryRotate: true` y `maxNumberOfSymbols: 1`. Los intentos MUST ejecutarse en el orden original, escala 0,75, escala 0,5 (lados redondeados con `Math.round`), giro +2° y giro -2° (la imagen original girada sobre su centro, mismo tamaño, fondo blanco; ángulo positivo en sentido horario con el eje y hacia abajo, como `CanvasRenderingContext2D.rotate`) y detenerse en el primero con un símbolo válido. Los giros compensan la tolerancia de unos 2° de zxing-cpp a la rotación (medida en la tarea 3.1; skill `captura-movil`, issue #145) y son necesarios para LPI-04.
+Cada intento MUST llamar a `readBarcodes` con `formats: ["PDF417"]`, `tryHarder: true`, `tryRotate: true` y `maxNumberOfSymbols: 1`. Los intentos MUST ejecutarse en el orden original, escala 0,75, escala 0,5, giro +2° y giro -2°, y detenerse en el primero con un símbolo válido. Las escalas MUST redondear los lados con `Math.round`. Los giros MUST rotar la imagen original como define el escenario "Geometría de los giros".
+
+#### Scenario: Geometría de los giros
+- **WHEN** se ejecutan los intentos `giro+2` y `giro-2` sobre S
+- **THEN** cada uno recibe la imagen original girada sobre su centro, del mismo tamaño y con fondo blanco, con ángulo positivo en sentido horario y el eje y hacia abajo (como `CanvasRenderingContext2D.rotate`). Los giros compensan la tolerancia de unos 2° de zxing-cpp a la rotación (medida en la tarea 3.1; skill `captura-movil`, issue #145) y son necesarios para LPI-04
 
 #### Scenario: Opciones enviadas
 - **WHEN** se decodifica S con un `readBarcodes` inyectado que registra sus argumentos
@@ -72,9 +76,15 @@ La salida `bytes` MUST poder pasarse sin transformación a `parsearPdf417Amarill
 - **THEN** el resultado tiene `ok: true` y su NUIP, apellidos, nombres, sexo, fecha de nacimiento y RH coinciden con `F.esperado`
 
 ### Requirement: LPI-06 CLI leer-foto
-`npm run leer-foto -- [--sin-mascara] <ruta>` MUST decodificar el archivo, parsearlo con `buscarDivipol` e imprimir en stdout un único JSON `{ ok, intento, enmascarado, resultado }` o `{ ok: false, error }`. Salida: 0 válida, 1 sin PDF417 o ilegible, 2 parser con `ok: false`, 64 uso incorrecto (sin ruta, más de una ruta, opción desconocida o archivo ilegible). stderr MUST NOT incluir la ruta ni el contenido.
+`npm run leer-foto -- [--sin-mascara] <ruta>` MUST decodificar el archivo, parsearlo con `buscarDivipol` e imprimir en stdout un único JSON `{ ok, intento, enmascarado, resultado }` o `{ ok: false, error }`, con los códigos del escenario "Códigos de salida". stderr MUST NOT incluir la ruta ni el contenido. Sin `--sin-mascara` (`enmascarado: true`) la CLI MUST enmascarar según "Reglas de máscara"; con ella (`enmascarado: false`) MUST imprimir todo completo.
 
-Por defecto (`enmascarado: true`) la CLI MUST enmascarar en `resultado.campos`: `numeroDocumento` conserva los 4 primeros y los 2 últimos dígitos y sustituye el resto por `*` (si tiene menos de 8 dígitos, solo conserva los 2 últimos); `primerApellido`, `segundoApellido`, `primerNombre` y `segundoNombre` conservan la primera letra de cada palabra y sustituyen las demás letras por `*`, manteniendo los espacios (`null` queda `null`). Con `--sin-mascara` (`enmascarado: false`) los campos se imprimen completos. El resto de campos no se modifica.
+#### Scenario: Códigos de salida
+- **WHEN** la CLI termina
+- **THEN** el código es 0 si la lectura es válida, 1 sin PDF417 o ilegible, 2 si el parser devuelve `ok: false` y 64 por uso incorrecto (sin ruta, más de una ruta, opción desconocida o archivo ilegible)
+
+#### Scenario: Reglas de máscara
+- **WHEN** la CLI imprime sin `--sin-mascara`
+- **THEN** `numeroDocumento` conserva los 4 primeros y los 2 últimos dígitos y sustituye el resto por `*` (si tiene menos de 8 dígitos, solo conserva los 2 últimos); `primerApellido`, `segundoApellido`, `primerNombre` y `segundoNombre` conservan la primera letra de cada palabra y sustituyen las demás letras por `*`, manteniendo los espacios; `null` queda `null`; el resto de campos no se modifica
 
 #### Scenario: Lectura de imagen sintética
 - **WHEN** se ejecuta la CLI con `--sin-mascara` sobre S escrita en `os.tmpdir()`
