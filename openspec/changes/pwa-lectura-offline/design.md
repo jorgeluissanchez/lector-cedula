@@ -75,8 +75,11 @@ Según el principio II y la fila "Captura web" de la matriz de `.claude/skills/e
 | OFF-16 | Rendimiento web | Lighthouse CI | `LH` | script <= 307200 bytes; performance >= 0,90 |
 | OFF-17 | E2E (actualización fallida) | Playwright | `E(actualizacion)` | `lector-A` intacta; lectura offline verde |
 | OFF-18 | Accesibilidad | @axe-core/playwright | `E(accesibilidad)` | 0 serious/critical en 3 pantallas, 2 proyectos |
-| OFF-22, OFF-25 | Unitaria (Worker en Node con frames sintéticos degradados) | Vitest | `npx vitest run packages/capture/test/lectura` | cédulas degradadas: score 70 y motivo null; escenas sin cédula < 70; desenfoque extremo `desenfocado` |
-| OFF-25 | E2E (vídeos suaves) | Playwright | `npx playwright test e2e/lectura/suave-amarilla.spec.ts e2e/lectura/suave-digital.spec.ts --project=lectura-chromium` | `listo` y `resultado` |
+| OFF-22, OFF-25 | Unitaria (Worker en Node con frames sintéticos degradados: gaussiano, movimiento, reflejo, oscuro, sobreexpuesto) | Vitest | `npx vitest run packages/capture/test/lectura/off-25-filtros-estrictos.test.ts packages/capture/test/lectura/off-22-presencia.test.ts` | cédulas suaves (varianza 27 a 152): score >= 70 y motivo null con y sin presencia; más suaves: `desenfocado`; movida: `desenfocado`; reflejo sobre la MRZ: `reflejo`; oscura: `oscuro`; sobreexpuesta: `sobreexpuesto`; sin cédula < 70; presencia nunca evaluada bajo el umbral |
+| CAL-03, CAL-07, CAL-08 (delta) | Unitaria con los literales recalibrados | Vitest | `npx vitest run packages/capture/test/cal-03-nitidez.test.ts packages/capture/test/cal-07-score.test.ts packages/capture/test/cal-08-umbrales.test.ts` | escenarios literales; tabla de `docs/decisiones/2026-10-06-umbrales-calidad-captura.md` igual a los valores por defecto |
+| CAL-08, NAT-03 | Unitaria (JSON generado para el núcleo nativo sin desfase) | Vitest, Kotest | `npx vitest run packages/nucleo-js/test/nat-03-umbrales.test.ts`, `KJ` | JSON idéntico al generado; Kotlin con 8 y 35 y sin `laplacianoMinimoGuiado` |
+| OFF-25 | E2E (vídeos suaves; vídeos que no deben disparar) | Playwright | `npx playwright test e2e/lectura/suave-amarilla.spec.ts e2e/lectura/suave-digital.spec.ts e2e/lectura/desenfocada.spec.ts e2e/lectura/sin-documento.spec.ts --project=lectura-chromium --workers=1` | suaves: `listo` y `resultado`; desenfocada y sin documento: sin `listo`, con su feedback |
+| OFF-25 | Eval (sin lecturas falsas; sin regresión por campo) | corredores de `evals/` | `npm run eval:mrz-imagen`, `npm run eval:quick` | 0 lecturas falsas; sin regresión frente a `baseline.json` |
 | OFF-26 | Unitaria (política y reductor) + E2E (tarjeta ilegible) | Vitest, Playwright | `npx vitest run apps/pwa/test/off-26-reintentos.test.ts`, `E(errores)` | decisiones literales; dos `leyendo` antes de `error-lectura` |
 | OFF-27 | Unitaria (orden y número de llamadas con dependencias inyectadas; mensaje del Worker lector; `contenido` del Worker de calidad) + cliente | Vitest | `npx vitest run packages/capture/test/lectura/off-27-pista.test.ts apps/pwa/test/off-27-29-diagnostico-cliente.test.ts` | escenarios literales |
 | OFF-28 | Unitaria con frames sintéticos de vídeo (módulos de 2 px, sigma 1,3 y JPEG 60; sigma 1,2 y JPEG 45) y sin lecturas falsas | Vitest + zxing-wasm real | `npx vitest run packages/capture/test/pdf417/off-28-realce.test.ts` | sin realce `pdf417-no-encontrado`, con realce bytes exactos; 0 lecturas falsas |
@@ -98,3 +101,23 @@ Según el principio II y la fila "Captura web" de la matriz de `.claude/skills/e
 - OFF-28 (b): la ampliación bilineal sola no recupera un PDF417 de 2 px por módulo desenfocado (probado con x2 y x3 y ambos binarizadores); lo que sí lo recupera es el enfoque horizontal (unsharp mask) tras el estiramiento de contraste. Se activa solo en el Worker de la PWA (`realce: true`) para no cambiar el orden de LPI-11 de la CLI. Amarilla sintética de vídeo (sigma 1,3, JPEG 60): antes `mrz-no-encontrada` tras 16592 a 17291 ms (PDF417 sin éxito y respaldo MRZ); después `realce-x2` en 865 a 980 ms.
 - OFF-28 (c): con `amarilla-suave-1080p` se vio que un respaldo MRZ en el primer frame (11,5 s) agotaba el presupuesto de frames; el respaldo pasa a hacerse una sola vez al final, sobre el primer frame. Con la secuencia, la misma escena se lee en el tercer frame (unos 4,1 s) cuando los dos primeros fallan.
 - OFF-29: `?debug=1` para diagnosticar en el celular sin datos personales: solo resoluciones, códigos y tiempos, en memoria.
+
+## Recalibración estricta de la nitidez (2026-10-10, tarea 5.8)
+
+Decisión del usuario del 2026-10-07: nitidez, iluminación, reflejo y movimiento bloquean siempre; la presencia es una condición adicional, nunca un sustituto. Se elimina la captura guiada (OFF-25 anterior: score elevado a `umbralListo` con presencia y varianza >= `LAPLACIANO_MINIMO_GUIADO` 12) y se recalibran los umbrales de CAL-08 (delta MODIFIED de `calidad-captura`). Detalle en `docs/decisiones/2026-10-10-recalibracion-nitidez.md`.
+
+| Umbral | Antes | Ahora |
+|---|---|---|
+| `laplacianoDesenfocado` | 40 | 8 |
+| `laplacianoNitido` | 200 | 35 |
+| Varianza con score 70 | 152 | 27 |
+| `LAPLACIANO_MINIMO_GUIADO` | 12 | eliminado |
+
+Mediciones (varianza del Laplaciano en el frame de análisis de 640 px, dentro de la guía):
+
+- Fotos reales del usuario (fuera del repositorio, solo números): 326 a 798 con el realce de la app de cámara; con un desenfoque adicional de sigma 1 (equivalente al vídeo en vivo), 28 a 56; con sigma 1,5, 12 a 20. El 27 deja pasar las primeras y frena las segundas.
+- Sintéticas degradadas (ruido +-4, JPEG 50): digital sigma 1,5: 33,4; digital girada sigma 1: 46,9; amarilla sigma 1,5: 71,9; amarilla al 20 % sigma 0,75: 49,9 (todas disparan). Amarilla al 20 % sigma 1: 25,1; digital sigma 2: 14,5; movimiento diagonal 9 px + sigma 1: 21,5; horizontal 15 px + sigma 1: 25,6 (todas `desenfocado`).
+- Vídeos: `amarilla-suave-1080p` 77,9 y `digital-suave-1080p` 128,6 (score antes 24 y 55; ahora 100 y 88); `desenfocada-1080p` 5,0; `amarilla-1080p` con sigma 6 (NAT-03) 19,4, que sigue en `desenfocado` también con presencia.
+- Límite conocido: un movimiento puro en un solo eje conserva la energía del eje perpendicular (horizontal 15 px sin desenfoque: 229) y no se detecta; si no se lee, OFF-26 reintenta.
+
+Efecto en el núcleo nativo (`sdk-nativo`, NAT-03): el JSON generado pierde `laplacianoMinimoGuiado` y Kotlin aplica la misma regla; el escenario "Desenfoque con documento presente" de `sdk-nativo` se ajusta en su spec delta.

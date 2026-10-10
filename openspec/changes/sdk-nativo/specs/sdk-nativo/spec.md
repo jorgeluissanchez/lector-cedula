@@ -75,9 +75,9 @@ El núcleo SHALL calcular un `score` 0-100 y un `motivo` (`oscuro`, `sobreexpues
 - **WHEN** se analiza `amarilla-1080p.png` con desenfoque gaussiano sigma 6 (en píxeles del frame 1920x1080)
 - **THEN** en el score de CAL-07 `motivo` es `"desenfocado"` y `score` < 70
 
-#### Scenario: Desenfoque con documento presente (captura guiada)
-- **WHEN** se evalúa esa misma imagen como el Lector, con la presencia guiada de OFF-22/OFF-25 (documento presente y varianza del Laplaciano >= `laplacianoMinimoGuiado`)
-- **THEN** `score` es exactamente `umbralListo` y `motivo` es `null`, igual que `packages/capture` en Node para la misma imagen; con sigma 10 `motivo` es `"desenfocado"`
+#### Scenario: Desenfoque con documento presente
+- **WHEN** se evalúa esa misma imagen como el Lector, con la presencia de OFF-22/OFF-25 (documento en la guía; tras la recalibración de CAL-08 del 2026-10-10 la presencia solo se evalúa con score >= `umbralListo` y nunca lo eleva)
+- **THEN** el resultado es el mismo que el score de CAL-07 (`motivo` `"desenfocado"` y `score` < 70), con contenido `null`, igual que `packages/capture` en Node para la misma imagen; con sigma 10 `motivo` es `"desenfocado"`
 
 #### Scenario: Paridad con la web
 - **WHEN** se analizan con el núcleo nativo y con `packages/capture` en Node los fixtures de calidad de `e2e/videos/sinteticos/`
