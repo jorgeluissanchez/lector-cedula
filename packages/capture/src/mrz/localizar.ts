@@ -54,30 +54,36 @@ export function luminancias(p: PixelesRgba): Uint8Array {
 }
 
 /**
- * Umbral de Otsu: devuelve `t` tal que la tinta es `luma <= t`, o `null` si la imagen tiene un solo nivel
- * (varianza entre clases nula: no hay tinta que separar).
+ * Umbral de Otsu (LMI-01b): devuelve `t` tal que la tinta es `luma <= t`, o `null` si la imagen tiene un solo nivel
+ * (varianza entre clases nula: no hay tinta que separar). Exacto: la varianza entre clases n0 * n1 * (m0 - m1)^2 es
+ * d^2 / (n0 * n1) con d = S0 * N - S * n0, y se compara en cruz con BigInt (S0 * N supera 2^53 en fotos grandes).
+ * Ante empate gana el umbral más bajo: solo un candidato estrictamente mayor reemplaza al mejor.
  */
 export function umbralOtsu(luma: Uint8Array): number | null {
   const hist = new Array<number>(256).fill(0);
   for (const v of luma) hist[v] = (hist[v] as number) + 1;
-  const total = luma.length;
-  let sumaTotal = 0;
-  for (let i = 0; i < 256; i++) sumaTotal += i * (hist[i] as number);
-  let pesoFondo = 0;
-  let sumaFondo = 0;
-  let mejor = 0;
+  const total = BigInt(luma.length);
+  let sumaTotalN = 0;
+  for (let i = 0; i < 256; i++) sumaTotalN += i * (hist[i] as number);
+  const sumaTotal = BigInt(sumaTotalN);
+  let pesoFondo = 0n;
+  let sumaFondo = 0n;
+  let mejorNum = 0n;
+  let mejorDen = 1n;
   let umbral: number | null = null;
   for (let t = 0; t < 256; t++) {
-    pesoFondo += hist[t] as number;
-    if (pesoFondo === 0) continue;
+    const h = BigInt(hist[t] as number);
+    pesoFondo += h;
+    if (pesoFondo === 0n) continue;
     const pesoFrente = total - pesoFondo;
-    if (pesoFrente === 0) break;
-    sumaFondo += t * (hist[t] as number);
-    const m0 = sumaFondo / pesoFondo;
-    const m1 = (sumaTotal - sumaFondo) / pesoFrente;
-    const entre = pesoFondo * pesoFrente * (m0 - m1) * (m0 - m1);
-    if (entre > mejor) {
-      mejor = entre;
+    if (pesoFrente === 0n) break;
+    sumaFondo += BigInt(t) * h;
+    const d = sumaFondo * total - sumaTotal * pesoFondo;
+    const num = d * d;
+    const den = pesoFondo * pesoFrente;
+    if (num * mejorDen > mejorNum * den) {
+      mejorNum = num;
+      mejorDen = den;
       umbral = t;
     }
   }

@@ -176,7 +176,7 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
     expect(bandasRegulares(b(0, 9), b(20, 29), b(46, 55))).toBe(false);
   });
 
-  it("LMI-01b Otsu: null con un solo nivel; separa dos niveles", () => {
+  it("LMI-01b Un solo nivel y dos niveles", () => {
     expect(umbralOtsu(new Uint8Array([7, 7, 7]))).toBeNull();
     expect(umbralOtsu(new Uint8Array([10, 10, 200, 200]))).toBe(10);
     expect(umbralOtsu(new Uint8Array([0, 0, 0, 100, 255, 255]))).toBe(100);
@@ -184,33 +184,50 @@ describe("LMI-01b Criterio de la proyección", { timeout: 60_000 }, () => {
 });
 
 describe("LMI-01b Piezas de la proyección (límites exactos)", { timeout: 60_000 }, () => {
-  /** Oráculo independiente de Otsu: varianza entre clases calculada directamente para cada umbral. */
-  function varianzaEntre(valores: Uint8Array, t: number): number {
+  /**
+   * Oráculo independiente y exacto de Otsu: para cada umbral separa las clases por filtrado y da la varianza entre clases
+   * n0 * n1 * (m0 - m1)^2 como fracción de BigInt [numerador, denominador] con m = suma / n, sin dividir.
+   */
+  function varianzaEntre(valores: Uint8Array, t: number): readonly [bigint, bigint] {
     const fondo = Array.from(valores).filter((v) => v <= t);
     const frente = Array.from(valores).filter((v) => v > t);
-    if (fondo.length === 0 || frente.length === 0) return 0;
-    const media = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-    return fondo.length * frente.length * (media(fondo) - media(frente)) ** 2;
+    if (fondo.length === 0 || frente.length === 0) return [0n, 1n];
+    const suma = (xs: number[]) => BigInt(xs.reduce((a, b) => a + b, 0));
+    const n0 = BigInt(fondo.length);
+    const n1 = BigInt(frente.length);
+    // m0 - m1 = (s0 * n1 - s1 * n0) / (n0 * n1); por n0 * n1 queda (s0 * n1 - s1 * n0)^2 / (n0 * n1).
+    const dif = suma(fondo) * n1 - suma(frente) * n0;
+    return [dif * dif, n0 * n1];
   }
+  const mayor = (a: readonly [bigint, bigint], b: readonly [bigint, bigint]) => a[0] * b[1] > b[0] * a[1];
 
-  it("LMI-01b Otsu coincide con el oráculo de varianza entre clases", async () => {
+  it("LMI-01b Empate en la varianza entre clases: gana el umbral más bajo", () => {
+    // Contraejemplo de fast-check (semilla -1808592412): 109 y 146 empatan con 361250 / 3.
+    const valores = new Uint8Array([245, 109, 146, 217, 13]);
+    const [n109, d109] = varianzaEntre(valores, 109);
+    const [n146, d146] = varianzaEntre(valores, 146);
+    expect(n109 * 3n).toBe(361250n * d109);
+    expect(n146 * 3n).toBe(361250n * d146);
+    expect(umbralOtsu(valores)).toBe(109);
+  });
+
+  it("LMI-01b Otsu coincide con el oráculo exacto de varianza entre clases", async () => {
+    let conTinta = 0;
+    const numRuns = Number(process.env["OTSU_NUM_RUNS"] ?? 1000);
     await fc.assert(
       fc.asyncProperty(fc.uint8Array({ minLength: 1, maxLength: 60 }), async (valores) => {
-        const t = umbralOtsu(valores);
         const varianzas = Array.from({ length: 256 }, (_, i) => varianzaEntre(valores, i));
-        const maxima = Math.max(...varianzas);
-        if (maxima === 0) {
-          expect(t).toBeNull();
-          return;
-        }
-        expect(t).not.toBeNull();
-        const eps = maxima * 1e-9;
-        expect(varianzas[t ?? 0]).toBeGreaterThanOrEqual(maxima - eps);
-        // Es el primer umbral que alcanza el máximo.
-        expect(varianzas.slice(0, t ?? 0).every((v) => v < maxima - eps)).toBe(true);
+        // Primer umbral que alcanza el máximo (solo lo reemplaza uno estrictamente mayor).
+        let primero = 0;
+        for (let i = 1; i < 256; i++) if (mayor(varianzas[i] as readonly [bigint, bigint], varianzas[primero] as readonly [bigint, bigint])) primero = i;
+        const esperado = (varianzas[primero] as readonly [bigint, bigint])[0] === 0n ? null : primero;
+        if (esperado !== null) conTinta++;
+        expect(umbralOtsu(valores)).toBe(esperado);
       }),
-      { numRuns: 500 },
+      { numRuns },
     );
+    // Propiedad no vacía: la gran mayoría de los casos tiene dos niveles o más.
+    expect(conTinta / numRuns).toBeGreaterThan(0.5);
   });
 
   it("LMI-01b Luminancia BT.601 entera", () => {
