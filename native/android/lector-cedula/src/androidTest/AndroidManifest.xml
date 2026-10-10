@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KI (tarea 1.7): actividad mínima para montar VistaCamara (NAT-19). Solo existe en el APK de pruebas. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="io.github.jorgeluissanchez.lectorcedula.camara.ActividadPrueba"
+            android:exported="false" />
+    </application>
+</manifest>
