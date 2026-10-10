@@ -7,11 +7,14 @@ import { resolve } from "node:path";
 const dirPaquete = fileURLToPath(new URL("..", import.meta.url));
 const raiz = resolve(dirPaquete, "..", "..");
 
-/** Resuelve `@lector-cedula/parsers` a su fuente TypeScript. */
+/** Resuelve `@lector-cedula/parsers` y sus subrutas (`/divipola`, `/divipol-2018`) a su fuente TypeScript. */
 const fuentesParsers = {
   name: "fuentes-parsers",
   setup(b) {
-    b.onResolve({ filter: /^@lector-cedula\/parsers$/ }, () => ({ path: resolve(raiz, "packages", "parsers", "src", "index.ts") }));
+    b.onResolve({ filter: /^@lector-cedula\/parsers(\/[a-z0-9-]+)?$/ }, (a) => {
+      const sub = a.path.slice("@lector-cedula/parsers".length).replace(/^\//, "");
+      return { path: resolve(raiz, "packages", "parsers", "src", ...(sub ? [sub] : []), "index.ts") };
+    });
   },
 };
 
