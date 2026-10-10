@@ -36,6 +36,8 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     // `:nucleo` la usa como `implementation`; las instrumentadas leen el JSON del bundle y del oráculo.
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    // NAT-06 (tarea 1.5): liblectorcedula_ocr.so (Tesseract y Leptonica sin libjpeg ni libpng) para arm64-v8a y x86_64.
+    implementation(project(":tesseract4android"))
 }
 
 // NAT-16: informe de lo que se distribuye en el AAR para check:licencias (`build/dependencias-resueltas.txt`).

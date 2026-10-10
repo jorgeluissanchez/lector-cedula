@@ -49,7 +49,69 @@ val copiarOraculo = tasks.register<Copy>("copiarOraculoCalidad") {
 }
 sourceSets.test { resources.srcDir(copiarOraculo) }
 
+// Tarea 1.5 (NAT-06): oráculo MRZ (plan de vistas de packages/capture, sin OCR) para el diferencial en proceso.
+val oraculoMrz = rootProject.layout.projectDirectory.file("../../packages/nucleo-js/dist/oraculo-mrz.js")
+val copiarOraculoMrz = tasks.register<Copy>("copiarOraculoMrz") {
+    from(oraculoMrz) { into("lectorcedula") }
+    into(layout.buildDirectory.dir("generated/oraculo-mrz"))
+    doFirst { check(oraculoMrz.asFile.isFile) { "Falta packages/nucleo-js/dist/oraculo-mrz.js: npm run nucleo:construir" } }
+}
+sourceSets.test { resources.srcDir(copiarOraculoMrz) }
+
+// NAT-06 "Mismo modelo": mrz.traineddata (BSD-3-Clause) de `npm run modelos:mrz` viaja como recurso del núcleo (y del
+// AAR) solo si su SHA-256 es el de `tesseract-mrz` en models/manifest.json. Nunca se copia a mano al repositorio.
+val modeloMrz = rootProject.layout.projectDirectory.file("../../models/tesseract/mrz.traineddata")
+val manifiestoModelos = rootProject.layout.projectDirectory.file("../../models/manifest.json")
+val copiarModeloMrz = tasks.register<Copy>("copiarModeloMrz") {
+    from(modeloMrz) { into("lectorcedula") }
+    into(layout.buildDirectory.dir("generated/modelo"))
+    inputs.file(manifiestoModelos)
+    doFirst {
+        check(modeloMrz.asFile.isFile) { "Falta models/tesseract/mrz.traineddata: npm run modelos:mrz" }
+        @Suppress("UNCHECKED_CAST")
+        val entradas = groovy.json.JsonSlurper().parse(manifiestoModelos.asFile) as List<Map<String, Any?>>
+        val esperado = entradas.single { it["nombre"] == "tesseract-mrz" }["sha256"]
+        val real = java.security.MessageDigest.getInstance("SHA-256").digest(modeloMrz.asFile.readBytes()).joinToString("") { "%02x".format(it) }
+        check(real == esperado) { "mrz.traineddata no coincide con models/manifest.json ($real)" }
+    }
+}
+sourceSets.main { resources.srcDir(copiarModeloMrz) }
+
+// Tarea 1.5 (KJ con Tesseract real): la misma CMake de :tesseract4android compilada para el host Linux de la imagen
+// docker/android-sdk (CMake 3.31.6 y Ninja del SDK, g++ del sistema). Fuera de Linux o sin CMake del SDK se omite y las
+// pruebas con OCR real se saltan, salvo con `-PocrObligatorio=true` (CI), que las hace fallar.
+val cmakeSdk = providers.environmentVariable("ANDROID_HOME").map { "$it/cmake/3.31.6/bin" }.orElse("")
+val fuenteOcr = rootProject.layout.projectDirectory.dir("tesseract4android/src/main/cpp")
+val dirOcrHost = layout.buildDirectory.dir("ocr-host")
+val hilosOcr = (findProperty("ocrHilos") as String?) ?: "2"
+fun ocrHostPosible(): Boolean = System.getProperty("os.name").startsWith("Linux") && File("${cmakeSdk.get()}/cmake").canExecute()
+val configurarOcrHost = tasks.register<Exec>("configurarOcrHost") {
+    onlyIf { ocrHostPosible() }
+    inputs.dir(fuenteOcr)
+    inputs.file(rootProject.layout.projectDirectory.file("tesseract4android/fuentes-nativas.json"))
+    outputs.file(dirOcrHost.map { it.file("build.ninja") })
+    doFirst {
+        commandLine(
+            "${cmakeSdk.get()}/cmake", "-S", fuenteOcr.asFile.absolutePath, "-B", dirOcrHost.get().asFile.absolutePath, "-G", "Ninja",
+            "-DCMAKE_MAKE_PROGRAM=${cmakeSdk.get()}/ninja", "-DCMAKE_BUILD_TYPE=Release",
+            "-DJNI_INCLUDE=${System.getProperty("java.home")}/include",
+            "-DFUENTES_CACHE=${rootProject.layout.buildDirectory.dir("fuentes-nativas").get().asFile.absolutePath}",
+        )
+    }
+}
+val compilarOcrHost = tasks.register<Exec>("compilarOcrHost") {
+    dependsOn(configurarOcrHost)
+    onlyIf { ocrHostPosible() }
+    inputs.dir(fuenteOcr)
+    outputs.file(dirOcrHost.map { it.file("liblectorcedula_ocr.so") })
+    doFirst { commandLine("${cmakeSdk.get()}/cmake", "--build", dirOcrHost.get().asFile.absolutePath, "--target", "lectorcedula_ocr", "-j", hilosOcr) }
+}
+
 tasks.test {
+    dependsOn(compilarOcrHost)
+    systemProperty("lectorcedula.ocr", dirOcrHost.get().file("liblectorcedula_ocr.so").asFile.absolutePath)
+    systemProperty("nat.ocrObligatorio", (findProperty("ocrObligatorio") as String?) ?: "false")
+    rootProject.layout.buildDirectory.dir("fixtures-mrz").get().asFile.let { systemProperty("lectorcedula.fixturesMrz", it.absolutePath) }
     useJUnitPlatform()
     maxHeapSize = "2g"
     // Carga de la máquina (CLAUDE.md): un solo proceso de pruebas.

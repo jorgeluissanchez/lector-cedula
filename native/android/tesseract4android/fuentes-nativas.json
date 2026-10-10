@@ -1,0 +1,21 @@
+{
+  "descripcion": "Fuentes C/C++ fijadas que compila native/android/tesseract4android (sdk-nativo, NAT-06, tarea 1.5). CMake las descarga, verifica el SHA-256 y aborta si no coincide. Son byte a byte las que Tesseract4Android 4.9.0 copia en src/main/cpp/tesseract/src y src/main/cpp/leptonica/src (comparadas sin diferencias, salvo fin de línea, el 2026-10-10). libjpeg y libpng de Tesseract4Android NO se usan: fuera de la lista permitida (revisor-licencias, 2026-10-10). check:licencias exige que cada entrada figure en native/licencias-nativas.json, sección vendorizado.",
+  "fuentes": [
+    {
+      "nombre": "tesseract",
+      "version": "5.5.1",
+      "licencia": "Apache-2.0",
+      "url": "https://github.com/tesseract-ocr/tesseract/archive/refs/tags/5.5.1.tar.gz",
+      "sha256": "a7a3f2a7420cb6a6a94d80c24163e183cf1d2f1bed2df3bbc397c81808a57237",
+      "directorio": "tesseract-5.5.1"
+    },
+    {
+      "nombre": "leptonica",
+      "version": "1.85.0",
+      "licencia": "BSD-2-Clause",
+      "url": "https://github.com/DanBloomberg/leptonica/releases/download/1.85.0/leptonica-1.85.0.tar.gz",
+      "sha256": "3745ae3bf271a6801a2292eead83ac926e3a9bc1bf622e9cd4dd0f3786e17205",
+      "directorio": "leptonica-1.85.0"
+    }
+  ]
+}

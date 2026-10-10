@@ -18,4 +18,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "lector-cedula-android"
-include(":nucleo", ":lector-cedula")
+include(":nucleo", ":lector-cedula", ":tesseract4android")

@@ -265,7 +265,12 @@ object LocalizarMrz {
     private const val TRAMOS_MINIMOS_TD3 = 30
 
     /** OD-20: par TD3 horizontal en la ventana; devuelve el centro vertical (filas de la imagen) o `null`. */
-    fun parTd3(luma: IntArray, w: Int, h: Int, f: CajaMrz): Double? {
+    fun parTd3(luma: IntArray, w: Int, h: Int, f: CajaMrz): Double? = parTd3ConCaja(luma, w, h, f)?.centro
+
+    /** OD-20 y OD-21: par TD3 con su centro vertical y la caja ajustada al par (margen de medio alto de línea). */
+    data class ParTd3(val centro: Double, val caja: CajaMrz)
+
+    fun parTd3ConCaja(luma: IntArray, w: Int, h: Int, f: CajaMrz): ParTd3? {
         val y0 = f.y
         val hf = f.alto
         val v = Ventana(luma, w, y0, hf)
@@ -281,6 +286,8 @@ object LocalizarMrz {
             if ((a.inicio == 0 && y0 > 0) || (b.fin == hf - 1 && y0 + hf < h)) continue
             var t = Int.MAX_VALUE
             var ancho = Int.MIN_VALUE
+            var xMin = Int.MAX_VALUE
+            var xMax = Int.MIN_VALUE
             for (banda in listOf(a, b)) {
                 var n = 0
                 var antes = false
@@ -302,11 +309,18 @@ object LocalizarMrz {
                 }
                 t = min(t, n)
                 ancho = max(ancho, x1 - x0 + 1)
+                xMin = min(xMin, x0)
+                xMax = max(xMax, x1)
             }
             if (t < TRAMOS_MINIMOS_TD3) continue
             val relacion = (t * media) / ancho
             if (relacion < RELACION_MINIMA || relacion > RELACION_MAXIMA) continue
-            return y0 + (a.dobleCentro + b.dobleCentro) / 4.0
+            val margen = redondear(media * 0.5)
+            val izq = max(0, xMin - margen)
+            val der = min(w, xMax + 1 + margen)
+            val arriba = max(0, a.inicio - margen)
+            val abajo = min(hf, b.fin + 1 + margen)
+            return ParTd3(y0 + (a.dobleCentro + b.dobleCentro) / 4.0, CajaMrz(izq, y0 + arriba, der - izq, abajo - arriba))
         }
         return null
     }
