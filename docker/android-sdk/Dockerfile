@@ -33,7 +33,7 @@ RUN test "${ACEPTO_LICENCIA_ANDROID_SDK}" = "si" \
       || (echo "Construir esta imagen acepta la Android SDK License: pasa --build-arg ACEPTO_LICENCIA_ANDROID_SDK=si" && exit 1)
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends unzip \
+    && apt-get install -y --no-install-recommends unzip g++ \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL -o /tmp/clt.zip "https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS}_latest.zip" \

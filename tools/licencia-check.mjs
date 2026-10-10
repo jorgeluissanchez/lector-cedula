@@ -258,6 +258,36 @@ function archivosNativos(dir, filtro) {
   });
 }
 
+/** Códecs de imagen fuera de la lista permitida (libjpeg, IJG; libpng, libpng-2.0): nunca se vendorizan (tarea 1.5). */
+const CODEC_PROHIBIDO = /jpeg|png/i;
+
+/**
+ * Tarea 1.5 (NAT-16): fuentes C/C++ que se compilan en el AAR (`fuentes-nativas.json`: `{ fuentes: [{ nombre, licencia,
+ * url, sha256 }] }`) frente a la sección `vendorizado` del registro. Cada fuente debe estar registrada con la misma
+ * licencia, permitida, y fijada por SHA-256; libjpeg y libpng no se admiten.
+ */
+export function evaluarFuentesVendorizadas(origen, manifiesto, registro) {
+  const errores = [];
+  const fuentes = Array.isArray(manifiesto?.fuentes) ? manifiesto.fuentes : null;
+  if (fuentes === null) return [`${origen}: sin lista "fuentes"`];
+  for (const f of fuentes) {
+    const nombre = String(f?.nombre ?? "");
+    if (CODEC_PROHIBIDO.test(nombre) || CODEC_PROHIBIDO.test(String(f?.url ?? "").split("/").pop() ?? "")) {
+      errores.push(`${origen}: ${nombre}: libjpeg y libpng no están permitidas (IJG y libpng-2.0 fuera de la lista)`);
+      continue;
+    }
+    const entrada = registro?.vendorizado?.[nombre];
+    if (entrada === undefined) {
+      errores.push(`${origen}: ${nombre} sin licencia registrada en ${REGISTRO_NATIVO} (vendorizado)`);
+      continue;
+    }
+    if (entrada.licencia !== f.licencia) errores.push(`${origen}: ${nombre}: licencia ${f.licencia} distinta de la registrada (${entrada.licencia})`);
+    else if (!evaluarLicencia(f.licencia).ok) errores.push(`${origen}: ${nombre}: ${f.licencia} no permitida en producción`);
+    if (!/^[0-9a-f]{64}$/.test(String(f.sha256 ?? ""))) errores.push(`${origen}: ${nombre}: sin SHA-256 fijado`);
+  }
+  return errores;
+}
+
 /** Revisa `native/` bajo `raiz`: build.gradle.kts, informes resueltos de producción y Package.resolved. */
 export function revisarLicenciasNativas(raiz) {
   const dirNativo = join(raiz, "native");
@@ -279,7 +309,10 @@ export function revisarLicenciasNativas(raiz) {
       for (const d of dependenciasDeGradle(contenido)) deps.push({ origen: rel(r), tipo: "gradle", ...d });
     }
   }
-  return evaluarDependenciasNativas(deps, registro);
+  const vendorizadas = archivosNativos(dirNativo, (r) => r.endsWith("fuentes-nativas.json")).flatMap((r) =>
+    evaluarFuentesVendorizadas(rel(r), leerJson(r), registro),
+  );
+  return [...evaluarDependenciasNativas(deps, registro), ...vendorizadas];
 }
 
 function leerJson(ruta) {

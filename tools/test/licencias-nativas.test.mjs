@@ -14,6 +14,7 @@ import {
   dependenciasDeGradle,
   dependenciasDeSwiftPm,
   evaluarDependenciasNativas,
+  evaluarFuentesVendorizadas,
   revisarLicenciasNativas,
 } from "../licencia-check.mjs";
 
@@ -153,6 +154,58 @@ describe("NAT-16 Control de licencias nativo sobre el repositorio", { timeout: 6
     const bien = await correr(RAIZ);
     expect(bien.code).toBe(0);
     expect(bien.stdout).toContain("licencia-check: OK");
+  });
+});
+
+describe("NAT-16 Fuentes C/C++ vendorizadas (tarea 1.5)", { timeout: 60_000 }, () => {
+  const sha = "a".repeat(64);
+  const registro = { vendorizado: { tesseract: { licencia: "Apache-2.0" }, leptonica: { licencia: "BSD-2-Clause" }, raro: { licencia: "GPL-3.0" } } };
+
+  it("NAT-16 Tesseract y Leptonica registradas, con licencia permitida y SHA-256, pasan", () => {
+    const m = { fuentes: [{ nombre: "tesseract", licencia: "Apache-2.0", url: "https://x/5.5.1.tar.gz", sha256: sha }, { nombre: "leptonica", licencia: "BSD-2-Clause", url: "https://x/l.tar.gz", sha256: sha }] };
+    expect(evaluarFuentesVendorizadas("f.json", m, registro)).toStrictEqual([]);
+  });
+
+  it("NAT-16 libjpeg o libpng vendorizadas fallan aunque estén registradas", () => {
+    const m = { fuentes: [{ nombre: "libjpeg", licencia: "IJG", url: "https://x/jpegsrc.v9f.tar.gz", sha256: sha }, { nombre: "codec", licencia: "Zlib", url: "https://x/libpng-1.6.48.tar.gz", sha256: sha }] };
+    const e = evaluarFuentesVendorizadas("f.json", m, { vendorizado: { libjpeg: { licencia: "IJG" }, codec: { licencia: "Zlib" } } });
+    expect(e).toStrictEqual(["f.json: libjpeg: libjpeg y libpng no están permitidas (IJG y libpng-2.0 fuera de la lista)", "f.json: codec: libjpeg y libpng no están permitidas (IJG y libpng-2.0 fuera de la lista)"]);
+  });
+
+  it("NAT-16 Sin registro, con licencia distinta o fuera de la lista, o sin SHA-256: falla y lo nombra", () => {
+    const m = {
+      fuentes: [
+        { nombre: "nueva", licencia: "MIT", url: "u", sha256: sha },
+        { nombre: "tesseract", licencia: "MIT", url: "u", sha256: sha },
+        { nombre: "raro", licencia: "GPL-3.0", url: "u", sha256: sha },
+        { nombre: "leptonica", licencia: "BSD-2-Clause", url: "u", sha256: "corto" },
+      ],
+    };
+    expect(evaluarFuentesVendorizadas("f.json", m, registro)).toStrictEqual([
+      "f.json: nueva sin licencia registrada en native/licencias-nativas.json (vendorizado)",
+      "f.json: tesseract: licencia MIT distinta de la registrada (Apache-2.0)",
+      "f.json: raro: GPL-3.0 no permitida en producción",
+      "f.json: leptonica: sin SHA-256 fijado",
+    ]);
+    expect(evaluarFuentesVendorizadas("f.json", {}, registro)).toStrictEqual(['f.json: sin lista "fuentes"']);
+  });
+
+  it("NAT-16 El repositorio: native/android/tesseract4android/fuentes-nativas.json está registrado y sin códecs", () => {
+    expect(revisarLicenciasNativas(RAIZ)).toStrictEqual([]);
+    const m = JSON.parse(readFileSync(join(RAIZ, "native", "android", "tesseract4android", "fuentes-nativas.json"), "utf8"));
+    expect(m.fuentes.map((f) => [f.nombre, f.version, f.licencia])).toStrictEqual([
+      ["tesseract", "5.5.1", "Apache-2.0"],
+      ["leptonica", "1.85.0", "BSD-2-Clause"],
+    ]);
+    const raiz = mkdtempSync(join(tmpdir(), "licencias-vendorizado-"));
+    cpSync(join(RAIZ, "native"), join(raiz, "native"), { recursive: true, filter: (o) => !/[\\/](build|\.gradle)([\\/]|$)/u.test(o) });
+    const ruta = join(raiz, "native", "android", "tesseract4android", "fuentes-nativas.json");
+    writeFileSync(ruta, JSON.stringify({ fuentes: [...m.fuentes, { nombre: "libpng", licencia: "libpng-2.0", url: "https://x/libpng.tar.gz", sha256: "b".repeat(64) }] }));
+    try {
+      expect(revisarLicenciasNativas(raiz).some((x) => x.includes("libpng"))).toBe(true);
+    } finally {
+      rmSync(raiz, { recursive: true, force: true });
+    }
   });
 });
 
