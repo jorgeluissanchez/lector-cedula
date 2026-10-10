@@ -101,6 +101,20 @@ describe("OD-40 Dependencia prohibida", () => {
     expect(h[0].mensaje).toContain(nombre);
   });
 
+  it("NAT-05: el wrapper oficial de zxing-cpp solo se admite por su coordenada exacta io.github.zxing-cpp:android", () => {
+    const ruta = "native/android/lector-cedula/build.gradle.kts";
+    expect(revisarArchivo(ruta, 'dependencies {\n    implementation("io.github.zxing-cpp:android:3.1.1")\n}\n')).toEqual([]);
+    for (const [linea, nombre] of [
+      ['    implementation("io.github.zxing-cpp:android-qr:1.0.0")', "io.github.zxing-cpp:android-qr"],
+      ['    implementation("io.github.zxing-cpp:android:3.1.1"); implementation("com.google.zxing:core:3.5.3")', "zxing"],
+      ['    implementation("com.example:zxing-cpp:android:1.0")', "zxing"],
+    ]) {
+      const h = revisarArchivo(ruta, `dependencies {\n${linea}\n}\n`);
+      expect(h, linea).toHaveLength(1);
+      expect(h[0].mensaje).toContain(nombre);
+    }
+  });
+
   it("un AndroidManifest de native/ con android.permission.NFC falla", () => {
     const xml = '<manifest>\n  <uses-permission android:name="android.permission.NFC" />\n</manifest>\n';
     for (const ruta of ["native/android/lector-cedula/src/main/AndroidManifest.xml", "native/android/demo/src/debug/AndroidManifest.xml"]) {

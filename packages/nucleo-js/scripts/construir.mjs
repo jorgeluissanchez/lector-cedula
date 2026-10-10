@@ -8,7 +8,7 @@ const dirPaquete = fileURLToPath(new URL("..", import.meta.url));
 const raiz = resolve(dirPaquete, "..", "..");
 
 /** Resuelve `@lector-cedula/parsers` y sus subrutas (`/divipola`, `/divipol-2018`) a su fuente TypeScript. */
-const fuentesParsers = {
+export const fuentesParsers = {
   name: "fuentes-parsers",
   setup(b) {
     b.onResolve({ filter: /^@lector-cedula\/parsers(\/[a-z0-9-]+)?$/ }, (a) => {

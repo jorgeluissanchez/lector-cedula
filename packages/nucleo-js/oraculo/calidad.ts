@@ -14,6 +14,7 @@ import type { Cuadrilatero } from "../../capture/src/calidad/tipos.js";
 import { UMBRALES_POR_DEFECTO } from "../../capture/src/calidad/umbrales.js";
 import { calcularGuia, guiaEnAnalisis, type Caja } from "../../capture/src/flujo/guia.js";
 import { evidenciaTd3, localizarConEvidencia } from "../../capture/src/mrz/localizar.js";
+import { aGris } from "../../capture/src/pdf417/localizar.js";
 import { decodificarBase64 } from "../src/base64.js";
 
 function bytes(b64: string): Uint8Array {
@@ -72,6 +73,13 @@ function tarjeta(lumaB64: string, ancho: number, alto: number): string {
   region,
   mrz,
   tarjeta,
+  /** NAT-05: luminancia que la web entrega a zxing-wasm (`aGris`), un valor por píxel, como arreglo JSON. */
+  gris: (b64: string, width: number, height: number) => {
+    const g = aGris(rgba(b64, width, height));
+    const valores: number[] = [];
+    for (let i = 0; i < g.data.length; i += 4) valores.push(g.data[i] as number);
+    return JSON.stringify(valores);
+  },
   rampa: (x: number, a: number, b: number) => rampa(x, a, b),
   guia: (ancho: number, alto: number, orientacion: "horizontal" | "vertical" | null, margen: number | null) =>
     JSON.stringify(calcularGuia(ancho, alto, { ...(orientacion === null ? {} : { orientacion }), ...(margen === null ? {} : { margen }) })),

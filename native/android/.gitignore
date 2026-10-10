@@ -2,3 +2,5 @@
 build/
 local.properties
 .kotlin/
+# NAT-05: fixtures sintéticos de packages/nucleo-js/scripts/generar-fixtures-pdf417.mjs (assets de las instrumentadas).
+lector-cedula/src/androidTest/assets/sinteticos/
