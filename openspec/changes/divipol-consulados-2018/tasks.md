@@ -18,7 +18,7 @@
 
 ## 5. Revisión
 
-- [ ] 5.1 `revisor-licencias` sobre la fuente CC BY-SA y su llegada a la PWA y la CLI.
+- [x] 5.1 `revisor-licencias` sobre la fuente CC BY-SA y su llegada a la PWA y la CLI. Revisado 2026-10-10: licencia CC BY-SA 4.0 confirmada en la metadata de datos.gov.co (vh8b-jfhg, autor Registraduría); atribución, cambios, sin garantías y sin aval presentes en `LICENSES.md`, `THIRD_PARTY_NOTICES.md`, la pantalla de licencias de la PWA, `THIRD_PARTY_LICENSES.txt` del paquete web y `--licencias`/`fuentes` de la CLI; compartir igual limitado a los datos (punto de entrada separado, código MIT fuera del alcance). Observación menor: el título oficial del conjunto en datos.gov.co es "Dipole Exterior Presidente 2018" (los avisos dicen "Divipole"); alinear el título en un cambio posterior.
 - [x] 5.2 Mutación de `divipol-lib.mjs` y `src/divipol-2018/index.ts` (`npm run test:mutacion`, >= 85 %).
 - [ ] 5.3 `npm run check` en verde.
 
