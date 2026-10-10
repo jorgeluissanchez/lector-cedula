@@ -27,13 +27,14 @@ jobs:
 
   mutacion:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
       - name: Entorno de pruebas (dependencias, Chromium, modelo MRZ, tsc -b, assets web)
         uses: ./.github/actions/preparar-node
+      # La corrida inicial con cobertura perTest de toda la suite supera los 5 min por defecto de Stryker en el runner.
       - name: Pruebas de mutación (Stryker, break 85)
-        run: npm run test:mutacion
+        run: npm run test:mutacion -- --dryRunTimeoutMinutes 45
       - name: Reporte de mutación
         if: always()
         uses: actions/upload-artifact@v4
