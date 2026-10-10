@@ -22,10 +22,14 @@ import java.util.Base64
 
 /**
  * Frame RGBA de la cámara a resolución completa. Lo posee quien lo entrega; el [Lector] lo libera (pone a cero) al
- * terminar de usarlo (NAT-13). Liberar dos veces no lanza.
+ * terminar de usarlo (NAT-13). Liberar dos veces no lanza. `alLiberar` (opcional) avisa a la fuente, ya con los píxeles
+ * a cero, para que reutilice el búfer (la fuente de cámara no reserva 8 MB por frame).
  */
-class FrameCamara(val pixeles: ByteArray, val ancho: Int, val alto: Int) {
-    fun liberar() = pixeles.fill(0)
+class FrameCamara(val pixeles: ByteArray, val ancho: Int, val alto: Int, private val alLiberar: ((FrameCamara) -> Unit)? = null) {
+    fun liberar() {
+        pixeles.fill(0)
+        alLiberar?.invoke(this)
+    }
 }
 
 /** Fallo al abrir la fuente con su código público de SDK-27 (`camara-denegada`, `camara-no-disponible`, ...). */
@@ -41,6 +45,9 @@ interface FuenteFrames {
 
     /** Cierra la fuente y libera la cámara. Idempotente. */
     fun cerrar()
+
+    /** Enciende o apaga la linterna (NAT-02). Sin flash o sin cámara abierta no hace nada y nunca lanza. */
+    fun linterna(encendida: Boolean) = Unit
 }
 
 /** Datos crudos leídos por el decodificador nativo: los interpreta el bundle (NAT-05, NAT-06). */
@@ -99,6 +106,15 @@ class Lector(
         if (destruido) return
         if (!emitir(evento("reintentar"), EstadoLector.Fase.PERMISO)) return
         ejecutar(f)
+    }
+
+    /** Linterna de la fuente abierta (NAT-02); sin fuente no hace nada. No cambia la fase ni lanza. */
+    fun linterna(encendida: Boolean) {
+        try {
+            fuente?.linterna(encendida)
+        } catch (e: Exception) {
+            // Una linterna que falla no es un error de lectura (NAT-02 "Linterna").
+        }
     }
 
     /** Vuelve a `inicio` y libera la cámara (NAT-02 "Liberación"). */

@@ -56,6 +56,18 @@ El núcleo SHALL abrir la cámara trasera a 1920x1080 o más, con enfoque autom�
 - **WHEN** en Kotlin se cancela la corrutina que ejecuta `iniciar` mientras la fuente se abre (`permiso`) o entrega frames (`activo`)
 - **THEN** el efecto es el de `cancelar()`: la fase es `inicio` y la fuente de frames quedó cerrada
 
+#### Scenario: Enfoque continuo sin barrido único en Android
+- **WHEN** se construye la `FocusMeteringAction` de "Enfoque continuo" en Android
+- **THEN** mide solo AE y AWB (`meteringPointsAf` vacío y un punto AE y AWB en el centro de `guia`), de modo que CameraX no pasa el autoenfoque a `AUTO` ni lo bloquea en la primera distancia: el autoenfoque sigue en `CONTINUOUS_PICTURE`
+
+#### Scenario: Frames de luminancia de la cámara
+- **WHEN** CameraX entrega imágenes YUV_420_888 (con relleno de fila o `pixelStride` 2) más rápido de lo que el `Lector` las procesa
+- **THEN** solo se copia el plano Y de la imagen más reciente, una vez, cuando el `Lector` pide el siguiente frame; las imágenes descartadas o inválidas vuelven a CameraX sin leerse; U y V nunca se leen; el frame es RGBA gris (R = G = B = Y, A = 255) a resolución completa y en la orientación del sensor, y las luminancias de calidad, PDF417 y MRZ de ese frame son exactamente Y
+
+#### Scenario: Linterna sin cámara abierta
+- **WHEN** se llama `linterna(true)` sin fuente abierta o el control de la cámara lanza
+- **THEN** no lanza, no llega al control y no cambia `fase`
+
 ### Requirement: NAT-03 Calidad nativa con paridad web
 El núcleo SHALL calcular un `score` 0-100 y un `motivo` (`oscuro`, `sobreexpuesto`, `reflejo`, `desenfocado`, `acerca` o `null`) sobre la luminancia reducida a 640 px de lado largo, con los umbrales por omisión de CAL-08 leídos de un JSON generado desde `packages/capture/src/calidad/umbrales.ts`. Para la misma imagen, la diferencia con `packages/capture` MUST ser <= 2 puntos y el `motivo` MUST coincidir.
 
@@ -269,6 +281,10 @@ El núcleo MUST NOT escribir imágenes, frames ni resultados en disco, caché, `
 - **WHEN** se libera una captura una o dos veces, o el analizador lanza a mitad de un frame
 - **THEN** todos los bytes de los búferes de luminancia y de envío son 0 y la segunda liberación no lanza
 
+#### Scenario: Búferes de la cámara a cero
+- **WHEN** la fuente de cámara reutiliza el búfer de un frame liberado y después se cierra por `cancelar`, `destruir`, `error` o la cancelación de la corrutina
+- **THEN** el búfer reutilizado estaba a cero, al cerrar no queda ningún búfer retenido (un frame liberado después del cierre tampoco se retiene) y toda imagen pendiente vuelve a CameraX
+
 ### Requirement: NAT-14 Rendimiento
 En el dispositivo `REF`, el tiempo de `leyendo` a `resultado` SHALL tener p95 < 500 ms para la amarilla y p95 < 2000 ms para la digital, sobre 20 lecturas en caliente. En el emulador de CI se informa sin bloquear.
 
@@ -338,6 +354,10 @@ El SDK nativo MUST NOT dibujar UI propia: lo único visual SHALL ser la vista pr
 #### Scenario: Android solo con la preview
 - **WHEN** Espresso inspecciona la jerarquía de `VistaCamara` en fase `activo`
 - **THEN** contiene exactamente una `PreviewView` y ninguna `TextView`, `Button`, `ImageView` ni vista con fondo propio
+
+#### Scenario: Android, preview sin fondo
+- **WHEN** se crea la vista de `VistaCamara(fuente, modifier)` o de `crearVistaPrevia(contexto)`
+- **THEN** la `PreviewView` no tiene fondo (CameraX la crea negra) y sus únicas vistas internas son la superficie de la cámara y la `ScreenFlashView` de CameraX con alfa 0; `fuente` es la misma `FuenteCamaraX` que se pasa a `Lector.iniciar`
 
 #### Scenario: iOS solo con la capa de preview
 - **WHEN** XCTest inspecciona `VistaCamaraUIView` en fase `activo`

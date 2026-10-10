@@ -3,6 +3,7 @@
 // gradle-pitest-plugin para Android (pl.droidsonroids) no es compatible con AGP 9.
 plugins {
     id("com.android.library")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
@@ -22,6 +23,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    buildFeatures {
+        compose = true
+    }
+
     testOptions {
         unitTests.all { it.useJUnitPlatform() }
     }
@@ -31,6 +36,18 @@ dependencies {
     api(project(":nucleo"))
     // NAT-05 (tarea 1.4): wrapper oficial de zxing-cpp, solo con el formato PDF417 (revisor-licencias, 2026-10-10).
     implementation("io.github.zxing-cpp:android:3.1.1")
+    // NAT-02 y NAT-19 (tarea 1.7): CameraX (AOSP, Apache-2.0) en la versión de camera-core que ya trae zxing-cpp.
+    implementation("androidx.camera:camera-camera2:1.5.2")
+    implementation("androidx.camera:camera-lifecycle:1.5.2")
+    api("androidx.camera:camera-view:1.5.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    // VistaCamara: Compose lo aporta la app del integrador (no viaja en el AAR ni en su árbol de dependencias).
+    compileOnly("androidx.compose.runtime:runtime:1.12.1")
+    compileOnly("androidx.compose.ui:ui:1.12.1")
+    // KI de NAT-19: actividad con setContent y Espresso para inspeccionar la jerarquía (solo prueba).
+    androidTestImplementation("androidx.activity:activity-compose:1.13.0")
+    androidTestImplementation("androidx.compose.ui:ui:1.12.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     // KI: instrumentadas en el emulador (AndroidX Test, Apache-2.0; JUnit 4 transitiva, EPL-1.0, solo prueba).
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
