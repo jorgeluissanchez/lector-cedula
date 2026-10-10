@@ -30,7 +30,7 @@ El núcleo nativo de Android y de iOS SHALL exponer un `Lector` con `iniciar(fue
 - **THEN** la secuencia termina en `activo→error`, `error.codigo` es `"calidad-error"` y la fuente de frames quedó cerrada
 
 #### Scenario: Secuencias arbitrarias
-- **WHEN** se generan (jqwik en Kotlin, fast-check sobre el bundle) secuencias de hasta 50 eventos entre `iniciar`, `cancelar`, `reintentar`, `destruir`, frames, éxito y fallo
+- **WHEN** se generan (Kotest property en Kotlin, fast-check sobre el bundle) secuencias de hasta 50 eventos entre `iniciar`, `cancelar`, `reintentar`, `destruir`, frames, éxito y fallo
 - **THEN** cada par consecutivo de fases pertenece a `TRANSICIONES` y ninguna llamada lanza
 
 ### Requirement: NAT-02 Cámara nativa de alta resolución
@@ -52,6 +52,10 @@ El núcleo SHALL abrir la cámara trasera a 1920x1080 o más, con enfoque autom�
 - **WHEN** se llama `cancelar()` en fase `activo`
 - **THEN** la fase es `inicio` y la cámara está cerrada (`CameraX` sin casos de uso vinculados; `AVCaptureSession.isRunning` `false`)
 
+#### Scenario: Cancelación de la corrutina en Kotlin
+- **WHEN** en Kotlin se cancela la corrutina que ejecuta `iniciar` mientras la fuente se abre (`permiso`) o entrega frames (`activo`)
+- **THEN** el efecto es el de `cancelar()`: la fase es `inicio` y la fuente de frames quedó cerrada
+
 ### Requirement: NAT-03 Calidad nativa con paridad web
 El núcleo SHALL calcular un `score` 0-100 y un `motivo` (`oscuro`, `sobreexpuesto`, `reflejo`, `desenfocado`, `acerca` o `null`) sobre la luminancia reducida a 640 px de lado largo, con los umbrales por omisión de CAL-08 leídos de un JSON generado desde `packages/capture/src/calidad/umbrales.ts`. Para la misma imagen, la diferencia con `packages/capture` MUST ser <= 2 puntos y el `motivo` MUST coincidir.
 
@@ -68,8 +72,12 @@ El núcleo SHALL calcular un `score` 0-100 y un `motivo` (`oscuro`, `sobreexpues
 - **THEN** `motivo` es `"reflejo"`
 
 #### Scenario: Desenfoque
-- **WHEN** se analiza `amarilla-1080p.png` con desenfoque gaussiano sigma 6
-- **THEN** `motivo` es `"desenfocado"`
+- **WHEN** se analiza `amarilla-1080p.png` con desenfoque gaussiano sigma 6 (en píxeles del frame 1920x1080)
+- **THEN** en el score de CAL-07 `motivo` es `"desenfocado"` y `score` < 70
+
+#### Scenario: Desenfoque con documento presente (captura guiada)
+- **WHEN** se evalúa esa misma imagen como el Lector, con la presencia guiada de OFF-22/OFF-25 (documento presente y varianza del Laplaciano >= `laplacianoMinimoGuiado`)
+- **THEN** `score` es exactamente `umbralListo` y `motivo` es `null`, igual que `packages/capture` en Node para la misma imagen; con sigma 10 `motivo` es `"desenfocado"`
 
 #### Scenario: Paridad con la web
 - **WHEN** se analizan con el núcleo nativo y con `packages/capture` en Node los fixtures de calidad de `e2e/videos/sinteticos/`

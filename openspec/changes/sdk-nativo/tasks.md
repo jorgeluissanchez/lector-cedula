@@ -11,8 +11,8 @@ Reglas: TDD (principio II), la prueba se ve fallar antes de implementar. Datos s
 
 ## Fase 1. Núcleo Android (Kotlin)
 
-- [ ] 1.1 Motor JS en Kotlin: binding QuickJS elegido con `revisor-licencias`, carga del bundle desde `assets/`, igualdad con Node. Cubre NAT-07 (igualdad entre motores, errores pasados). Tipos: **unitaria**, **diferencial**. Verificación: `KJ`, `L`. Revisor: `revisor-licencias`.
-- [ ] 1.2 `Lector` con `StateFlow`, `FuenteFrames` inyectable y transiciones delegadas al bundle. Cubre NAT-01, NAT-11 (StateFlow). Tipos: **unitaria**, **propiedad** (jqwik), **mutación**. Verificación: `KJ`, `KM`.
+- [x] 1.1 Motor JS en Kotlin: binding QuickJS elegido con `revisor-licencias`, carga del bundle desde `assets/`, igualdad con Node. Cubre NAT-07 (igualdad entre motores, errores pasados). Tipos: **unitaria**, **diferencial**. Verificación: `KJ`, `L`. Revisor: `revisor-licencias`.
+- [x] 1.2 `Lector` con `StateFlow`, `FuenteFrames` inyectable y transiciones delegadas al bundle. Cubre NAT-01, NAT-11 (StateFlow). Tipos: **unitaria**, **propiedad** (Kotest property; decisión 3), **mutación**. Verificación: `KJ`, `KM`.
 - [ ] 1.3 Calidad y presencia en Kotlin con umbrales generados desde `umbrales.ts`; volcado JSON para el diferencial. Cubre NAT-03, NAT-04. Tipos: **unitaria**, **metamórfica**, **diferencial**, **mutación**. Verificación: `KJ`, `CT`, `KM`.
 - [ ] 1.4 PDF417 con zxing-cpp (solo `PDF417`), sin bytes en logs. Cubre NAT-05. Tipos: **unitaria**, **metamórfica**, **privacidad**. Verificación: `KJ`, `CT`. Revisor: `revisor-licencias`.
 - [ ] 1.5 MRZ con Tesseract nativo, localización, enderezado y plan de vistas; `mrz.traineddata` con el SHA-256 del manifiesto web. Cubre NAT-06. Tipos: **unitaria**, **diferencial**, **mutación**. Verificación: `KJ`, `CT`, `KM`. Revisor: `revisor-licencias`.

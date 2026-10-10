@@ -38,6 +38,10 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+      - name: Bundle nucleo-js y oráculo de calidad (KJ empaqueta el bundle y compara con el oráculo, tareas 1.1 y 1.3)
+        run: |
+          npm ci --ignore-scripts
+          npm run nucleo:construir
       - name: Imagen del SDK de Android (acepta la Android SDK License; ver docker/android-sdk/Dockerfile)
         run: docker build --build-arg ACEPTO_LICENCIA_ANDROID_SDK=si -t lector-android-sdk docker/android-sdk
       - name: Pruebas JVM (KJ) e informe de dependencias del AAR

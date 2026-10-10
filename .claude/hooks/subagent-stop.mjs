@@ -10,7 +10,7 @@ const propios = archivosTocados(transcripcion).filter((r) => /\.(m?[jt]sx?)$/.te
 if (propios.length === 0) process.exit(0);
 
 const lista = propios.map((r) => `"${r}"`).join(" ");
-const pruebas = correr(`npx vitest related --run --passWithNoTests ${lista}`);
+const pruebas = correr(`npx vitest related --run --passWithNoTests --maxWorkers=2 ${lista}`);
 if (!pruebas.ok) {
   bloquear(`El subagente dejó pruebas en rojo relacionadas con sus cambios. Corrígelas o reporta el bloqueo con la evidencia.\n${cola(pruebas.salida)}`);
 }

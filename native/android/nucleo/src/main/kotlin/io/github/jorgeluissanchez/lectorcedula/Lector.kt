@@ -5,6 +5,7 @@ import io.github.jorgeluissanchez.lectorcedula.calidad.Contenido
 import io.github.jorgeluissanchez.lectorcedula.calidad.Guia
 import io.github.jorgeluissanchez.lectorcedula.calidad.Umbrales
 import io.github.jorgeluissanchez.lectorcedula.motor.MotorJs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,10 +73,18 @@ class Lector(
     /** Estado observable (SDK-28). */
     val estado: StateFlow<EstadoLector> = _estado.asStateFlow()
 
+    /** Fuente abierta (o abriéndose); `null` tras cerrar. */
     private var fuente: FuenteFrames? = null
+
+    /** Última fuente usada por [iniciar], para [reintentar] (SDK-27: reintentar reabre la cámara). */
+    private var ultimaFuente: FuenteFrames? = null
     private var cuenta = 0
     private var destruido = false
     private val idioma: String = (opciones["idioma"] as? JsonPrimitive)?.content ?: "es"
+
+    /** Pruebas: recibe cada par (anterior, siguiente) que produce el bundle, sin la conflación de [StateFlow]. */
+    @JvmField
+    internal var observador: ((EstadoLector, EstadoLector) -> Unit)? = null
 
     /** Abre `fuente` y procesa frames hasta un estado terminal, el fin de la fuente o [cancelar]. */
     suspend fun iniciar(fuente: FuenteFrames) {
@@ -86,7 +95,7 @@ class Lector(
 
     /** Desde `resultado` o `error`, vuelve a `permiso` y reabre la última fuente (SDK-27). */
     suspend fun reintentar() {
-        val f = fuente ?: return
+        val f = ultimaFuente ?: return
         if (destruido) return
         if (!emitir(evento("reintentar"), EstadoLector.Fase.PERMISO)) return
         ejecutar(f)
@@ -102,13 +111,18 @@ class Lector(
     fun destruir() {
         cancelar()
         destruido = true
+        ultimaFuente = null
     }
 
     private suspend fun ejecutar(f: FuenteFrames) {
         fuente = f
+        ultimaFuente = f
         cuenta = 0
         try {
             f.abrir()
+        } catch (e: CancellationException) {
+            if (fuente === f) cancelar()
+            throw e
         } catch (e: ErrorFuente) {
             falla(e.codigo)
             return
@@ -121,14 +135,20 @@ class Lector(
             return
         }
         emitir(evento("camara-lista"))
-        while (estado.value.fase == EstadoLector.Fase.ACTIVO || estado.value.fase == EstadoLector.Fase.LISTO) {
-            if (fuente !== f) return
-            val frame = f.siguiente() ?: return
-            try {
-                procesar(frame)
-            } finally {
-                frame.liberar()
+        try {
+            while (estado.value.fase == EstadoLector.Fase.ACTIVO || estado.value.fase == EstadoLector.Fase.LISTO) {
+                if (fuente !== f) return
+                val frame = f.siguiente() ?: return
+                try {
+                    if (fuente === f) procesar(frame)
+                } finally {
+                    frame.liberar()
+                }
             }
+        } catch (e: CancellationException) {
+            // La corrutina del integrador se canceló: igual que cancelar(), fase inicio y cámara liberada (NAT-02).
+            if (fuente === f) cancelar()
+            throw e
         }
     }
 
@@ -229,8 +249,11 @@ class Lector(
     /** Aplica `transicion()` del bundle; con `esperada`, indica si la fase resultante es esa. */
     @Synchronized
     private fun emitir(evento: JsonElement, esperada: EstadoLector.Fase? = null): Boolean {
-        val siguiente = motor.llamar("transicion", _estado.value.json, evento) as? JsonObject ?: return false
+        val anterior = _estado.value
+        // `transicion` del bundle nunca lanza y siempre devuelve un estado (NAT-07).
+        val siguiente = motor.llamar("transicion", anterior.json, evento) as JsonObject
         _estado.value = EstadoLector(siguiente)
+        observador?.invoke(anterior, _estado.value)
         return esperada == null || _estado.value.fase == esperada
     }
 }

@@ -39,11 +39,12 @@ class EstadoLector(val json: JsonObject) {
         val validacionId: String? get() = json["validacion_id"]?.texto()
     }
 
-    data class Error(val codigo: String, val mensaje: String)
+    /** `ErrorLector` (SDK-27): `opcion` solo con `opcion-invalida` (NAT-12 "Sesión sin servidor"). */
+    data class Error(val codigo: String, val mensaje: String, val opcion: String? = null)
 
     val fase: Fase get() = Fase.de(json["fase"]?.texto())
     val resultado: Resultado? get() = (json["resultado"] as? JsonObject)?.let(::Resultado)
-    val error: Error? get() = (json["error"] as? JsonObject)?.let { Error(it["codigo"]?.texto().orEmpty(), it["mensaje"]?.texto().orEmpty()) }
+    val error: Error? get() = (json["error"] as? JsonObject)?.let { Error(it["codigo"]?.texto().orEmpty(), it["mensaje"]?.texto().orEmpty(), it["opcion"]?.texto()) }
     val contenido: String? get() = json["contenido"]?.texto()
     val envio: JsonObject? get() = json["envio"] as? JsonObject
     val calidad: JsonObject? get() = json["calidad"] as? JsonObject

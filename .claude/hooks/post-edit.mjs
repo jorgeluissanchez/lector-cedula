@@ -29,7 +29,7 @@ if (hallazgos.length > 0) {
 if (/^(packages|apps)\/.+\.(ts|tsx)$|^tools\/.+\.mjs$/.test(rel)) {
   const lint = correr(`npx eslint --fix "${rel}"`);
   if (!lint.ok) bloquear(`eslint falló en ${rel}:\n${cola(lint.salida)}`);
-  const pruebas = correr(`npx vitest related --run --passWithNoTests "${rel}"`);
+  const pruebas = correr(`npx vitest related --run --passWithNoTests --maxWorkers=1 "${rel}"`);
   if (!pruebas.ok) {
     bloquear(`Pruebas relacionadas con ${rel} en rojo (principio II):\n${cola(pruebas.salida)}`);
   }

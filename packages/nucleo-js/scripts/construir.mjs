@@ -45,8 +45,19 @@ export async function construirNucleo({ salida = resolve(dirPaquete, "dist", "nu
   return salida;
 }
 
+/**
+ * Oráculo de calidad de las pruebas Kotlin (tarea 1.3, NAT-03 y NAT-04): `oraculo/calidad.ts` en `dist/oraculo-calidad.js`.
+ * Solo pruebas: no entra en el bundle ni en el AAR, y no cuenta para el presupuesto de NAT-18.
+ */
+export async function construirOraculo({ salida = resolve(dirPaquete, "dist", "oraculo-calidad.js") } = {}) {
+  const { build } = await import("esbuild");
+  await build({ ...opcionesNucleo(salida), entryPoints: [resolve(dirPaquete, "oraculo", "calidad.ts")], minify: false });
+  return salida;
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const i = process.argv.indexOf("--salida");
   const ruta = await construirNucleo(i >= 0 ? { salida: resolve(process.argv[i + 1]) } : {});
   process.stdout.write(`nucleo-js: ${ruta}\n`);
+  if (i < 0) process.stdout.write(`oráculo de calidad (solo pruebas): ${await construirOraculo()}\n`);
 }

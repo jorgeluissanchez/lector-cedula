@@ -54,7 +54,9 @@ Lector autoalojado de la cédula colombiana (PDF417 amarilla, MRZ digital, OCR),
 - Tope: CPU 70 % y RAM 80 %. `node tools/carga.mjs` mide; `node tools/carga.mjs --esperar` espera a que la CPU baje del 45 % antes de algo pesado.
 - Pesado: `npm run check` completo, `npm test` completo, Playwright, `docker build`/Gradle, Stryker, evals completas. Ligero: pruebas de un archivo, lint de un archivo, edición.
 - Turnos: o varios agentes con tareas ligeras (máximo 3), o una sola tarea pesada con todo lo demás en pausa. Nunca dos pesadas a la vez.
-- Vitest siempre con `--maxWorkers=2`, también la suite completa: con 3 llegó al 100 % porque muchas pruebas lanzan procesos. No dejes daemons vivos: `--no-daemon` en Gradle y cierra servidores de prueba al terminar.
+- Vitest siempre con `--maxWorkers=2`, también la suite completa: con 3 llegó al 100 % porque muchas pruebas lanzan procesos. `vitest.config.ts` ya fija `maxWorkers: 2` y los hooks `post-edit` (1), `stop` y `subagent-stop` (2) también; no lo subas.
+- Una sola carga pesada a la vez: o Vitest o Docker, nunca ambos. Los hooks corren Vitest tras cada edición, así que un agente con Docker en marcha suma esa carga. No dejes daemons vivos: `--no-daemon` en Gradle y cierra servidores de prueba al terminar.
+- Docker: `--cpus=3 --memory=5g` como máximo y Gradle `--no-daemon --max-workers=1`; con 4 CPUs más los programas del usuario llegó al 96 %.
 - `.vscode/settings.json` impide que las extensiones de Java importen `native/android` con Gradle; no lo quites.
 
 ## Errores pasados

@@ -72,3 +72,6 @@ next-env.d.ts
 examples/*/public/lector-cedula/
 .stryker-tmp-*/
 apps/pwa/dist-demo/
+
+# Worktrees de agentes paralelos
+.claude/worktrees/

@@ -10,7 +10,7 @@ const propios = archivosTocados(evento.transcript_path ?? "", undefined, { soloU
 if (propios.length === 0) process.exit(0);
 
 const lista = propios.map((r) => `"${r}"`).join(" ");
-const pruebas = correr(`npx vitest related --run --passWithNoTests ${lista}`);
+const pruebas = correr(`npx vitest related --run --passWithNoTests --maxWorkers=2 ${lista}`);
 if (!pruebas.ok) bloquear(`No termines todavía: hay pruebas en rojo relacionadas con tus cambios.\n${cola(pruebas.salida)}`);
 
 if (propios.some((r) => /^(packages|evals)\//.test(r))) {
