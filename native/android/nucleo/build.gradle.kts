@@ -64,6 +64,8 @@ tasks.register("testDebugUnitTest") {
 pitest {
     // `-PpitClases=a.*,b.*` acota la mutación (p. ej. por tarea); por omisión, todo el núcleo.
     targetClasses.set(((findProperty("pitClases") as String?)?.split(",") ?: listOf("io.github.jorgeluissanchez.lectorcedula.*")))
+    // Sin esto el plugin toma `targetClasses` también como pruebas: acotar a `...mrz.*` dejaba PIT sin ninguna prueba.
+    targetTests.set(listOf("io.github.jorgeluissanchez.lectorcedula.*"))
     testPlugin.set("Kotest")
     // Carga de la máquina (CLAUDE.md): un hilo (`-PpitHilos` para más) y la propiedad de NAT-01 con 100 casos por mutante (1000 en `KJ`).
     threads.set((findProperty("pitHilos") as String?)?.toInt() ?: 1)
@@ -77,8 +79,10 @@ pitest {
     // estado de las corrutinas (ResultKt) y los cuerpos de `runBlocking` e inline de quickjs-kt.
     avoidCallsTo.set(listOf("kotlin.jvm.internal", "kotlin.ResultKt"))
     excludedMethods.set(listOf("invokeSuspend"))
-    excludedClasses.set(listOf("*\$\$inlined\$*"))
+    // `-PpitExcluir=a.B*,...` resta clases a `pitClases` (fragmentos disjuntos del job `pit` de nativo-android).
+    excludedClasses.set(listOf("*\$\$inlined\$*") + ((findProperty("pitExcluir") as String?)?.split(",") ?: emptyList()))
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
-    mutationThreshold.set(85)
+    // En los fragmentos de CI (`-PpitUmbral=0`) el umbral lo aplica tools/pit-resumen.mjs sobre la suma.
+    mutationThreshold.set((findProperty("pitUmbral") as String?)?.toInt() ?: 85)
 }
