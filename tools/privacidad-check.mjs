@@ -81,6 +81,8 @@ const DEPENDENCIA_PROHIBIDA = [
 
 /** OD-40: tampoco el núcleo nativo (Gradle) ni sus manifiestos (permiso NFC). */
 const GRADLE_NATIVO = /^native\/.*build\.gradle\.kts$/;
+/** NAT-05 (sdk-nativo): el wrapper oficial de zxing-cpp, solo por su coordenada exacta; lee el PDF417 (formato único). */
+const GRADLE_PERMITIDA = /(["'])io\.github\.zxing-cpp:android(?::[^"':]*)?\1/g;
 const GRADLE_PROHIBIDO = /com\.google\.mlkit:barcode-scanning|mlkit[-_.:]?barcode|barcode-scanning|com\.google\.zxing|zxing|zbar|(^|[^a-z])nfc([^a-z]|$)|mrtd/i;
 const MANIFIESTO_NATIVO = /^native\/.*AndroidManifest\.xml$/;
 
@@ -129,8 +131,9 @@ function numeroNoDeclarado([valor, opcional]) {
 function revisarNativo(r, contenido) {
   const gradle = GRADLE_NATIVO.test(r);
   return contenido.split(/\r?\n/).flatMap((texto, i) => {
-    if (gradle && !/^\s*\/\//.test(texto) && GRADLE_PROHIBIDO.test(texto)) {
-      const artefacto = /["']([^"']+)["']/.exec(texto)?.[1] ?? texto.trim();
+    const revisable = gradle ? texto.replace(GRADLE_PERMITIDA, "") : texto;
+    if (gradle && !/^\s*\/\//.test(texto) && GRADLE_PROHIBIDO.test(revisable)) {
+      const artefacto = /["']([^"']+)["']/.exec(revisable)?.[1] ?? texto.trim();
       return [{ ruta: r, linea: i + 1, mensaje: `OD-40: dependencia nativa de QR, códigos de barras de terceros o NFC prohibida: ${artefacto}` }];
     }
     if (!gradle && /android\.permission\.NFC\b/.test(texto)) {
