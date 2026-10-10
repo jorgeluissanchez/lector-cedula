@@ -27,7 +27,12 @@ jobs:
             NODE_ENV=test npx vitest run packages/motor/test/motor.test.ts -t "MOT-07 Copias a cero" --maxWorkers=1 > "salida-$1.txt" 2>&1
             echo $? > "codigo-$1.txt"
           }
-          for ronda in $(seq 1 10); do
+          npx vitest run packages/motor/test/motor.test.ts -t "DIAG-MOT07 forzado" --maxWorkers=1 2>&1 | grep -E "DIAG-FORZADO|✓|×" || true
+          correr() {
+            npx vitest run packages/motor/test/motor.test.ts packages/motor/test/privacidad.test.ts packages/motor/test/fraude-entrada.test.ts -t "^(?!DIAG)" > "salida-$1.txt" 2>&1
+            echo $? > "codigo-$1.txt"
+          }
+          for ronda in $(seq 1 6); do
             correr "$ronda-a" & pa=$!
             correr "$ronda-b" & pb=$!
             wait $pa $pb || true

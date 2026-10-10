@@ -192,6 +192,33 @@ describe("motor real", { timeout: 180_000 }, () => {
     }
   });
 
+  it("DIAG-MOT07 forzado: el tiempo se agota antes de que la decodificación lea la copia", async () => {
+    const clave = Symbol.for("@lector-cedula/motor.registroBuferes");
+    const registro: (Uint8Array | Uint8ClampedArray)[] = [];
+    (globalThis as Record<symbol, unknown>)[clave] = registro;
+    const capturados: (() => void)[] = [];
+    const original = globalThis.setTimeout;
+    try {
+      const m = await motor({ hilos: 0 });
+      await m.leerDocumento(A, FECHA);
+      registro.length = 0;
+      globalThis.setTimeout = ((fn: () => void) => {
+        capturados.push(fn);
+        return original(() => {}, 1);
+      }) as unknown as typeof setTimeout;
+      const p = codigo(m.leerDocumento(D, { ...FECHA, tiempoMaximoMs: 1 }));
+      globalThis.setTimeout = original;
+      console.log(`DIAG-FORZADO capturados=${capturados.length}`);
+      capturados[0]?.();
+      console.log(`DIAG-FORZADO codigo=${await p}`);
+      await new Promise((r) => original(r, 20_000));
+      console.log(`DIAG-FORZADO longitud=${registro.length} tipos=${registro.map((b) => b.constructor.name).join(",")} ceros=${registro.map((b) => b.every((x) => x === 0)).join(",")}`);
+    } finally {
+      globalThis.setTimeout = original;
+      Reflect.deleteProperty(globalThis, clave);
+    }
+  });
+
   it("MOT-08 el registro solo recibe evento, duración y código", async () => {
     const eventos: unknown[] = [];
     const m = await motor({ hilos: 1, registro: (e) => eventos.push(e) });
