@@ -27,6 +27,8 @@ const PROHIBIDOS = [
 const EXCEPCIONES: Readonly<Record<string, ReadonlySet<string>>> = {
   "apps/pwa/src/sw.ts": new Set(["fetch(", "caches"]),
   "packages/capture/src/mrz/entorno.ts": new Set(["convertToBlob"]),
+  // demo-opciones (DOP-06): preferencias de interfaz de la demo (forma de cámara, TI, fraude), nunca datos leídos.
+  "apps/pwa/src/preferencias.ts": new Set(["localStorage"]),
 };
 
 function archivos(dir: string): string[] {
@@ -54,6 +56,11 @@ function hallazgos(raiz = RAIZ, bases: readonly string[] = ["packages/capture/sr
 describe("CAM-11 análisis estático", () => {
   it("CAM-11 Código fuente sin salidas de datos", () => {
     expect(hallazgos()).toStrictEqual([]);
+  });
+
+  it("DOP-06 CAM-11 con la excepción: preferencias.ts solo con localStorage", () => {
+    expect([...(EXCEPCIONES["apps/pwa/src/preferencias.ts"] ?? [])]).toStrictEqual(["localStorage"]);
+    expect(Object.keys(EXCEPCIONES).sort()).toStrictEqual(["apps/pwa/src/preferencias.ts", "apps/pwa/src/sw.ts", "packages/capture/src/mrz/entorno.ts"]);
   });
 
   it("CAM-11 el analizador detecta identificadores prohibidos en .ts, .tsx, .js, .mjs y .html", () => {

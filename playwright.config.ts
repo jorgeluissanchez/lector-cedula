@@ -39,6 +39,14 @@ const proyectosLectura: Project[] = [
   use: { ...dispositivo, baseURL: "http://localhost:4173", video: "retain-on-failure", launchOptions: { args: CAMARA } },
 }));
 
+/**
+ * demo-opciones (job `e2e-demo` de CI): con `E2E_SERVIDORES=pwa` solo se levantan los dos primeros servidores, la PWA
+ * normal (4173) y la demo (4175); el resto de ejemplos no se compila.
+ */
+function filtrarServidores<T>(servidores: T[]): T[] {
+  return process.env.E2E_SERVIDORES === "pwa" ? servidores.slice(0, 2) : servidores;
+}
+
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
@@ -49,7 +57,7 @@ export default defineConfig({
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: "disabled" } },
   // E2E_SIN_SERVIDORES=1: suites que traen su propio servidor (e2e/sdk/alojado.spec.ts contra api-pruebas en Docker) no
   // compilan ni levantan los servidores locales.
-  webServer: process.env.E2E_SIN_SERVIDORES === "1" ? [] : [
+  webServer: process.env.E2E_SIN_SERVIDORES === "1" ? [] : filtrarServidores([
     {
       command: "npm run build -w apps/pwa && npm run preview -w apps/pwa -- --port 4173 --strictPort",
       url: "http://localhost:4173",
@@ -117,7 +125,7 @@ export default defineConfig({
       timeout: 600_000,
       env: { NEXT_TELEMETRY_DISABLED: "1", NG_CLI_ANALYTICS: "false" },
     })),
-  ],
+  ]),
   use: {
     trace: "on-first-retry",
     screenshot: "only-on-failure",
@@ -161,7 +169,9 @@ export default defineConfig({
     ...proyectosCaptura,
     ...proyectosLectura,
     // mitigacion-autor (MA-02, MA-03): aviso de la demo y ausencia de envíos.
-    { name: "demo-chromium", testDir: "e2e/demo", use: { ...DISPOSITIVOS.escritorio, baseURL: "http://localhost:4175", launchOptions: { args: CAMARA } } },
+    { name: "demo-chromium", testDir: "e2e/demo", use: { ...DISPOSITIVOS.escritorio, baseURL: "http://localhost:4175", video: "retain-on-failure", launchOptions: { args: CAMARA } } },
+    // demo-opciones: el panel de opciones también en móvil (cada spec elige su vídeo).
+    { name: "demo-pixel7", testDir: "e2e/demo", use: { ...DISPOSITIVOS.pixel, baseURL: "http://localhost:4175", video: "retain-on-failure", launchOptions: { args: CAMARA } } },
     // despliegue-produccion (DP-07): PWA servida con las cabeceras de producción (CSP incluida).
     { name: "despliegue-chromium", testDir: "e2e/despliegue", use: { ...DISPOSITIVOS.escritorio, baseURL: "http://localhost:4180", launchOptions: { args: CAMARA } } },
     ...(CON_WEBKIT ? [{

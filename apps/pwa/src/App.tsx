@@ -1,9 +1,13 @@
 // Pantallas de la PWA (design.md, decisiones 8 y 9): `inicio`, `activo`, `pausado`, `listo` y `error`; y las de lectura
 // (pwa-lectura-offline, OFF-09, OFF-13, OFF-14, OFF-18, OFF-19): `leyendo`, `resultado` y `error-lectura`.
-import { calcularGuia, guiaEnPantalla, TEXTOS_ENTORNO, TEXTOS_ERROR_CAMARA, TEXTOS_ERROR_LECTURA, type Caja } from "@lector-cedula/capture";
+import { TEXTOS_ENTORNO, TEXTOS_ERROR_CAMARA, TEXTOS_ERROR_LECTURA, type Caja } from "@lector-cedula/capture";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "preact/hooks";
 import { diagnosticoActivo, lineasDiagnostico, type Diagnostico } from "./diagnostico";
 import { ESTADO_INICIAL, reducir, type CodigoError } from "./estado";
+import { guiaEnPantallaDeForma, RECUADROS, TEXTO_DE_PIE, type FormaCamara } from "./forma";
+import { fraudeEfectivo, tiEfectiva } from "./opciones";
+import { almacenNavegador, guardarPreferencias, leerPreferencias, PREFERENCIAS_POR_OMISION, type Preferencias } from "./preferencias";
+import type { OpcionesSesion } from "./sesion";
 import { iniciarIndicador, TEXTOS_OFFLINE, type EstadoOffline } from "./precache/indicador";
 import { fragmentos, RUTA_AUTORIZACION_TI, RUTA_POLITICA, RUTA_TERMINOS, TEXTO_ALCANCE, TEXTO_CASILLA_REPRESENTANTE, type Bloque } from "./legal";
 import { LICENCIA_CC_BY_SA, RUTA_AVISOS, SECCIONES_LICENCIAS, TEXTO_ENLACE_FUENTES } from "./licencias";
@@ -76,15 +80,18 @@ function Boton(props: { texto: string; alPulsar: () => void; secundario?: boolea
   );
 }
 
-/** Guía decorativa (CAM-08, CAM-09) sobre el vídeo mostrado con `object-fit: contain`. */
-function Guia(props: { video: HTMLVideoElement | null }) {
+/**
+ * Guía decorativa (CAM-08, CAM-09) sobre el vídeo: a pantalla completa con `object-fit: contain`; en los recuadros de
+ * demo-opciones (DOP-03a) con `object-fit: cover` y la orientación del recuadro.
+ */
+function Guia(props: { video: HTMLVideoElement | null; forma: FormaCamara }) {
   const [caja, setCaja] = useState<Caja | null>(null);
   useEffect(() => {
     const v = props.video;
     if (v === null) return;
     const medir = () => {
       if (v.videoWidth === 0) return;
-      setCaja(guiaEnPantalla(calcularGuia(v.videoWidth, v.videoHeight), v.videoWidth, v.videoHeight, v.clientWidth, v.clientHeight));
+      setCaja(guiaEnPantallaDeForma(props.forma, { anchoVideo: v.videoWidth, altoVideo: v.videoHeight, anchoElemento: v.clientWidth, altoElemento: v.clientHeight }));
     };
     medir();
     v.addEventListener("loadedmetadata", medir);
@@ -95,9 +102,82 @@ function Guia(props: { video: HTMLVideoElement | null }) {
       v.removeEventListener("resize", medir);
       window.removeEventListener("resize", medir);
     };
-  }, [props.video]);
+  }, [props.video, props.forma]);
   if (caja === null) return null;
   return <div class="guia" aria-hidden="true" style={{ left: `${caja.x}px`, top: `${caja.y}px`, width: `${caja.ancho}px`, height: `${caja.alto}px` }} />;
+}
+
+/** demo-opciones (DOP-01): textos literales del panel. */
+export const TEXTOS_OPCIONES = Object.freeze({
+  boton: "Opciones",
+  titulo: "Opciones de la demostración",
+  forma: "Forma de la cámara",
+  formas: Object.freeze({ "pantalla-completa": "Pantalla completa", "recuadro-horizontal": "Recuadro horizontal", "recuadro-vertical": "Recuadro vertical (cédula de pie)" }),
+  ti: "Admitir tarjeta de identidad (menores de edad)",
+  notaTi: "Al leer el documento de un menor se pedirá la autorización de su representante legal antes de mostrar los datos.",
+  fraude: "Señal de fraude",
+  notaFraude: "Señal orientativa calculada en tu dispositivo; no confirma la autenticidad del documento.",
+  recordadas: "Estas preferencias se recuerdan en este navegador. Ningún dato del documento se guarda.",
+});
+
+/**
+ * DOP-01: botón "Opciones" (disclosure con `aria-expanded`) y región con la forma de la cámara, la TI y la señal de
+ * fraude. Lo forzado por la compilación o la URL se muestra marcado y deshabilitado (decisión 7).
+ */
+function PanelOpciones(props: {
+  abierto: boolean;
+  alternar: () => void;
+  forma: FormaCamara;
+  tarjetaIdentidad: boolean;
+  tiForzada: boolean;
+  fraude: boolean;
+  fraudeForzado: boolean;
+  cambiar: (cambio: Partial<Preferencias>) => void;
+}) {
+  const t = TEXTOS_OPCIONES;
+  const formas = Object.keys(t.formas) as FormaCamara[];
+  return (
+    <>
+      <button type="button" class="boton secundario" aria-expanded={props.abierto} aria-controls="panel-opciones" onClick={props.alternar}>
+        {t.boton}
+      </button>
+      <section id="panel-opciones" class="opciones" aria-labelledby="titulo-opciones" hidden={!props.abierto}>
+        <h2 id="titulo-opciones">{t.titulo}</h2>
+        <fieldset>
+          <legend>{t.forma}</legend>
+          {formas.map((f) => (
+            <label class="opcion" key={f}>
+              <input type="radio" name="forma" value={f} checked={props.forma === f} onChange={() => props.cambiar({ forma: f })} />
+              <span>{t.formas[f]}</span>
+            </label>
+          ))}
+        </fieldset>
+        <label class="opcion">
+          <input
+            type="checkbox"
+            checked={props.tarjetaIdentidad}
+            disabled={props.tiForzada}
+            aria-describedby="nota-ti"
+            onChange={(e) => props.cambiar({ tarjetaIdentidad: (e.currentTarget as HTMLInputElement).checked })}
+          />
+          <span>{t.ti}</span>
+        </label>
+        <p id="nota-ti" class="nota">{t.notaTi}</p>
+        <label class="opcion">
+          <input
+            type="checkbox"
+            checked={props.fraude}
+            disabled={props.fraudeForzado}
+            aria-describedby="nota-fraude"
+            onChange={(e) => props.cambiar({ fraude: (e.currentTarget as HTMLInputElement).checked })}
+          />
+          <span>{t.fraude}</span>
+        </label>
+        <p id="nota-fraude" class="nota">{t.notaFraude}</p>
+        <p class="nota">{t.recordadas}</p>
+      </section>
+    </>
+  );
 }
 
 export function App() {
@@ -107,11 +187,26 @@ export function App() {
   // OFF-29: diagnóstico solo con ?debug=1, en memoria (números y códigos).
   const [diagnostico, setDiagnostico] = useState<Diagnostico | null>(null);
   const depurar = useMemo(() => diagnosticoActivo(location.search), []);
+  // demo-opciones (DOP-02a): preferencias del panel, solo en la demo; fuera de ella no se lee ni se escribe nada.
+  const [preferencias, setPreferencias] = useState<Preferencias>(() => (__DEMO__ ? leerPreferencias(almacenNavegador()) : PREFERENCIAS_POR_OMISION));
+  const [panelAbierto, setPanelAbierto] = useState(false);
+  const fraudeForzado = useMemo(() => fraudeActivo(import.meta.env.VITE_FRAUDE as string | undefined, location.search), []);
+  // DOP-04 y DOP-05: lo forzado por la compilación o la URL manda; la preferencia solo cuenta en la demo.
+  const tiActiva = tiEfectiva({ compilacion: ADMITIR_TI, demo: __DEMO__, preferencia: preferencias.tarjetaIdentidad });
+  const fraude = fraudeEfectivo({ forzado: fraudeForzado, demo: __DEMO__, preferencia: preferencias.fraude });
+  const forma: FormaCamara = __DEMO__ ? preferencias.forma : "pantalla-completa";
+  const opcionesRef = useRef<OpcionesSesion>({});
+  opcionesRef.current = { fraude, admitirTarjetaIdentidad: tiActiva, forma };
+  const cambiarPreferencias = (cambio: Partial<Preferencias>) => {
+    const nuevas = { ...preferencias, ...cambio };
+    setPreferencias(nuevas);
+    guardarPreferencias(almacenNavegador(), nuevas);
+  };
   const sesion = useMemo(
     () =>
       crearSesion(
         { evento: despachar, feedback: setFeedback, ...(depurar ? { diagnostico: setDiagnostico } : {}) },
-        { fraude: fraudeActivo(import.meta.env.VITE_FRAUDE as string | undefined, location.search), admitirTarjetaIdentidad: ADMITIR_TI },
+        () => opcionesRef.current,
       ),
     [depurar],
   );
@@ -196,9 +291,19 @@ export function App() {
       data-tipo-documento={p === "resultado" ? estado.lectura.tipoDocumento : undefined}
     >
       {p === "activo" && (
-        <div class="escena">
-          <video ref={refVideo} class="video" autoplay playsInline muted />
-          <Guia video={video} />
+        <div class="escena" data-forma={forma}>
+          {forma === "pantalla-completa" ? (
+            <>
+              <video ref={refVideo} class="video" autoplay playsInline muted />
+              <Guia video={video} forma={forma} />
+            </>
+          ) : (
+            // DOP-03: recuadro de examples/login (SDK-64) con object-fit: cover.
+            <div class="recuadro" style={{ width: `${RECUADROS[forma].ancho}px`, height: `${RECUADROS[forma].alto}px` }}>
+              <video ref={refVideo} class="video" autoplay playsInline muted />
+              <Guia video={video} forma={forma} />
+            </div>
+          )}
         </div>
       )}
       <div class="panel">
@@ -222,7 +327,7 @@ export function App() {
                 <a class="enlace" href={RUTA_TERMINOS}>
                   Términos de uso
                 </a>
-                {ADMITIR_TI && (
+                {tiActiva && (
                   <>
                     {" · "}
                     <a class="enlace" href={RUTA_AUTORIZACION_TI}>
@@ -239,12 +344,25 @@ export function App() {
             <p class="offline" role="status" data-offline={offline}>
               {TEXTOS_OFFLINE[offline]}
             </p>
+            {__DEMO__ && (
+              <PanelOpciones
+                abierto={panelAbierto}
+                alternar={() => setPanelAbierto(!panelAbierto)}
+                forma={forma}
+                tarjetaIdentidad={tiActiva}
+                tiForzada={ADMITIR_TI}
+                fraude={fraude}
+                fraudeForzado={fraudeForzado}
+                cambiar={cambiarPreferencias}
+              />
+            )}
           </>
         )}
         <p class="estado" role="status" aria-live="polite">
           {textoEstado}
         </p>
         {estado.aviso !== null && p === "activo" && <p class="aviso">{estado.aviso}</p>}
+        {p === "activo" && forma === "recuadro-vertical" && <p class="indicacion">{TEXTO_DE_PIE}</p>}
         {p === "leyendo" && (
           <div class="progreso">
             <progress aria-label="Progreso de la lectura" />

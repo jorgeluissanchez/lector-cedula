@@ -85,7 +85,7 @@ f) Acceder gratuitamente a sus datos.
 
 Si [RAZÓN SOCIAL] activa esta opción, también se lee la tarjeta de identidad de personas de 7 a 17 años. Antes de mostrar los datos, el representante legal del menor debe autorizar el tratamiento, tras escuchar la opinión del menor según su madurez y en su interés superior (Ley 1581 de 2012, artículo 7; Decreto 1377 de 2013, artículo 12). No se guardan imágenes ni datos en el dispositivo y el resultado de un menor no se conserva. Ver la [autorización del representante legal](URL-AUTORIZACION-TI).
 
-Cuando la opción está activa: (a) la finalidad es la misma de la sección 3; (b) se exige la autorización expresa del representante legal antes de devolver datos; (c) el resultado de un menor no se guarda en el almacén de resultados (retención 0) y el webhook solo lleva identificador, estado y tipo de documento; (d) los menores de 7 años se rechazan (su documento es el registro civil). Activarla (`LECTOR_ADMITIR_TI` o `VITE_ADMITIR_TI`) exige revisión jurídica previa.
+Cuando la opción está activa: (a) la finalidad es la misma de la sección 3; (b) se exige la autorización expresa del representante legal antes de devolver datos; (c) el resultado de un menor no se guarda en el almacén de resultados (retención 0) y el webhook solo lleva identificador, estado y tipo de documento; (d) los menores de 7 años se rechazan (su documento es el registro civil). Activarla (`LECTOR_ADMITIR_TI`, `VITE_ADMITIR_TI` o, en la demostración compilada con `VITE_DEMO=true`, la casilla del panel de opciones) exige revisión jurídica previa.
 
 ## 9. Encargados y transmisión internacional de datos
 

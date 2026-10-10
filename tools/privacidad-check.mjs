@@ -39,6 +39,11 @@ const REGLAS_LINEA = [
 const OFF11_RUTAS = /^(apps\/pwa\/src|packages\/capture\/src)\//;
 const OFF11_PATRON = /\b(localStorage|sessionStorage|indexedDB)\b|\bdocument\.cookie\b/;
 const OFF11_MENSAJE = "OFF-11: almacenamiento del navegador (localStorage, sessionStorage, indexedDB, document.cookie) prohibido en la PWA y la captura";
+/**
+ * demo-opciones (DOP-06): única excepción, `localStorage` en este archivo exacto (preferencias de interfaz de la demo:
+ * forma de cámara, TI y fraude; nunca datos leídos). El resto de almacenamientos sigue prohibido también aquí.
+ */
+const EXCEPCION_PREFERENCIAS = "apps/pwa/src/preferencias.ts";
 
 /**
  * NAT-13 (sdk-nativo): el núcleo nativo (Kotlin y Swift fuera de pruebas) no persiste imágenes, frames ni resultados
@@ -207,7 +212,9 @@ export function revisarArchivo(ruta, contenido) {
   const off11 = OFF11_RUTAS.test(r) && !ES_TEST.test(r);
   const nativo = NATIVO_RUTAS.test(r) && !NATIVO_PRUEBA.test(r);
   const manifiesto = MANIFIESTO_LIBRERIA.test(r);
-  lineas.forEach((texto, i) => {
+  const preferencias = r === EXCEPCION_PREFERENCIAS;
+  lineas.forEach((crudo, i) => {
+    const texto = preferencias ? crudo.replace(/\blocalStorage\b/g, "") : crudo;
     if (manifiesto && /android\.permission\.INTERNET\b/.test(texto)) {
       hallazgos.push({ ruta: r, linea: i + 1, mensaje: "NAT-13: el manifiesto de la librería no declara android.permission.INTERNET" });
       return;

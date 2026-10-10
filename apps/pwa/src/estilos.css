@@ -60,3 +60,21 @@ h1 { font-size: 1.5rem; margin: 0; }
    ensanchan la página en el móvil (tapaban "Continuar" y "Cancelar" en Pixel 7). */
 .autorizacion-representante { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .autorizacion-representante p, .autorizacion-representante li { margin: 0; overflow-wrap: anywhere; }
+
+/* demo-opciones (DOP-01): panel de opciones de la demo; controles de 24 px y filas de 44 px (CAM-09). */
+.panel > .boton[aria-controls="panel-opciones"] { align-self: flex-start; }
+.opciones { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #4b5563; border-radius: 8px; }
+.opciones[hidden] { display: none; }
+.opciones h2 { font-size: 1.125rem; margin: 0; }
+.opciones fieldset { margin: 0; padding: 8px 12px; border: 1px solid #4b5563; border-radius: 8px; }
+.opciones legend { padding: 0 4px; }
+.opcion { display: flex; gap: 12px; align-items: center; min-height: 44px; cursor: pointer; }
+.opcion input { width: 24px; height: 24px; flex: none; margin: 0; }
+.opcion input:disabled + span { color: #d1d5db; }
+.nota { margin: 0; font-size: 0.875rem; color: #d1d5db; }
+
+/* demo-opciones (DOP-03): recuadros de examples/login (SDK-64) con object-fit: cover. */
+.escena[data-forma^="recuadro"] { display: flex; justify-content: center; align-items: flex-start; padding-top: 16px; }
+.recuadro { position: relative; flex: none; overflow: hidden; border-radius: 12px; background: #000; }
+.recuadro .video { object-fit: cover; }
+.indicacion { margin: 0; padding: 8px 12px; background: #1e3a5f; color: #e0f2fe; border-radius: 8px; }

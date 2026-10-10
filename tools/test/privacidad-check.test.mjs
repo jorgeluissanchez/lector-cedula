@@ -81,6 +81,28 @@ describe("OFF-11: nada persiste en la PWA ni en captura", () => {
     expect(revisarArchivo("packages/parsers/src/x.ts", "document.cookie;\n")).toHaveLength(0);
   });
 
+  // demo-opciones, DOP-06: única excepción, `localStorage` en apps/pwa/src/preferencias.ts (preferencias de la demo).
+  it("DOP-06 Excepción solo en preferencias.ts", () => {
+    expect(revisarArchivo("apps/pwa/src/preferencias.ts", "localStorage.getItem(k);\n")).toStrictEqual([]);
+    const sesion = revisarArchivo("apps/pwa/src/preferencias.ts", "sessionStorage.getItem(k);\n");
+    expect(sesion).toHaveLength(1);
+    expect(sesion[0].mensaje).toMatch(/OFF-11/);
+    const app = revisarArchivo("apps/pwa/src/App.tsx", "localStorage.getItem(k);\n");
+    expect(app).toHaveLength(1);
+    expect(app[0].mensaje).toMatch(/OFF-11/);
+  });
+
+  it("DOP-06 la excepción no cubre otros almacenamientos en la misma línea ni otras rutas parecidas", () => {
+    for (const linea of ["localStorage.x; indexedDB.open('a');", "localStorage.x; document.cookie = 'a';"]) {
+      const h = revisarArchivo("apps/pwa/src/preferencias.ts", `${linea}\n`);
+      expect(h, linea).toHaveLength(1);
+      expect(h[0].mensaje).toMatch(/OFF-11/);
+    }
+    for (const ruta of ["apps/pwa/src/sub/preferencias.ts", "apps/pwa/src/preferencias.tsx", "packages/capture/src/preferencias.ts", "apps/pwa/src/preferencias.ts.bak"]) {
+      expect(revisarArchivo(ruta, "localStorage.getItem(k);\n").length, ruta).toBeGreaterThan(0);
+    }
+  });
+
   it("el repositorio real cumple OFF-11", () => {
     const archivos = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "apps/pwa/src", "packages/capture/src"], { encoding: "utf8" })
       .split(/\r?\n/).filter(Boolean);
