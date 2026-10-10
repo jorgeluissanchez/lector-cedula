@@ -106,15 +106,24 @@ async function main() {
   const salida = i >= 0 ? resolve(process.argv[i + 1]) : SALIDA_POR_DEFECTO;
   const { PERSONA_BASE, generarMrzTd1 } = await import("@lector-cedula/fixtures");
   const { PNG } = (await import("pngjs")).default;
-  const { crearRenderizador } = await import("../../evals/sinteticos/render-mrz.mjs");
+  const jpeg = (await import("jpeg-js")).default;
+  const { crearRenderizador, DISTORSIONES } = await import("../../evals/sinteticos/render-mrz.mjs");
   const mrz = generarMrzTd1(PERSONA_BASE, { semilla: 1 });
   const render = await crearRenderizador();
   try {
-    const rgba = async (lineas) => {
-      const png = PNG.sync.read(Buffer.from((await render.render(lineas)).bytes));
-      return { data: new Uint8ClampedArray(png.data), width: png.width, height: png.height };
+    const rgba = async (lineas, opciones) => {
+      const bytes = Buffer.from((await render.render(lineas, opciones)).bytes);
+      const img = bytes[0] === 0xff && bytes[1] === 0xd8 ? jpeg.decode(bytes, { useTArray: true, formatAsRGBA: true }) : PNG.sync.read(bytes);
+      return { data: new Uint8ClampedArray(img.data), width: img.width, height: img.height };
     };
-    const casos = escribir(salida, escenas(await rgba(mrz.lineas), await rgba(LINEAS_PASAPORTE), [...mrz.lineas]));
+    const lineas = [...mrz.lineas];
+    // Conjunto E del eval mrz-imagen (evals/sinteticos): reverso limpio, sus 9 distorsiones y la foto F, para PERSONA_BASE.
+    const conjuntoE = [
+      { nombre: "reverso", formato: "td1", lineas, imagen: await rgba(lineas) },
+      ...(await Promise.all(DISTORSIONES.map(async (d) => ({ nombre: `reverso-${d}`, formato: "td1", lineas, imagen: await rgba(lineas, { distorsion: d, semillaRuido: 1 }) })))),
+      { nombre: "reverso-foto", formato: "td1", lineas, imagen: await rgba(lineas, { foto: true }) },
+    ];
+    const casos = escribir(salida, [...escenas(conjuntoE[0].imagen, await rgba(LINEAS_PASAPORTE), lineas), ...conjuntoE]);
     process.stdout.write(`fixtures MRZ (${casos.length}): ${salida}\n`);
   } finally {
     await render.cerrar();

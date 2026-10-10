@@ -1,4 +1,5 @@
 import java.math.BigDecimal
+import java.security.MessageDigest
 
 // Núcleo Kotlin sin Android (sdk-nativo): lógica pura probada en la JVM con Kotest (Apache-2.0) y mutación con PIT
 // (Apache-2.0, gradle-pitest-plugin de szpak). `KJ` (`testDebugUnitTest`) también corre estas pruebas.
@@ -71,7 +72,7 @@ val copiarModeloMrz = tasks.register<Copy>("copiarModeloMrz") {
         @Suppress("UNCHECKED_CAST")
         val entradas = groovy.json.JsonSlurper().parse(manifiestoModelos.asFile) as List<Map<String, Any?>>
         val esperado = entradas.single { it["nombre"] == "tesseract-mrz" }["sha256"]
-        val real = java.security.MessageDigest.getInstance("SHA-256").digest(modeloMrz.asFile.readBytes()).joinToString("") { "%02x".format(it) }
+        val real = MessageDigest.getInstance("SHA-256").digest(modeloMrz.asFile.readBytes()).joinToString("") { "%02x".format(it) }
         check(real == esperado) { "mrz.traineddata no coincide con models/manifest.json ($real)" }
     }
 }
