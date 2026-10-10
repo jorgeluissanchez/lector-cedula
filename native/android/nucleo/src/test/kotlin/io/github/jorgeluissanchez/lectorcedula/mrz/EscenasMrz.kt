@@ -45,7 +45,7 @@ object EscenasMrz {
     /** Lienzo blanco con 3 barras negras de 2 px inclinadas `grados` (la de `enderezar.test.ts`). */
     fun barras(grados: Double, w: Int = 400, h: Int = 200): ImagenRgba {
         val c = Lienzo(w, h, 255)
-        val tan = Math.tan(grados * Math.PI / 180)
+        val tan = StrictMath.tan(grados * Math.PI / 180)
         for (y0 in intArrayOf(60, 100, 140)) {
             for (x in 20 until w - 20) {
                 val y = PlanMrz.redondearJs(y0 + (x - w / 2.0) * tan).toInt()
