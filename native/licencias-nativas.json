@@ -52,6 +52,6 @@
     { "nombre": "PIT (org.pitest)", "licencia": "Apache-2.0", "fuente": "https://github.com/hcoles/pitest/blob/master/LICENSE" },
     { "nombre": "Gradle 9.8.1", "licencia": "Apache-2.0", "fuente": "https://github.com/gradle/gradle/blob/master/LICENSE" },
     { "nombre": "Eclipse Temurin 21 (imagen docker/android-sdk)", "licencia": "GPL-2.0-with-classpath-exception", "fuente": "https://adoptium.net/docs/faq/", "justificacion": "Solo herramienta de compilación; no se redistribuye." },
-    { "nombre": "Android SDK command-line tools, platform android-35, build-tools 35.0.1, NDK 28.2.13676358, CMake 3.31.6", "licencia": "Android-SDK-License-Agreement", "fuente": "https://developer.android.com/studio/terms", "justificacion": "Solo herramienta de compilación dentro de docker/android-sdk; fuera de la lista permitida: pendiente de revisor-licencias y de aceptación humana de los términos (docs/investigacion/07-bindings-nativos.md)." }
+    { "nombre": "Android SDK command-line tools, platform android-36, build-tools 35.0.1, NDK 28.2.13676358, CMake 3.31.6", "licencia": "Android-SDK-License-Agreement", "fuente": "https://developer.android.com/studio/terms", "justificacion": "Solo herramienta de compilación dentro de docker/android-sdk; fuera de la lista permitida: pendiente de revisor-licencias y de aceptación humana de los términos (docs/investigacion/07-bindings-nativos.md)." }
   ]
 }

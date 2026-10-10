@@ -37,7 +37,16 @@ interface LectorCodigosNativo {
 /** Luminancia BT.601 entera, igual que `aGris` de `packages/capture/src/pdf417/localizar.ts` (redondeo de `Math.round`). */
 object Luminancia {
     fun deRgba(rgba: ByteArray, ancho: Int, alto: Int): ByteArray {
-        return ByteArray(ancho * alto) // ROJO TDD: sin implementar
+        require(ancho > 0 && alto > 0 && rgba.size >= ancho * alto * 4) { "frame-invalido" }
+        val luma = ByteArray(ancho * alto)
+        for (i in luma.indices) {
+            val o = i * 4
+            val r = rgba[o].toInt() and 0xFF
+            val g = rgba[o + 1].toInt() and 0xFF
+            val b = rgba[o + 2].toInt() and 0xFF
+            luma[i] = ((299 * r + 587 * g + 114 * b + 500) / 1000).toByte()
+        }
+        return luma
     }
 }
 
@@ -48,8 +57,12 @@ object Luminancia {
  * entregan quedan a cero (NAT-13). Un fallo del binding equivale a "sin lectura en este frame".
  */
 class DecodificadorPdf417(private val nativo: LectorCodigosNativo) : Decodificador {
+    init {
+        require(nativo.formatos == OpcionesPdf417.FORMATOS) { "formatos-no-admitidos" }
+    }
+
     override fun leer(frame: FrameCamara, contenido: Contenido?): Lectura? {
-        if (frame.ancho > 0) return null // ROJO TDD: sin implementar
+        if (contenido != null && contenido != Contenido.PDF417) return null
         val luma = Luminancia.deRgba(frame.pixeles, frame.ancho, frame.alto)
         val codigos = try {
             nativo.leer(luma, frame.ancho, frame.alto)

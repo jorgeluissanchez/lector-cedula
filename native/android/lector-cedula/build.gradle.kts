@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "io.github.jorgeluissanchez.lectorcedula"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 24
