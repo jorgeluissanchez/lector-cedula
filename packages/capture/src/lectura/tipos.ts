@@ -2,6 +2,7 @@
 import type {
   buscarDivipol,
   parsearPdf417Amarilla,
+  Rh,
 } from "@lector-cedula/parsers";
 import type { LectorMrz } from "../mrz/lector.js";
 import type { Pixeles, ResultadoPdf417Imagen } from "../pdf417/decodificar.js";
@@ -18,22 +19,42 @@ export type TipoDocumento = "cedula-ciudadania" | "cedula-extranjeria" | "pasapo
 /** OD-22: zona del documento de la que salen los campos. */
 export type FuenteLectura = "pdf417" | "mrz-td1" | "mrz-td3";
 
+/** SDK-65: fecha del calendario como `AAAA-MM-DD` (alias documentado de `string`, sin hora ni zona). */
+export type FechaIso = string;
+
+/** SDK-65: sexo del documento. `X` (no especificado) solo lo da la cédula digital (MZ-14); la amarilla da `M` o `F`. */
+export type SexoDocumento = "M" | "F" | "X";
+
+/** SDK-65: lugar de nacimiento de la amarilla según DIVIPOL o los consulados 2018 (OFF-08, DC-08). */
+export interface LugarNacimiento {
+  /** 5 dígitos DIVIPOL (departamento y municipio). */
+  readonly codigo: string;
+  readonly departamento: string;
+  readonly municipio: string;
+}
+
+export type { Rh };
+
 /**
- * OD-22a: campos comunes. `nuip`, `rh` y `lugarNacimiento` solo aparecen cuando la fuente los aporta (la amarilla los
- * tres; la digital, el NUIP).
+ * OD-22a y SDK-65: campos comunes. `nuip`, `rh` y `lugarNacimiento` solo aparecen cuando la fuente los aporta (la
+ * amarilla y la TI por PDF417 los tres; la digital, el NUIP; CE y pasaporte, ninguno).
  */
 export interface CamposDocumento {
+  /** Enmascarado (`********56`) salvo con `enmascarar: false`. */
   readonly numeroDocumento: string | null;
   readonly apellidos: string;
   readonly nombres: string;
-  readonly fechaNacimiento: string | null;
-  readonly sexo: string | null;
+  readonly fechaNacimiento: FechaIso | null;
+  readonly sexo: SexoDocumento | null;
+  /** Código ICAO tal como viene en la MRZ (p. ej. `"COL"`, `"VEN"`, `"D"`); `"COL"` en la amarilla. */
   readonly nacionalidad: string | null;
+  /** `"COL"` en las cédulas; el estado emisor ICAO en CE y pasaporte. */
   readonly paisEmisor: string;
-  readonly fechaVencimiento: string | null;
+  readonly fechaVencimiento: FechaIso | null;
   readonly nuip?: string | null;
-  readonly rh?: string;
-  readonly lugarNacimiento?: unknown;
+  readonly rh?: Rh;
+  /** `null` si el código no se resuelve (aviso `lugar-nacimiento-no-resuelto`). */
+  readonly lugarNacimiento?: LugarNacimiento | null;
 }
 
 /** Errores de `leerDocumento` (entrada para `clasificarErrorLectura`, OFF-13). */

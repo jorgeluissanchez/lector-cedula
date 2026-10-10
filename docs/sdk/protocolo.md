@@ -36,6 +36,24 @@ Con `Accept: application/json` (sin `application/x-ndjson`) o `?streaming=0` (`P
 - `ok: true`: `documento` (al menos `tipoDocumento`, `campos` y `warnings`, en camelCase) y `riesgo` opcional.
 - `ok: false`: `rechazo: { motivo, diferencias? }` y `riesgo` opcional. `diferencias` solo con `no-coincide` y solo rutas de campo (por ejemplo `"campos.nuip"`), sin valores.
 
+## Tipos de los campos
+
+`documento.campos` sigue `CamposDocumento` (exportado por `@lector-cedula/web` junto con `SexoDocumento`, `Rh`, `LugarNacimiento` y `FechaIso`). `validarEvento` y `protocolo-ndjson.schema.json` (`definitions.campos`) comprueban estos tipos cuando la clave está presente; una clave ausente o adicional se admite. Un back propio que envíe otro tipo hace fallar el front con `protocolo-invalido`.
+
+| Campo | Tipo | Cuándo aparece |
+|---|---|---|
+| `numeroDocumento` | `string \| null` | Siempre |
+| `apellidos`, `nombres` | `string` | Siempre |
+| `fechaNacimiento`, `fechaVencimiento` | `FechaIso \| null` (`"AAAA-MM-DD"`) | Siempre; la amarilla no trae vencimiento (`null`) |
+| `sexo` | `"M" \| "F" \| "X" \| null` | Siempre; `"X"` solo en la digital |
+| `nacionalidad` | `string \| null` | Siempre; código ICAO tal como viene (`"COL"`, `"VEN"`, `"D"`) |
+| `paisEmisor` | `string` | Siempre |
+| `nuip` | `string \| null` | Amarilla, tarjeta de identidad y digital |
+| `rh` | `"A+" \| "A-" \| "B+" \| "B-" \| "AB+" \| "AB-" \| "O+" \| "O-"` | Amarilla y tarjeta de identidad |
+| `lugarNacimiento` | `{ codigo, departamento, municipio } \| null` | Amarilla y tarjeta de identidad; `null` si DIVIPOL no lo resuelve |
+
+Ningún lector produce lugar ni fecha de expedición.
+
 ## Motivos de rechazo
 
 Lista cerrada `MOTIVOS_RECHAZO`:

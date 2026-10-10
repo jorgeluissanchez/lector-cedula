@@ -136,6 +136,7 @@ Comandos:
 | MOT-23 | Seguridad (413 antes de leer todo, cuerpo truncado, multipart malformado) | Vitest + fuzz con fast-check | `UN` | numRuns >= 1000, un único evento final, 0 excepciones |
 | MOT-24 | Contrato de protocolo Java y Go | `CT --protocolo` | `CT`, `JV`, `GO` | 100 % igual al manejador Node |
 | MOT-25 | Unitaria (Accept, `?streaming=0`) e igualdad entre protocolos | Vitest | `UN` | 3/3 escenarios; 100 % igualdad |
+| MOT-27 | Unitaria (tabla literal de campos rechazados y aceptados) y propiedad diferencial validador contra esquema JSON (Ajv) | Vitest + fast-check | `npx vitest run packages/protocolo/test/mot-27-campos.test.ts` | 36/36; numRuns >= 1000 sin discrepancias, entre 5 % y 95 % de campos aceptados |
 
 ## Revisores
 

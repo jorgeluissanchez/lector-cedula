@@ -15,6 +15,103 @@
         "ocupado",
         "error-interno"
       ]
+    },
+    "fechaIso": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      ]
+    },
+    "campos": {
+      "description": "MOT-27 y SDK-65: tipos de las claves de CamposDocumento cuando están presentes; se admiten claves ausentes y adicionales.",
+      "type": "object",
+      "properties": {
+        "numeroDocumento": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "apellidos": {
+          "type": "string"
+        },
+        "nombres": {
+          "type": "string"
+        },
+        "fechaNacimiento": {
+          "$ref": "#/definitions/fechaIso"
+        },
+        "fechaVencimiento": {
+          "$ref": "#/definitions/fechaIso"
+        },
+        "sexo": {
+          "enum": [
+            "M",
+            "F",
+            "X",
+            null
+          ]
+        },
+        "nacionalidad": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paisEmisor": {
+          "type": "string"
+        },
+        "nuip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rh": {
+          "enum": [
+            "A+",
+            "A-",
+            "B+",
+            "B-",
+            "AB+",
+            "AB-",
+            "O+",
+            "O-"
+          ]
+        },
+        "lugarNacimiento": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string"
+                },
+                "departamento": {
+                  "type": "string"
+                },
+                "municipio": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "codigo",
+                "departamento",
+                "municipio"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      }
     }
   },
   "oneOf": [
@@ -53,7 +150,7 @@
           "type": "object",
           "properties": {
             "campos": {
-              "type": "object"
+              "$ref": "#/definitions/campos"
             }
           },
           "required": [

@@ -93,7 +93,7 @@ export {
 export { iniciarCamara, RESTRICCIONES_CAMARA, type Camara, type Medios } from "./navegador/camara.js";
 
 // Lectura en el dispositivo (cambio pwa-lectura-offline): máscara, orquestación PDF417 -> MRZ y errores.
-export type { CamposDocumento, DependenciasLectura, ErrorLectura, FuenteLectura, OpcionesLectura, PistaLectura, ResultadoLectura, TipoDocumento, TipoLectura } from "./lectura/tipos.js";
+export type { CamposDocumento, DependenciasLectura, ErrorLectura, FechaIso, FuenteLectura, LugarNacimiento, OpcionesLectura, PistaLectura, ResultadoLectura, Rh, SexoDocumento, TipoDocumento, TipoLectura } from "./lectura/tipos.js";
 export { enmascararCamposMrz, enmascararCamposPdf417, enmascararNombre, enmascararResultadoMrz, enmascararUltimos2 } from "./lectura/mascara.js";
 export { interpretarMrz, interpretarPdf417, leerDocumento, type DependenciasInterpretacion, type Paso as PasoLectura } from "./lectura/leer.js";
 export { crearLectorCodigosPdf417 } from "./lectura/codigos.js";

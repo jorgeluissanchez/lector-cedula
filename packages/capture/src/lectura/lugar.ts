@@ -3,6 +3,7 @@
 // DC-08 (divipol-consulados-2018): si la búsqueda principal no encuentra el código o es un consulado renombrado,
 // se consulta el módulo de consulados 2018 (CC BY-SA 4.0, Registraduría) para mostrar el nombre vigente.
 import type { buscarDivipol } from "@lector-cedula/parsers";
+import type { LugarNacimiento } from "./tipos.js";
 import {
   buscarConsulado2018,
   RENOMBRADOS_2018,
@@ -30,10 +31,13 @@ function resolver(
   return vigente.encontrado ? vigente : principal;
 }
 
+/** `T` con `campos.lugarNacimiento` resuelto (SDK-65). */
+export type ConLugar<T extends ConCampos> = T & { readonly campos: T["campos"] & { readonly lugarNacimiento: LugarNacimiento | null } };
+
 export function conLugarNacimiento<T extends ConCampos>(
   resultado: T,
   buscar: typeof buscarDivipol,
-): T {
+): ConLugar<T> {
   const { codigoDepartamentoNacimiento: d, codigoMunicipioNacimiento: m } =
     resultado.campos;
   const r =

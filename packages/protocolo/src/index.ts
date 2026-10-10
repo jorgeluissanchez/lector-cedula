@@ -88,6 +88,42 @@ function rechazoValido(r: unknown): boolean {
   return Array.isArray(r.diferencias) && r.diferencias.every((d) => typeof d === "string");
 }
 
+// MOT-27 y SDK-65: tipos de las claves de `CamposDocumento` (`@lector-cedula/capture`) cuando están presentes; las
+// claves ausentes y las adicionales se admiten. La misma regla que `definitions.campos` del esquema JSON.
+const FECHA_ISO = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/u;
+const SEXOS: ReadonlySet<unknown> = new Set(["M", "F", "X"]);
+const RH: ReadonlySet<unknown> = new Set(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]);
+
+const esTexto = (v: unknown): boolean => typeof v === "string";
+const textoONulo = (v: unknown): boolean => v === null || typeof v === "string";
+const fechaONula = (v: unknown): boolean => v === null || (typeof v === "string" && FECHA_ISO.test(v));
+
+function lugarValido(v: unknown): boolean {
+  if (v === null) return true;
+  if (!esObjeto(v)) return false;
+  const claves = Object.keys(v);
+  return claves.length === 3 && esTexto(v.codigo) && esTexto(v.departamento) && esTexto(v.municipio);
+}
+
+const REGLAS_CAMPOS: Readonly<Record<string, (v: unknown) => boolean>> = {
+  numeroDocumento: textoONulo,
+  apellidos: esTexto,
+  nombres: esTexto,
+  fechaNacimiento: fechaONula,
+  fechaVencimiento: fechaONula,
+  sexo: (v) => v === null || SEXOS.has(v),
+  nacionalidad: textoONulo,
+  paisEmisor: esTexto,
+  nuip: textoONulo,
+  rh: (v) => RH.has(v),
+  lugarNacimiento: lugarValido,
+};
+
+function camposValidos(c: unknown): boolean {
+  if (!esObjeto(c)) return false;
+  return Object.entries(REGLAS_CAMPOS).every(([clave, regla]) => !Object.hasOwn(c, clave) || regla(c[clave]));
+}
+
 /** Comprueba un evento del protocolo (la misma regla que `protocolo-ndjson.schema.json`). Nunca lanza. */
 export function validarEvento(x: unknown): x is EventoProtocolo {
   if (!esObjeto(x) || typeof x.etapa !== "string") return false;
@@ -98,7 +134,7 @@ export function validarEvento(x: unknown): x is EventoProtocolo {
     return typeof p === "number" && p >= 0 && p <= 1;
   }
   if (x.etapa !== "resultado") return false;
-  if (x.ok === true) return soloClaves(x, ["etapa", "ok", "documento", "riesgo"]) && esObjeto(x.documento) && esObjeto(x.documento.campos);
+  if (x.ok === true) return soloClaves(x, ["etapa", "ok", "documento", "riesgo"]) && esObjeto(x.documento) && camposValidos(x.documento.campos);
   if (x.ok === false) return soloClaves(x, ["etapa", "ok", "rechazo", "riesgo"]) && rechazoValido(x.rechazo);
   return false;
 }

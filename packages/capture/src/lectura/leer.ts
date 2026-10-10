@@ -17,6 +17,7 @@ import type {
   CamposDocumento,
   DependenciasLectura,
   FuenteLectura,
+  LugarNacimiento,
   OpcionesLectura,
   ResultadoLectura,
   TipoDocumento,
@@ -68,7 +69,7 @@ function exito(
   return { ok: true, ...base, campos: enmascarar ? enmascararCampos(campos) : campos, ...(menorDeEdad ? { menorDeEdad: true as const } : {}) };
 }
 
-function camposAmarilla(c: CamposCedulaAmarilla & { lugarNacimiento?: unknown }): CamposDocumento {
+function camposAmarilla(c: CamposCedulaAmarilla & { readonly lugarNacimiento: LugarNacimiento | null }): CamposDocumento {
   return {
     numeroDocumento: c.numeroDocumento,
     apellidos: unir(c.primerApellido, c.segundoApellido),
@@ -80,7 +81,7 @@ function camposAmarilla(c: CamposCedulaAmarilla & { lugarNacimiento?: unknown })
     fechaVencimiento: null,
     nuip: c.numeroDocumento,
     rh: c.rh,
-    lugarNacimiento: c.lugarNacimiento ?? null,
+    lugarNacimiento: c.lugarNacimiento,
   };
 }
 

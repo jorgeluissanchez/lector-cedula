@@ -198,6 +198,16 @@ Comandos nuevos:
 | SDK-64 | Privacidad del ejemplo: todas las peticiones al origen del preview; `localStorage`, `sessionStorage` e `indexedDB.databases()` vacíos al terminar cada lectura | Playwright | igual | 0 peticiones fuera de `http://localhost:4196`, almacenamiento vacío |
 | SDK-64 | Escenas sintéticas declaradas | Vitest | `npx vitest run tools/test/videos-cedula.test.mjs` | verde |
 
+### Pruebas de los tipos públicos de los campos (2026-10-10)
+
+| Requisito | Tipo de prueba | Herramienta | Comando | Umbral |
+|---|---|---|---|---|
+| SDK-65 | Tipos (`expectTypeOf` y `@ts-expect-error`): tipos exactos, asignaciones inválidas y campos inexistentes | tsc (vía `tools/test/mot-15-tipos.test.mjs`) | `npx tsc -p packages/web/test/tipos --noEmit` | 0 errores |
+| SDK-65 | Conformidad: salida real de `interpretarPdf417`/`interpretarMrz` con fixtures sintéticos (amarilla, TI, digital, CE, pasaporte; con y sin máscara) contra `validarEvento`, el esquema JSON (Ajv) y un oráculo literal del dominio | Vitest | `npx vitest run packages/web/test/sdk-65-campos.test.ts` | 3/3 escenarios |
+| SDK-65 | Propiedad de la salida real (PDF417, digital, CE TD1 y pasaporte TD3 arbitrarios) | fast-check | igual | numRuns >= 300 por fuente, > 50 % de lecturas correctas por fuente |
+| SDK-65, MOT-27 | Validador del protocolo | Vitest + fast-check | `npx vitest run packages/protocolo/test/mot-27-campos.test.ts` | ver MOT-27 en `motor-backend-embebido` |
+| SDK-65 | Documentación | Vitest | `npx vitest run tools/test/docs-sdk.test.mjs` | verde |
+
 ## Decisiones del orquestador por delegación del usuario (2026-10-08)
 
 - Ruta: se usa la existente `/v1/validations` (AV-01), sin alias.

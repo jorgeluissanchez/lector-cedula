@@ -407,6 +407,13 @@ La respuesta SHALL ser un stream NDJSON (un objeto JSON por línea, UTF-8, termi
 - **WHEN** se leen `packages/protocolo/package.json` y las importaciones de `packages/web/src` y `packages/servidor/src`
 - **THEN** `@lector-cedula/protocolo` no declara `dependencies` y tanto el front (`packages/web`) como el back (`packages/servidor`) importan de él los tipos del protocolo
 
+### Requirement: MOT-27 Tipos de los campos en el protocolo
+`validarEvento` y `protocolo-ndjson.schema.json` SHALL comprobar que las claves de `documento.campos` definidas por `CamposDocumento` (SDK-65) respetan sus tipos cuando están presentes; las claves ausentes y las adicionales se admiten (compatibilidad: solo se estrecha lo que la salida real ya cumplía).
+
+#### Scenario: Tipos de los campos del documento
+- **WHEN** `validarEvento` y `protocolo-ndjson.schema.json` reciben un `resultado` con `ok: true` cuyo `documento.campos` trae, por separado, `sexo: "masculino"`, `rh: "C+"`, `lugarNacimiento: { codigo: "16001" }`, `fechaNacimiento: "17/05/1990"`, `nuip: 9999123456` (número) o `apellidos: null`
+- **THEN** ambos lo rechazan; y aceptan `campos: {}`, campos con claves adicionales (`fechaExpedicion: "2020-01-01"`) y los campos de la amarilla sintética con `sexo: "F"`, `rh: "AB-"`, `lugarNacimiento: null` y `fechaVencimiento: null`
+
 ### Requirement: MOT-21 Confirmación solo si ok
 `alConfirmar(documento, contexto)` SHALL llamarse exactamente una vez y antes de emitir el evento final cuando el resultado es `ok: true`, y MUST NOT llamarse en ningún rechazo, error ni cancelación. `contexto` lleva `{ riesgo, comparacion, peticion: Request }`. Si `alConfirmar` lanza, el evento final SHALL ser `ok: false` con `rechazo.motivo` `"error-interno"` y el mensaje MUST NOT viajar al cliente.
 

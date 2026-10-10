@@ -1191,3 +1191,22 @@ La captura y la revalidación SHALL usar `videoWidth` x `videoHeight` de la pist
 #### Scenario: Sin red externa ni almacenamiento
 - **WHEN** termina cualquiera de las lecturas de los escenarios anteriores
 - **THEN** todas las peticiones de la página fueron al origen del preview (`http://localhost:4196`) y `localStorage.length`, `sessionStorage.length` y `indexedDB.databases()` están vacíos
+
+### Requirement: SDK-65 Tipos públicos de los campos
+`@lector-cedula/web` SHALL exportar `CamposDocumento` (OD-22a) con los tipos que producen realmente los parsers y el motor, definidos una sola vez en `@lector-cedula/capture` y reexportados junto con `SexoDocumento`, `Rh`, `LugarNacimiento` y `FechaIso`. MUST NOT declarar campos que ningún parser produce. El protocolo comprueba los mismos tipos (MOT-27).
+
+#### Scenario: Tipos precisos para el integrador
+- **WHEN** se compila `packages/web/test/tipos/sdk-65.ts` con `npx tsc -p packages/web/test/tipos --noEmit`
+- **THEN** `numeroDocumento` es `string | null`; `apellidos` y `nombres`, `string`; `fechaNacimiento` y `fechaVencimiento`, `FechaIso | null` (`FechaIso` = `string` `AAAA-MM-DD`, alias documentado); `sexo`, `SexoDocumento | null` con `SexoDocumento` = `"M" | "F" | "X"` (`X` solo de la digital, MZ-14); `nacionalidad`, `string | null`; `paisEmisor`, `string`; `nuip`, `string | null | undefined`; `rh`, `Rh | undefined` con `Rh` = `"A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-"`; `lugarNacimiento`, `LugarNacimiento | null | undefined` con `LugarNacimiento` = `{ codigo: string; departamento: string; municipio: string }` (DIVIPOL o consulados 2018); y asignar `sexo: "masculino"`, `rh: "C+"` o `lugarNacimiento: { x: 1 }` es un error de compilación
+
+#### Scenario: Sin campos inventados
+- **WHEN** el mismo archivo accede a `campos.lugarExpedicion`, `campos.fechaExpedicion` o `lugarNacimiento.pais`
+- **THEN** cada acceso es un error de compilación y las claves de `LugarNacimiento` son exactamente `codigo`, `departamento` y `municipio`
+
+#### Scenario: La salida real cumple el protocolo
+- **WHEN** `interpretarPdf417` e `interpretarMrz` de `@lector-cedula/capture` leen fixtures sintéticos (amarilla y TI de `PERSONA_BASE` con NUIP `9999123456`, digital, CE y pasaporte sintéticos), con y sin máscara, y cada lectura correcta se envuelve en `{ etapa: "resultado", ok: true, documento: { tipoDocumento, campos, warnings } }`
+- **THEN** `validarEvento` devuelve `true`, el evento valida contra `protocolo-ndjson.schema.json` (Ajv), `sexo`, `rh` y las fechas están en su dominio y `lugarNacimiento` de la amarilla es `{ codigo: "16001", departamento, municipio }`
+
+#### Scenario: Propiedad de la salida real
+- **WHEN** fast-check genera fixtures PDF417 (`arbFixturePdf417`) y MRZ TD1 de la digital (`arbFixtureMrz`) arbitrarios y datos TD1 y TD3 ICAO válidos por construcción, con `admitirTarjetaIdentidad: true`
+- **THEN** toda lectura correcta cumple el validador y el esquema del protocolo y más del 50 % de los casos generados son lecturas correctas (numRuns >= 300 por fuente)

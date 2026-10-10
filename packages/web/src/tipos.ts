@@ -1,7 +1,7 @@
 /**
  * Tipos públicos del núcleo headless (sdk-integracion, SDK-27, SDK-28, SDK-38). Sin código: solo contratos.
  */
-import type { FrameLectura, ResultadoLectura } from "@lector-cedula/capture";
+import type { CamposDocumento, FrameLectura, ResultadoLectura } from "@lector-cedula/capture";
 import type { EtapaIntermedia, Rechazo } from "@lector-cedula/protocolo";
 import type { DispositivoLector, UmbralesAuto } from "./decidir-front.js";
 
@@ -9,7 +9,8 @@ export type { DispositivoLector, MotivoFront, UmbralesAuto, DecisionFront } from
 export type { MotivoRechazo } from "@lector-cedula/protocolo";
 
 type LecturaCorrecta = Extract<ResultadoLectura, { ok: true }>;
-export type CamposDocumento = LecturaCorrecta["campos"];
+/** SDK-65: campos del documento con los tipos que producen los parsers (una sola definición, en `@lector-cedula/capture`). */
+export type { CamposDocumento, FechaIso, LugarNacimiento, Rh, SexoDocumento } from "@lector-cedula/capture";
 export type TipoDocumento = LecturaCorrecta["tipoDocumento"];
 
 export type FaseLector = "inicio" | "permiso" | "activo" | "listo" | "leyendo" | "verificando" | "resultado" | "error";
