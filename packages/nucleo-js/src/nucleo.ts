@@ -6,6 +6,7 @@
  * error o un estado válido. Sin DOM, sin red, sin disco, sin reloj (la fecha de referencia la pasa el nativo).
  */
 import { buscarDivipol, parsearPdf417Amarilla } from "@lector-cedula/parsers";
+import { extraerLineasMrz, extraerLineasTd3 } from "../../capture/src/mrz/extraer.js";
 import { fechaReferenciaValida, interpretarLineasMrz } from "../../capture/src/mrz/interpretar.js";
 import type { IntentoMrz } from "../../capture/src/mrz/lector.js";
 import { interpretarMrz, interpretarPdf417, type Paso } from "../../capture/src/lectura/leer.js";
@@ -112,6 +113,30 @@ export const procesarMrz = protegido(
     return salida(interpretarMrz(lectura, o.lectura), o.documentos);
   },
   () => fallo("lectura-fallida", "motor"),
+);
+
+/** NAT-06: resumen de una vista OCR para el bucle nativo (las reglas de dígitos de control se quedan en el bundle). */
+export type EvaluacionTextoMrz =
+  | { readonly ok: true; readonly lineas: string[]; readonly digitosValidos: number; readonly documento: boolean }
+  | { readonly ok: false; readonly error: string; readonly lineas: string[] | null };
+
+/**
+ * NAT-06 (tarea 1.5): texto OCR de una vista MRZ con el mismo paso que el bucle de `crearLectorMrz` de la web:
+ * extracción de 3 líneas TD1 (o 2 TD3 si `opciones.formato` es exactamente `"td3"`) e interpretación. El nativo
+ * elige con `digitosValidos` y `documento` el intento que entrega a `procesarMrz`, sin reglas propias.
+ */
+export const evaluarTextoMrz = protegido(
+  (texto: unknown, opciones: unknown): EvaluacionTextoMrz => {
+    const fecha = fechaReferenciaValida(opciones);
+    if (fecha === null) return { ok: false, error: "fecha-referencia-invalida", lineas: null };
+    const formato = esObjeto(opciones) && opciones["formato"] === "td3" ? "td3" : "td1";
+    const lineas = formato === "td3" ? extraerLineasTd3(texto) : extraerLineasMrz(texto);
+    if (lineas === null) return { ok: false, error: "mrz-no-encontrada", lineas: null };
+    const r = interpretarLineasMrz(lineas, formato, fecha, "nativo" as IntentoMrz);
+    if (!r.ok) return { ok: false, error: r.error, lineas };
+    return { ok: true, lineas, digitosValidos: r.digitosValidos, documento: "documento" in r };
+  },
+  (): EvaluacionTextoMrz => ({ ok: false, error: "motor", lineas: null }),
 );
 
 /** Nombre de la primera opción inválida de `OpcionesLector` (SDK-27, SDK-38) o `null`. */

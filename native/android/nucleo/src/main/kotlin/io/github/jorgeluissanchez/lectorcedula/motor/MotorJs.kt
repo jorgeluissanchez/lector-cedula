@@ -38,7 +38,7 @@ class MotorJs private constructor(private val js: QuickJs) : Closeable {
 
     companion object {
         /** Funciones públicas del bundle (NAT-07, NAT-12). */
-        val FUNCIONES = setOf("procesarPdf417", "procesarMrz", "transicion", "crearEstado", "validarOpciones", "validarUrlSubida", "decidirEnvio", "mensajeError")
+        val FUNCIONES = setOf("procesarPdf417", "procesarMrz", "evaluarTextoMrz", "transicion", "crearEstado", "validarOpciones", "validarUrlSubida", "decidirEnvio", "mensajeError")
 
         private val JSON = Json
 

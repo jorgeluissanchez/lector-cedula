@@ -64,7 +64,7 @@ class MotorJsNat07Test : StringSpec({
         shouldThrow<IllegalArgumentException> { motor.llamarTexto("eval", JsonPrimitive("1")) }
         shouldThrow<IllegalArgumentException> { motor.llamarTexto("constructor") }
         shouldThrow<IllegalStateException> { MotorJs.crear("var x = 1;") }
-        MotorJs.FUNCIONES shouldBe setOf("procesarPdf417", "procesarMrz", "transicion", "crearEstado", "validarOpciones", "validarUrlSubida", "decidirEnvio", "mensajeError")
+        MotorJs.FUNCIONES shouldBe setOf("procesarPdf417", "procesarMrz", "evaluarTextoMrz", "transicion", "crearEstado", "validarOpciones", "validarUrlSubida", "decidirEnvio", "mensajeError")
     }
 
     "NAT-07 Entradas arbitrarias del puente nunca lanzan dentro del motor" {
