@@ -71,6 +71,7 @@ jobs:
             native/android/lector-cedula/build/reports/
             native/android/nucleo/build/reports/
             native/android/nucleo/build/volcados/
+            native/android/nucleo/build/goldens/
           if-no-files-found: ignore
 
   # KM de calidad y presencia (tarea 1.3), solo bajo demanda (workflow_dispatch con `pit`). PIT en un solo proceso tardó
@@ -116,7 +117,7 @@ jobs:
         env:
           CLASES: ${{ matrix.clases }}
           EXCLUIR: ${{ matrix.excluir }}
-          SIN_PRUEBAS: io.github.jorgeluissanchez.lectorcedula.Lector*,io.github.jorgeluissanchez.lectorcedula.EstadoLector*,io.github.jorgeluissanchez.lectorcedula.motor.*,io.github.jorgeluissanchez.lectorcedula.nucleo.*
+          SIN_PRUEBAS: io.github.jorgeluissanchez.lectorcedula.Lector*,io.github.jorgeluissanchez.lectorcedula.EstadoLector*,io.github.jorgeluissanchez.lectorcedula.motor.*,io.github.jorgeluissanchez.lectorcedula.nucleo.*,io.github.jorgeluissanchez.lectorcedula.calidad.CalidadDiferencialNat03Test
         run: |
           EXTRA=()
           if [ -n "$EXCLUIR" ]; then EXTRA+=("-PpitExcluir=$EXCLUIR"); fi
