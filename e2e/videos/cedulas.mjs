@@ -20,7 +20,8 @@ const alRevesEnGuia = enGuia.replace("[0:v]scale=", "[0:v]hflip,vflip,scale=");
 const giradaEnGuia = `${FONDO};[0:v]transpose=1,scale=-2:${GUIA.alto},${SIN_REFLEJO},format=yuv420p[t];[f][t]overlay=(W-w)/2:${GUIA.y}:shortest=1`;
 
 // OFF-25: cámara de celular real (más suave que los vídeos nítidos): desenfoque y ruido temporal; la amarilla además
-// con el contraste de la tarjeta al 20 %. Varianza del Laplaciano en el frame de análisis < 152 (sin OFF-25, "Desenfocado").
+// con el contraste de la tarjeta al 20 %. Varianza del Laplaciano en el frame de análisis entre 27 y 152: pasa con los umbrales
+// recalibrados de CAL-08 (tarea 5.8); con los anteriores (40/200) daba "Desenfocado".
 const suave = (sigma, ruido) => `,gblur=sigma=${sigma},noise=alls=${ruido}:allf=t`;
 const amarillaSuave = enGuia.replace(SIN_REFLEJO, `${SIN_REFLEJO},lutyuv=y='150+(val-150)*0.2'`) + suave(2.5, 4);
 const digitalSuave = enGuia + suave(5, 8);

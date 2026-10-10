@@ -7,7 +7,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
 
-export type Video = "amarilla-1080p" | "digital-1080p" | "digital-girada-90-1080p" | "digital-girada-180-1080p" | "nitida-1080p" | "amarilla-suave-1080p" | "digital-suave-1080p" | "pasaporte-col-1080p" | "ti-amarilla-1080p";
+export type Video = "amarilla-1080p" | "digital-1080p" | "digital-girada-90-1080p" | "digital-girada-180-1080p" | "nitida-1080p" | "amarilla-suave-1080p" | "digital-suave-1080p" | "pasaporte-col-1080p" | "ti-amarilla-1080p" | "desenfocada-1080p" | "sin-documento-1080p" | "tarjeta-ilegible-1080p";
 
 export const ARGS_CAMARA = ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"];
 

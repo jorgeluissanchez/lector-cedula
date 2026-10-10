@@ -26,3 +26,6 @@ Esperas por condición; ninguna `waitForTimeout`. Fecha fija con `page.clock.set
 | OFF-20 Pantalla de licencias; Licencias sin conexión; axe | `licencias.spec.ts`, `accesibilidad.spec.ts` | amarilla |
 | OFF-21 Casilla, no persistida, descargo, textos legales sin conexión, axe | `legal.spec.ts` | amarilla |
 | OFF-15 Presupuesto (tarea 7.1) | pendiente: `tiempos.spec.ts` | las tres |
+| OFF-22 Vídeo sin cédula en E2E | `sin-documento.spec.ts` | sin-documento |
+| OFF-25 Vídeos suaves en E2E (tarea 5.8: pasan por los umbrales recalibrados, sin elevar el score) | `suave-amarilla.spec.ts`, `suave-digital.spec.ts` | amarilla-suave, digital-suave |
+| OFF-25 Vídeos que no deben disparar en E2E | `desenfocada.spec.ts`, `sin-documento.spec.ts` | desenfocada, sin-documento |
